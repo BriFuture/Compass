@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>Pitch.qml</file>
+        <file>img/compass_roll_circle.png</file>
+        <file>DataSource.js</file>
+        <file>img/compass_base_2.png</file>
+    </qresource>
+</RCC>
