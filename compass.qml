@@ -555,7 +555,7 @@ Item {
         var args = h_getArgs()
         var base = 24 / pitchRoll.stdradius * pitchRoll.radius
         var height = 50 / pitchRoll.stdradius * pitchRoll.radius
-        var yoffset = - (pitchRoll.radius + 45) / pitchRoll.stdradius * pitchRoll.radius
+        var yoffset = - (pitchRoll.radius + 25 / pitchRoll.stdradius * pitchRoll.radius)
         ctx.fillStyle = args.color_red
         ctx.lineWidth=3
         ctx.beginPath()

@@ -6,6 +6,7 @@
 #include <QQuickItem>
 #include <QQmlContext>
 #include <QDebug>
+#include <QIcon>
 
 class Data : public QObject{
     Q_OBJECT

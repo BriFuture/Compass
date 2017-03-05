@@ -1,4 +1,5 @@
 ﻿#include "data.h"
+#include <QPixmap>
 
 Data::Data() {
     heading = 0;
@@ -12,8 +13,7 @@ void Data::view() {
     QQmlContext *context = compassview->rootContext();
     context->setContextProperty("dataSource", this);
     // 设置窗口图标
-    QIcon icon = QIcon(QStringLiteral("qrc:img/compass.ico"));
-    qDebug() << icon.isNull();
+    QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
     compassview->setIcon(icon);
 //    compassview->set
     // 设置窗口缩放时，根对象也会随之缩放
