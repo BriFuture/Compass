@@ -3,7 +3,8 @@ TEMPLATE = app
 QT += qml quick core gui
 CONFIG += c++11
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    data.cpp
 
 RESOURCES += qml.qrc
 
@@ -15,4 +16,5 @@ include(deployment.pri)
 
 DISTFILES +=
 
-HEADERS +=
+HEADERS += \
+    data.h

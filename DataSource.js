@@ -31,7 +31,7 @@ function changer() {
 //    changeData(2, incy)
     changeData(0, 1)
     changeData(1, 1)
-    changeData(2, 0)
+    changeData(2, 3)
 }
 
 function getData() {

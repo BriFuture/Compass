@@ -1,19 +1,19 @@
 ﻿#include <QGuiApplication>
 #include <QQmlApplicationEngine>
-//#include "test.h"
 
-void run() {
-    QQmlApplicationEngine engine;
-    engine.load(QUrl(QStringLiteral("qrc:/Pitch.qml")));
-}
+#include "data.h"
+
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    QQmlApplicationEngine engine;
+//    QQmlApplicationEngine engine;
 //    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-    engine.load(QUrl(QStringLiteral("qrc:/Pitch.qml")));
+//    engine.load(QUrl(QStringLiteral("qrc:/Pitch.qml")));
+
+    Data *data = new Data();
+    data->view();
 
 
     return app.exec();

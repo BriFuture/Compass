@@ -5,5 +5,8 @@
         <file>img/compass_roll_circle.png</file>
         <file>DataSource.js</file>
         <file>img/compass_base_2.png</file>
+        <file>img/compass.png</file>
+        <file>Compass.qml</file>
+        <file>img/compass.ico</file>
     </qresource>
 </RCC>
