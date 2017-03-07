@@ -1,5 +1,6 @@
 ﻿#include "data.h"
 #include <QPixmap>
+#include <QQmlApplicationEngine>
 
 Data::Data() {
     heading = 0;
@@ -21,6 +22,8 @@ void Data::view() {
     compassview->setTitle("Compass heading pitch & roll");
     compassview->show();
 
+//        QQmlApplicationEngine engine;
+//        engine.load(QUrl(QStringLiteral("qrc:/Test.qml")));
 }
 
 double Data::getRadius() {

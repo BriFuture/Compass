@@ -1,7 +1,5 @@
 ﻿import QtQuick 2.0
-
-import QtQuick 2.0
-import QtQuick.Window 2.2
+//import QtQuick.Window 2.2
 
 //import "DataSource.js" as DataSource
 
@@ -84,13 +82,13 @@ Item {
 //            fill: parent
             left: heading.right
         }
-        // const real,标准半径为 155
-        property real stdradius: 155
+        // const real,标准半径为 145
+        property real stdradius: 148
         //  设置俯仰角的圆的半径
         property real radius: stdradius / 1000 * container.width
 
         property string rollCircleImg : "img/compass_roll_circle.png"   // 白色基线图片
-        property string baseOuterImg: "img/compass_base_2.png"          // 指南针底部黑框
+        property string baseOuterImg: "img/compass_pr_base.png"          // 指南针底部黑框
         property real pitch: 0
         property real roll: 0
 
@@ -102,7 +100,7 @@ Item {
                 fill: parent
             }
 
-            z:1
+//            z:1
             contextType: "2d"
             visible: true
             onPaint: {
@@ -147,8 +145,8 @@ Item {
                 z: 0
 
                 // 原始图片内圆标准距离为 295 px 外圆标准距离为 449px
-                width: (449 / pitchRoll.stdradius) * pitchRoll.radius
-                height: (449 / pitchRoll.stdradius) * pitchRoll.radius
+                width: getScaledSize(449)
+                height: getScaledSize(449)
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     verticalCenter: parent.verticalCenter
@@ -168,13 +166,13 @@ Item {
                 id: baseOuterImg
                 z: 101
                 // 原始图片高度 86 宽度 361
-                width: (361 / pitchRoll.stdradius) * pitchRoll.radius
-                height: (86 / pitchRoll.stdradius) * pitchRoll.radius
+                width: getScaledSize(455)
+                height: getScaledSize(455)
 
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     verticalCenter: parent.verticalCenter
-                    verticalCenterOffset: pitchRoll.radius + baseOuterImg.height/2
+                    verticalCenterOffset: (2.5 / pitchRoll.stdradius) * pitchRoll.radius
                 }
             }
 
@@ -193,7 +191,9 @@ Item {
         onTriggered: {
 //            console.log("Timer is triggered! ")
 //            var data = DataSource.getData();
-            var data = [0, 0, 0]
+            var data = dataSource.getRadius()
+
+            data = [0, 0, 0]
 //            h_refresh(data[0])
             refresh(data[0], data[1], data[2])
         }
@@ -214,12 +214,12 @@ Item {
             color_blue: "#558db9",
             color_orange: "rgba(255, 122, 0, 0.75)",
             /** 线的参数 **/
-            longline: 30,       // 长刻度线的长度
-            shortline: 15,      // 短刻度线的长度
-            lineheight: 2,      // 线宽
-            linegap: pitchRoll.radius / 4.5,      // 两条长刻度线之间的距离
-            degrees: 5,                 // 相邻长线和短线之间的刻度间隔
-            mainLines: 4                // 每一边的主要长刻度线数
+            longline: getScaledSize(30),       // 长刻度线的长度
+            shortline: getScaledSize(15),      // 短刻度线的长度
+            lineheight: getScaledSize(2),      // 线宽
+            linegap: pitchRoll.radius / 4.5,        // 两条长刻度线之间的距离
+            degrees: 5,                             // 相邻长线和短线之间的刻度间隔
+            mainLines: 4                            // 每一边的主要长刻度线数
         }
     }
 
@@ -260,18 +260,21 @@ Item {
         ctx.strokeStyle = "white"
         ctx.fillStyle = "white"
         ctx.linewidth = 1
-        var addon = {showText: true, text: "0", base: args.pitch, mainLines: args.mainLines}
+        var addon = {showText: true, text: "0", base: args.pitch, mainLines: args.mainLines, txtoffset: args.longline/2+5}
 //        ctx.fontWeight = "bold"
-        ctx.font = (10/pitchRoll.stdradius)*pitchRoll.radius  + "px sans-serif bold"
         for(var i = 1; i <= args.mainLines; i++) {
-            // 圆水平的直径为界限，画出下半部分的刻度
+            ctx.font = getFontSize(10, 5)  + "px sans-serif bold"
+            // 圆水平的直径为界限，画出下半部分的长刻度
             addon.text = getDegree(- i * 2 * args.degrees + addon.base)
             drawLine(ctx, args.ox+0, args.oy+i*args.linegap, args.longline, args.lineheight, addon)
-            addon.text = getDegree(- i * 2 * args.degrees + addon.base + args.degrees)
-            drawLine(ctx, args.ox+0, args.oy+(i-0.5)*args.linegap, args.shortline, args.lineheight, addon)
-            // 圆水平的直径为界限，画出上半部分的刻度
+            // 圆水平的直径为界限，画出上半部分的长刻度
             addon.text = getDegree(i * 2 * args.degrees + addon.base)
             drawLine(ctx, args.ox+0, args.oy-(i*args.linegap), args.longline, args.lineheight, addon)
+            ctx.font = getFontSize(8, 4)  + "px sans-serif bold"
+            // 圆水平的直径为界限，画出下半部分的长刻度
+            addon.text = getDegree(- i * 2 * args.degrees + addon.base + args.degrees)
+            drawLine(ctx, args.ox+0, args.oy+(i-0.5)*args.linegap, args.shortline, args.lineheight, addon)
+            // 圆水平的直径为界限，画出上半部分的长刻度
             addon.text = getDegree(i * 2 * args.degrees + addon.base - args.degrees)
             drawLine(ctx, args.ox+0, args.oy-((i-0.5)*args.linegap), args.shortline, args.lineheight, addon)
         }
@@ -280,7 +283,7 @@ Item {
         // 在圆心旁边标出现在的 pitch 示数
         ctx.fillStyle = "red"
 
-        ctx.font = (13/pitchRoll.stdradius)*pitchRoll.radius + "px sans-serif"
+        ctx.font = getFontSize(16, 8) + "px sans-serif"
         ctx.fillText(args.pitch, args.ox + 7, args.oy + 6.5)
 //        ctx.stroke()
     }
@@ -307,7 +310,7 @@ Item {
         ctx.fill()
 //        ctx.stroke()
         // 绘制三角形
-        drawTriangle(ctx, args.ox, args.oy - pitchRoll.radius + 5, 30, 40);
+        drawTriangle(ctx, args.ox, args.oy - pitchRoll.radius + 5, getScaledSize(30), getScaledSize(40));
 
     }
 
@@ -326,7 +329,8 @@ Item {
         ctx.rect(x - linelength/2, y, linelength, lineheight)
         if(addon && addon.showText) {
 //            console.log(addon.text)
-            ctx.fillText(addon.text, x + linelength/2 + 5, y + 5.5)
+//            ctx.fillText(addon.text, x + linelength/2 + 5, y + 5.5)
+            ctx.fillText(addon.text, x + addon.txtoffset, y + getScaledSize(5.5))
         }
     }
 
@@ -461,6 +465,7 @@ Item {
 
     /*
      * 返回刻度盘上的刻度
+     * degree       刻度实际的数值
     */
     function getDegree(degree) {
         if(degree > 180) {
@@ -470,6 +475,28 @@ Item {
         }
 
         return degree
+    }
+
+    /*
+     * 返回字体大小，按照图形等比例的缩放大小
+     * 或者直接返回 minsize
+     * size     大小
+    */
+    function getFontSize(size, minsize) {
+        var s = getScaledSize(size)
+        if(s > minsize) {
+            return s
+        }
+        console.log("minsize:" + minsize)
+        return minsize
+    }
+
+    /*
+     * 等比例缩放尺寸
+     * size     期望的原始尺寸
+    */
+    function getScaledSize(size) {
+        return size / pitchRoll.stdradius * pitchRoll.radius
     }
 
     /*
