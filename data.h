@@ -13,6 +13,7 @@ class Data : public QObject{
 public:
     Data();
     void view();
+    void view3D();
     double heading;
 
 public slots:

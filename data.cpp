@@ -10,6 +10,7 @@ Data::Data() {
 void Data::view() {
     QQuickView *compassview = new QQuickView;
     compassview->setSource(QUrl(QStringLiteral("qrc:/Compass.qml")));
+//    compassview->setSource(QUrl(QStringLiteral("qrc:/ThreeD.qml")));
 //    compassview->rootContext()->setContextProperty("dataRadius", this);
     QQmlContext *context = compassview->rootContext();
     context->setContextProperty("dataSource", this);
@@ -24,6 +25,23 @@ void Data::view() {
 
 //        QQmlApplicationEngine engine;
 //        engine.load(QUrl(QStringLiteral("qrc:/Test.qml")));
+}
+
+void Data::view3D() {
+    QQuickView *compassview = new QQuickView;
+
+    compassview->setSource(QUrl(QStringLiteral("qrc:/SpacePath.qml")));
+//    compassview->rootContext()->setContextProperty("dataRadius", this);
+    QQmlContext *context = compassview->rootContext();
+    context->setContextProperty("dataSource", this);
+    // 设置窗口图标
+    QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
+    compassview->setIcon(icon);
+//    compassview->set
+    // 设置窗口缩放时，根对象也会随之缩放
+    compassview->setResizeMode(QQuickView::SizeRootObjectToView);
+    compassview->setTitle("3D Viewer");
+    compassview->show();
 }
 
 double Data::getRadius() {

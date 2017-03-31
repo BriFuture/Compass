@@ -9,5 +9,13 @@
         <file>img/compass.ico</file>
         <file>img/compass_pr_base.png</file>
         <file>Test.qml</file>
+        <file>gl-matrix.js</file>
+        <file>TD.qml</file>
+        <file>TD.js</file>
+        <file>SpacePath.js</file>
+        <file>SpacePath.qml</file>
+        <file>Coordinate3D.js</file>
+        <file>square.js</file>
+        <file>img/heading.png</file>
     </qresource>
 </RCC>

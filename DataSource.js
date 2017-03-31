@@ -1,6 +1,6 @@
 ﻿.pragma library
 // 0 -> 60
-var data0 = [0, 42, 0];
+var data0 = [0, 0, 0];
 
 /*
   * 修改数据
@@ -30,8 +30,9 @@ function changer() {
 //    changeData(1, incy)
 //    changeData(2, incy)
     changeData(0, 1)
+//    changeData(1, 1.25412)
     changeData(1, 1)
-    changeData(2, 3)
+    changeData(2, 0)
 }
 
 function getData() {

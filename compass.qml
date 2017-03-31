@@ -1,7 +1,6 @@
 ﻿import QtQuick 2.0
-//import QtQuick.Window 2.2
 
-//import "DataSource.js" as DataSource
+import "DataSource.js" as DataSource
 
 Item {
     visible: true
@@ -9,6 +8,16 @@ Item {
     height: 600
 //    title: qsTr("Display compress(Pitch)")
     id: container
+
+    MouseArea {
+        anchors.fill: parent
+        onClicked: {
+            if(updateTimer.running)
+                updateTimer.stop()
+            else
+                updateTimer.restart()
+        }
+    }
 
     /* 矩形，用于设置背景色 */
     Rectangle {
@@ -30,7 +39,7 @@ Item {
 
     /* 航向角相关内容 */
     Item {
-        id: heading
+        id: headingItem
         height: container.height
         width:  container.width/2
         anchors {
@@ -43,10 +52,10 @@ Item {
         Image {
             id: compass_heading_img
             anchors.centerIn: parent
-            width: (449 / pitchRoll.stdradius) * pitchRoll.radius
-            height: (449 / pitchRoll.stdradius) * pitchRoll.radius
+            width: getScaledSize(449)
+            height: getScaledSize(449)
             smooth:true
-            source: "img/compass.png"
+            source: "img/heading.png"
 //            transformOriginPoint: point(winscreen.width/2,winscreen.height/2)
 //            transformOrigin: winscreen.Center
         }
@@ -60,14 +69,14 @@ Item {
 
         Canvas {
             visible: true
-            id: mycanvas
+            id: headingCanvas
             anchors {
                 centerIn: parent
                 fill: parent
             }
             onPaint: {
                 var ctx = getContext("2d");
-                h_repaintCanvas(ctx)
+                h_repaintCanvas(ctx);
             }
         }
     }
@@ -80,7 +89,7 @@ Item {
         anchors {
 //            centerIn: parent
 //            fill: parent
-            left: heading.right
+            left: headingItem.right
         }
         // const real,标准半径为 145
         property real stdradius: 148
@@ -90,6 +99,8 @@ Item {
         property string rollCircleImg : "img/compass_roll_circle.png"   // 白色基线图片
         property string baseOuterImg: "img/compass_pr_base.png"          // 指南针底部黑框
         property real pitch: 0
+//        property real lastPitch: 0
+//        property bool pitchUp: false
         property real roll: 0
 
         // 画布，用于绘制俯仰仪，动态变化
@@ -117,6 +128,7 @@ Item {
 
         /* 绘制俯仰仪基线 */
         Canvas {
+            id: pitchStaticCanvas
             anchors {
                 centerIn: parent
                 fill: parent
@@ -143,7 +155,6 @@ Item {
                 id: roll_circle
                 source: pitchRoll.rollCircleImg
                 z: 0
-
                 // 原始图片内圆标准距离为 295 px 外圆标准距离为 449px
                 width: getScaledSize(449)
                 height: getScaledSize(449)
@@ -172,7 +183,7 @@ Item {
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     verticalCenter: parent.verticalCenter
-                    verticalCenterOffset: (2.5 / pitchRoll.stdradius) * pitchRoll.radius
+                    verticalCenterOffset: getScaledSize(2.5)
                 }
             }
 
@@ -180,21 +191,21 @@ Item {
     }
 
     /*
-     * 设置一个定时器，每隔 500ms 就从数据源中读取数据，修正图像
+     * 设置一个定时器，每隔 100ms 就从数据源中读取数据，修正图像
     */
     Timer {
         id: updateTimer
-        interval: 500
+        interval: 100
         running: true
         repeat: true
 
         onTriggered: {
 //            console.log("Timer is triggered! ")
-//            var data = DataSource.getData();
-            var data = dataSource.getRadius()
-
-            data = [0, 0, 0]
-//            h_refresh(data[0])
+            var data = DataSource.getData();
+//            var data = [0, 0, 0];
+//            data[0]=dataSource.getHeading();
+//            data[1]=dataSource.getPitch();
+//            data[2]=dataSource.getRoll();
             refresh(data[0], data[1], data[2])
         }
     }
@@ -212,14 +223,17 @@ Item {
             /* 颜色 */
             color_gray: "#513928",
             color_blue: "#558db9",
-            color_orange: "rgba(255, 122, 0, 0.75)",
+            color_orange: "rgba(255, 122, 0, 0.8)",
+            color_red: Qt.rgba(1, 0, 0, 0.5),
             /** 线的参数 **/
             longline: getScaledSize(30),       // 长刻度线的长度
             shortline: getScaledSize(15),      // 短刻度线的长度
             lineheight: getScaledSize(2),      // 线宽
-            linegap: pitchRoll.radius / 4.5,        // 两条长刻度线之间的距离
+            mainLines: 3,                           // 每一边的长刻度线数
+            linegap: pitchRoll.radius / 3.5,        // 两条长刻度线之间的距离
             degrees: 5,                             // 相邻长线和短线之间的刻度间隔
-            mainLines: 4                            // 每一边的主要长刻度线数
+            heading: headingItem.headingAngle,
+            heading_img_height: compass_heading_img.height
         }
     }
 
@@ -228,64 +242,94 @@ Item {
      * ctx 画布上下文
     */
     function repaintCanvas(ctx) {
-        var args = getArgs()
-        ctx.lineWidth = 1
-        // 覆盖上一次画布画出的内容
-//        ctx.fillStyle = "white"
-//        ctx.arc(ox, oy, pitchRoll, 0, Math.PI * 2)
-//        ctx.fill()
-        ctx.strokeStyle = "#f0f0f0"
+        var args = getArgs();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#f0f0f0";
 
-        /* 绘制图片，无法直接获取图片的高度和宽度，位移复杂 */
+        /* 绘制图片，位移复杂 */
 //        ctx.drawImage(pitchRoll.rollCircleImg, ox, oy)
 //        ctx.drawImage(pitchRoll.baseOuterImg, ox, oy + 193.5)
 
         // 绘制圆形
         fillRound(ctx, args.ox, args.oy, args.pitch, args)
 
-        /* 绘制中心圆点 */
-        ctx.beginPath()
-        ctx.strokeStyle = "red"
-        ctx.fillStyle = "red"
-        ctx.arc(args.ox, args.oy, 2, 0, Math.PI*2)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-
         /*
          * 绘制刻度，在圆内仅显示 4 个 x 10' x 2边 个刻度
          * 移动时修改刻度示数，数字为白色
         */
-        ctx.beginPath()
-        ctx.strokeStyle = "white"
-        ctx.fillStyle = "white"
-        ctx.linewidth = 1
-        var addon = {showText: true, text: "0", base: args.pitch, mainLines: args.mainLines, txtoffset: args.longline/2+5}
-//        ctx.fontWeight = "bold"
-        for(var i = 1; i <= args.mainLines; i++) {
-            ctx.font = getFontSize(10, 5)  + "px sans-serif bold"
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.linewidth = 1;
+        var addon = {showText: true, text: "0", mainLines: args.mainLines, txtoffset: args.longline/2 + getScaledSize(5)};
+//        ctx.fontWeight = "bold";
+        ctx.font = getFontSize(10, 5)  + "px sans-serif bold";
+        addon.text = getDegree(0, args.pitch);
+        drawLine(ctx, args.ox+0, moveLineOnY(0, false), args.longline, args.lineheight, addon);
+        for(var i = 1; i <= args.mainLines + 1; i++) {
+            ctx.font = getFontSize(10, 5)  + "px sans-serif bold";
             // 圆水平的直径为界限，画出下半部分的长刻度
-            addon.text = getDegree(- i * 2 * args.degrees + addon.base)
-            drawLine(ctx, args.ox+0, args.oy+i*args.linegap, args.longline, args.lineheight, addon)
+            addon.text = getDegree(- i * 2 * args.degrees, args.pitch);
+            drawLine(ctx, args.ox+0, moveLineOnY(i, false), args.longline, args.lineheight, addon);
             // 圆水平的直径为界限，画出上半部分的长刻度
-            addon.text = getDegree(i * 2 * args.degrees + addon.base)
-            drawLine(ctx, args.ox+0, args.oy-(i*args.linegap), args.longline, args.lineheight, addon)
-            ctx.font = getFontSize(8, 4)  + "px sans-serif bold"
-            // 圆水平的直径为界限，画出下半部分的长刻度
-            addon.text = getDegree(- i * 2 * args.degrees + addon.base + args.degrees)
-            drawLine(ctx, args.ox+0, args.oy+(i-0.5)*args.linegap, args.shortline, args.lineheight, addon)
-            // 圆水平的直径为界限，画出上半部分的长刻度
-            addon.text = getDegree(i * 2 * args.degrees + addon.base - args.degrees)
-            drawLine(ctx, args.ox+0, args.oy-((i-0.5)*args.linegap), args.shortline, args.lineheight, addon)
+            addon.text = getDegree(i * 2 * args.degrees, args.pitch);
+            drawLine(ctx, args.ox+0, moveLineOnY(i, true), args.longline, args.lineheight, addon);
+            ctx.font = getFontSize(8, 4)  + "px sans-serif bold";
+            // 圆水平的直径为界限，画出下半部分的短刻度
+            addon.text = getDegree(- i * 2 * args.degrees + args.degrees, args.pitch);
+            drawLine(ctx, args.ox+0, moveLineOnY(i-0.5, false), args.shortline, args.lineheight, addon);
+            // 圆水平的直径为界限，画出上半部分的短刻度
+            addon.text = getDegree(i * 2 * args.degrees - args.degrees, args.pitch);
+            drawLine(ctx, args.ox+0, moveLineOnY(i-0.5, true), args.shortline, args.lineheight, addon);
         }
 
-        ctx.fill()
-        // 在圆心旁边标出现在的 pitch 示数
-        ctx.fillStyle = "red"
-
-        ctx.font = getFontSize(16, 8) + "px sans-serif"
-        ctx.fillText(args.pitch, args.ox + 7, args.oy + 6.5)
+        ctx.fill();
 //        ctx.stroke()
+        /* 绘制中心圆点 */
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
+        ctx.fillStyle = "red";
+        ctx.arc(args.ox, args.oy, getScaledSize(1.2), 0, Math.PI*2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+      * 计算出 Y 轴方向的偏移
+      * line    线的位置
+      * up      上半部分或下半部分
+      * off     偏移量
+      */
+    function moveLineOnY(line, up) {
+        var args = getArgs();
+        var off = 0;
+//        if(pitchRoll.lastPitch !== args.pitch) {
+//            /**
+//              * 如果当前的 pitch 值大于之前的 pitch 值，认为俯仰仪在上升
+//              * 但当 pitch 值从 179 跨越 180 变成 -179 时，此时应该是上升，但是得到的布尔值却是 false
+//            **/
+//            pitchRoll.pitchUp = (args.pitch > pitchRoll.lastPitch) ? true : false;
+//            pitchRoll.lastPitch = args.pitch;
+//        }
+        off = args.pitch % (args.degrees * 2) / (args.degrees * 2);
+
+        off = off * args.linegap ;
+        var y;
+        if(up) {
+            y = args.oy - line * args.linegap;
+        } else {
+            y = args.oy + line * args.linegap;
+        }
+//        console.log("y: " +y + "  off: " + off);
+//        if( pitchRoll.pitchUp ) {
+//            y = y + off;
+//        } else {
+//            y = y - off;
+//            console.log("down " + y)
+//        }
+
+        return y + off;
     }
 
     /*
@@ -299,19 +343,24 @@ Item {
          * 然后用 color_orange 绘制顶部的三角形
          * 作为基准（不移动，不转动）
         */
+        ctx.clearRect(args.ox - pitchRoll.radius, args.oy - pitchRoll.radius, 2*pitchRoll.radius, 2*pitchRoll.radius);
         ctx.beginPath()
         ctx.strokeStyle = args.color_orange
         ctx.fillStyle = args.color_orange
         ctx.linewidth = 1
         var height = args.lineheight*2.4
-        var radius = pitchRoll.radius/2.2
-        drawLine(ctx, args.ox + radius, args.oy-height/2, radius, height)
-        drawLine(ctx, args.ox - radius, args.oy-height/2, radius, height)
+        var length = pitchRoll.radius/2.5
+        drawLine(ctx, args.ox + length + getScaledSize(30), args.oy-height/2, length, height)
+        drawLine(ctx, args.ox - length - getScaledSize(30), args.oy-height/2, length, height)
         ctx.fill()
 //        ctx.stroke()
         // 绘制三角形
-        drawTriangle(ctx, args.ox, args.oy - pitchRoll.radius + 5, getScaledSize(30), getScaledSize(40));
+        drawTriangle(ctx, args.ox, args.oy - pitchRoll.radius + getScaledSize(5), getScaledSize(30), getScaledSize(40));
 
+        // 在圆心旁边标出现在的 pitch 示数
+        ctx.fillStyle = "red"
+        ctx.font = getFontSize(16, 8) + "px sans-serif"
+        ctx.fillText(args.pitch.toFixed(2), args.ox + getScaledSize(6.5), args.oy + getScaledSize(6.5))
     }
 
     /*
@@ -326,10 +375,9 @@ Item {
      */
     function drawLine(ctx, x, y, linelength, lineheight, addon) {
         // 矩形沿 x 负方向再平移 linelength/2，使矩形中心位于原点
-        ctx.rect(x - linelength/2, y, linelength, lineheight)
+        ctx.rect(x - linelength/2, y - lineheight /2, linelength, lineheight)
         if(addon && addon.showText) {
 //            console.log(addon.text)
-//            ctx.fillText(addon.text, x + linelength/2 + 5, y + 5.5)
             ctx.fillText(addon.text, x + addon.txtoffset, y + getScaledSize(5.5))
         }
     }
@@ -466,15 +514,17 @@ Item {
     /*
      * 返回刻度盘上的刻度
      * degree       刻度实际的数值
+     * base         当前的 pitch 值
     */
-    function getDegree(degree) {
+    function getDegree(degree, base) {
+        degree += base - base % 10;
         if(degree > 180) {
             degree = degree - 360
         } else if (degree < -180) {
             degree = degree + 360
         }
 
-        return degree
+        return degree.toFixed(2)
     }
 
     /*
@@ -539,17 +589,22 @@ Item {
      * roll   横滚角
     */
     function refresh(heading, pitch, roll) {
-        compass_heading_img.rotation = heading
+        headingItem.headingAngle = heading;
+        compass_heading_img.rotation = -heading;
         // 更新数据
-        pitchRoll.pitch = pitch
-        pitchRoll.roll = roll
+        pitchRoll.pitch = pitch;
+        pitchRoll.roll = roll;
         // 旋转图像
-        roll_circle.rotation = roll
-        pitchCanvas.rotation = roll
+        roll_circle.rotation = roll;
+        pitchCanvas.rotation = roll;
         // 重新绘制 Canvas
-        pitchCanvas.requestPaint()
+        pitchCanvas.requestPaint();
+        pitchStaticCanvas.requestPaint();
+        headingCanvas.requestPaint();
         // 更新显示文字
-        displayText.text = "航向角(heading)：" + heading + "\n俯仰角(pitch)：" + pitch + "\n横滚角(pitch)：" + roll
+        displayText.text = "航向角(heading)：" + heading.toFixed(2) +
+                "\n俯仰角(pitch)：" + pitch.toFixed(2) +
+                "\n横滚角(pitch)：" + roll.toFixed(2);
 
     }
 
@@ -561,7 +616,7 @@ Item {
      * y            绘制位置（相对画布左上角），向下为正
     */
     function drawImage(ctx, path, x, y) {
-        ctx.drawImage(path, x, y)
+        ctx.drawImage(path, x, y);
     }
 
 
@@ -569,30 +624,41 @@ Item {
 
     function h_getArgs() {
         return {
-            color_red: Qt.rgba(1, 0, 0, 0.5) ,
-            ox: heading.width / 2 ,
-            oy: heading.height / 2 ,
-            heading: heading.headingAngle,
+            // 画布中心
+            ox: headingItem.width/2,
+            oy: headingItem.height/2,
+            /* 颜色 */
+            color_red: "rgba(255, 0, 0, 0.75)",
+            heading: headingItem.headingAngle,
             heading_img_height: compass_heading_img.height
-
         }
     }
 
     function h_repaintCanvas(ctx) {
-        var args = h_getArgs()
-        var base = 24 / pitchRoll.stdradius * pitchRoll.radius
-        var height = 50 / pitchRoll.stdradius * pitchRoll.radius
-        var yoffset = - (pitchRoll.radius + 25 / pitchRoll.stdradius * pitchRoll.radius)
-        ctx.fillStyle = args.color_red
-        ctx.lineWidth=3
-        ctx.beginPath()
+        var args = h_getArgs();
+        var base = getScaledSize(24);
+        var height = getScaledSize(50);
+        var yoffset = - (pitchRoll.radius - getScaledSize(25));
+        ctx.fillStyle = args.color_red;
+        ctx.strokeStyle = args.color_red;
+        ctx.lineWidth = getScaledSize(3);
+        ctx.clearRect(args.ox - pitchRoll.radius, args.oy - pitchRoll.radius - getScaledSize(30), 2*pitchRoll.radius, 2*pitchRoll.radius);
+        ctx.beginPath();
         // 线连接处用圆角
         ctx.lineJoin="round"
         ctx.moveTo(args.ox-base/2, args.oy + yoffset);
         ctx.lineTo(args.ox+base/2, args.oy + yoffset);
-        ctx.lineTo(args.ox,    args.oy + yoffset + height);
+        ctx.lineTo(args.ox,    args.oy + yoffset - height);
         ctx.closePath();
-        ctx.fill();
+//        ctx.fill();
+        ctx.stroke();
+
+        // 在圆心旁边标出现在的 heading 示数
+        ctx.fillStyle = "red";
+        ctx.font = getFontSize(16, 8) + "px sans-serif";
+
+        ctx.fillText(args.heading.toFixed(2), args.ox - getScaledSize(16), args.oy );
+
     }
 
     /*
