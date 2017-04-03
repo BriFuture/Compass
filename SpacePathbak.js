@@ -41,6 +41,9 @@ var accuracy = 48;
 var ball_radius = 4;
 var calcIndexMode;
 
+var heading = 0;
+var pitch = 0;
+
 function initializeGL(canvas) {
     gl = canvas.getContext("canvas3d", {depth: true, antilias: true});
 
@@ -89,64 +92,52 @@ function paintGL(canvas) {
 
     gl.uniformMatrix4fv(nUniform, false, nMatrix);
 
-    var heading = canvas.heading;
-    var pitch = canvas.pitch;
+    heading = canvas.heading;
+    pitch = canvas.pitch;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
     if(canvas.drawMode === "surface") {
-//         gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
-//         gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
+        // gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
         // 绘制坐标轴
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coordIndexBuffer);
-        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
         // 绘制球形
         gl.drawElements(gl.TRIANGLES, ball_vertex_count[0], gl.UNSIGNED_SHORT, 6*2);
     } else if( canvas.drawMode === "line"){
 //        gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
 //        gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
-//        gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer);
         gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, ball_vertex_count[1], gl.UNSIGNED_SHORT, 0);
 //        gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
+        // 绘制传感器指向的方向
+//        drawPoint(gl);
     } else if (canvas.drawMode === "lessLine") {
 //        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coordIndexBuffer);
 //        gl.drawElements(gl.TRIANGLES, ball_vertex_count[0] - accuracy * accuracy*1.5, gl.UNSIGNED_SHORT, (6 + accuracy * accuracy*1.5)*2);
-
-//        gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+        // gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lessLineIndexBuffer);
-        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, ball_vertex_count[2] - accuracy*3*2, gl.UNSIGNED_SHORT, 0);
         // 绘制赤道所在的圆面
         gl.drawElements(gl.TRIANGLES, accuracy*3*2*0.25, gl.UNSIGNED_SHORT, (ball_vertex_count[2] - accuracy*3*2*0.5) * 2);
     }
 
-    // 绘制传感器指向的方向
-    drawPoint(gl, pitch, heading);
 }
 
 function initShaders() {
     var vertCode =  'attribute vec3 aVertexPosition;' +
-//                    'attribute vec3 aPointPosition;' +
                     'attribute vec3 aVertexNormal;' +  // 法线
                     'attribute vec3 aColor;' +
-
                     'uniform highp mat4 uPMatrix;' +    // 透视矩阵
                     'uniform highp mat4 uMVMatrix;'+    // 模型视图矩阵
-                    // 'uniform highp mat4 uCMatrix;' +
-
                     'uniform highp mat4 uNormalMatrix;' +   // 模型法线矩阵
-//                    'uniform int uByte;'+
                     'uniform vec3 uLightDirection;'+
                     'varying vec3 vLight;'   +
                     'void main(void) {'      +
-                            'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); '+
-//                         '} else {gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);}' +
-                        // 'highp vec4 transformNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);' +
-                        // 'r+
+                        'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); '+
                         'vLight = aColor;' +
-//                        'gl_TutorialsSize = 10.0;' +
                     '}';
     var vertShader = getShader(gl, vertCode, gl.VERTEX_SHADER);
 
@@ -166,9 +157,6 @@ function initShaders() {
     vertexPositionAttrib = gl.getAttribLocation(shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(vertexPositionAttrib);
 
-//    pointPositionAttrib = gl.getAttribLocation(shaderProgram, "aPointPosition");
-//    gl.enableVertexAttribArray(pointPositionAttrib);
-
     vertexNormalAttrib  = gl.getAttribLocation(shaderProgram, "aVertexNormal");
     // gl.enableVertexAttribArray(vertexNormalAttrib);
 
@@ -179,7 +167,6 @@ function initShaders() {
     mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     pMatrixUniform  = gl.getUniformLocation(shaderProgram, "uPMatrix");
     nUniform = gl.getUniformLocation(shaderProgram, "uNormalMatrix");
-//    byteUniform = gl.getUniformLocation(shaderProgram, "uByte");
 }
 
 /**
@@ -289,25 +276,6 @@ function initBuffers() {
     // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColorData), gl.STATIC_DRAW);
     gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
 
-    // heading & pitch
-    var vertexPoint = [
-                0,0,0,
-                0,1,0,
-                0,1,1,
-                0,0,1,
-                0,0,0,
-                0,0,1,
-                0,1,1,
-                0,1,0
-            ];
-    pointBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPoint), gl.DYNAMIC_DRAW);
-    pointIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pointIndexBuffer);
-    // 绘制正反两面
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
 }
 
 /**
@@ -330,29 +298,20 @@ function calcPointIndex(heading, pitch) {
 //    return index;
 }
 
-function drawPoint(gl, pitch, heading) {
+function drawPoint(gl) {
     // 将俯仰角转换成绘图时的 theta 角
     var u = (90-pitch)/180;
     // 绘图时的 beta 角
     var v = heading / 360;
-    /** calcVertex() 返回的是 3x1 的数组（列主序），需要用数组的 concat() 函数连成一维数组 */
-//    sensorPoint = [
-//                calcVertex(u, v, ball_radius, 2), calcVertex(u+1/accuracy, v, ball_radius, 2),
-//                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius, 2), calcVertex(u, v+1/accuracy, ball_radius, 2)
-//            ];
-    var sensorPoint = [].concat(
-                calcVertex(u, v, ball_radius+0.01, 2), calcVertex(u+1/accuracy, v, ball_radius+0.01, 2),
-                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius+0.01, 2), calcVertex(u, v+1/accuracy, ball_radius+0.01, 2),
-                calcVertex(u, v, ball_radius+0.01, 2), calcVertex(u, v+1/accuracy, ball_radius+0.01, 2),
-                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius+0.01, 2), calcVertex(u+1/accuracy, v, ball_radius+0.01, 2)
-                );
-//     console.log(sensorPoint);
-    gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(sensorPoint));
-     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pointIndexBuffer);
-    gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
-//    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0);
+    var vertex = [
+                calcVertex(u, v, ball_radius), calcVertex(u+3/accuracy, v, ball_radius), calcVertex(u+3/accuracy, v+3/accuracy, ball_radius),
+                calcVertex(u, v, ball_radius), calcVertex(u+3/accuracy, v+3/accuracy, ball_radius), calcVertex(u, v+3/accuracy, ball_radius),
+            ];
+    // console.log(vertex);
+     gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex), gl.DYNAMIC_DRAW);
+     gl.vertexAttribPointer(pointPositionAttrib, 3, gl.FLOAT, false, 0, 0);
+     gl.drawArrays(gl.TRIANGLES, 0, 6);
 //    var phindex = calcPointIndex(heading, pitch);
     /** 绘制方向向量的投影，首先偏移坐标轴的 6 个索引,再偏移 phindex*2*2 个索引（line 绘制时，每次只用 4 个索引） **/
 //    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, (6+phindex*4)*2);
@@ -500,8 +459,7 @@ function calcIndex(i, j, offset) {
  * @param   r   球半径
  * @return      顶点的坐标，用三维数组表示
 */
-function calcVertex(u, v, r, precesion) {
-    precesion = precesion ? precesion : 8;
+function calcVertex(u, v, r) {
     var st = Math.sin(Math.PI * u);
     var ct = Math.cos(Math.PI * u);
     var sb = Math.sin(Math.PI * 2 * v);
@@ -509,7 +467,7 @@ function calcVertex(u, v, r, precesion) {
     var x = r * st * cb;
     var y = r * st * sb;
     var z = r * ct;
-    return [x.toFixed(precesion), y.toFixed(precesion), z.toFixed(precesion)];
+    return [x.toFixed(8), y.toFixed(8), z.toFixed(8)];
 }
 
 function createArrayBuffer(data) {

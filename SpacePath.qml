@@ -3,107 +3,32 @@ import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
 
 //import "Ball.js" as GLcode
-import "Coordinate3D.js" as GLcode
+import "SpacePath.js" as GLcode
 
 Item {
-    width: 800
-    height: 600
+    width: 1200
+    height: 900
     visible: true
 
     MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            top: parent.top
-            left: parent.left
-        }
-
+        anchors.fill: parent
         onClicked: {
-            canvas3d.xRotAnim+=canvas3d.gap;
+            canvas3d.isRunning = !canvas3d.isRunning
         }
 
     }
-    MouseArea {
+
+    Label {
         z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            top: parent.top
-            right: parent.right
-        }
-
-        onClicked: {
-            canvas3d.xRotAnim-=canvas3d.gap;
-        }
-
-    }
-    MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            bottom: parent.bottom
-            left: parent.left
-        }
-
-        onClicked: {
-            canvas3d.yRotAnim+=canvas3d.gap;
-        }
-    }
-    MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            bottom: parent.bottom
-            right: parent.right
-        }
-
-        onClicked: {
-            canvas3d.yRotAnim-=canvas3d.gap;
-        }
-    }
-    MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            top: parent.top
-            horizontalCenter: parent.horizontalCenter
-        }
-
-        onClicked: {
-            canvas3d.zRotAnim+=canvas3d.gap;
-        }
-    }
-    MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            bottom: parent.bottom
-            horizontalCenter: parent.horizontalCenter
-        }
-
-        onClicked: {
-            canvas3d.zRotAnim-=canvas3d.gap;
-        }
-    }
-    MouseArea {
-        z: 1
-        width: parent.width / 3
-        height: parent.height / 3
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            verticalCenter: parent.verticalCenter
-        }
-
-        onClicked: {
-            canvas3d.xRotAnim = 0;
-            canvas3d.yRotAnim = 0;
-            canvas3d.zRotAnim = 0;
-        }
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.rightMargin: 80
+        width: 30
+        height: 20
+        text: "FPS: " + canvas3d.fps
+        font.pointSize: 20
+        horizontalAlignment: Text.AlignLeft
+        verticalAlignment: Text.AlignVCenter
     }
 
     Rectangle {
@@ -111,23 +36,475 @@ Item {
         z: 1
         color: "transparent"
         width: 200
-        height: 200
+        height: 300
         border.color: "blue"
-        border.width: 2
+        border.width: 1
         layer.enabled: true
         layer.smooth: true
+//        Label {
+////            anchors.fill: parent
+//            anchors.margins: 16
+//            text: "X Rot:" + (canvas3d.xRotAnim | 0) + "\n"
+//                + "Y Rot:" + (canvas3d.yRotAnim | 0) + "\n"
+//                + "Z Rot:" + (canvas3d.zRotAnim | 0) + "\n"
+//                + "FPS:" + canvas3d.fps
+//            color: "red"
+//            font.pointSize: 20
+//            horizontalAlignment: Text.AlignLeft
+//            verticalAlignment: Text.AlignVCenter
+//        }
+        /*
         Label {
-            anchors.fill: parent
-            anchors.margins: 16
-            text: "X Rot:" + (canvas3d.xRotAnim | 0) + "\n"
-                + "Y Rot:" + (canvas3d.yRotAnim | 0) + "\n"
-                + "Z Rot:" + (canvas3d.zRotAnim | 0) + "\n"
-                + "FPS:" + canvas3d.fps
-            color: "red"
-            font.pointSize: 20
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
+            id: xPosLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.topMargin: 5
+            height: 20
+            text: "X POSITION:"
         }
+        Rectangle {
+            border.color: "black"
+            anchors.top: parent.top
+            anchors.leftMargin: 5
+            anchors.left: xPosLabel.right
+            width: 50
+            height: 20
+            TextInput {
+                id: xPosInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.xPos
+                validator: DoubleValidator{bottom: -300; top: 300;}
+            }
+        }
+        Label {
+            id: yPosLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: xPosLabel.bottom
+            anchors.topMargin: 5
+            height: 20
+            text: "Y POSITION:"
+        }
+        Rectangle {
+            border.color: "black"
+            anchors.left: yPosLabel.right
+            anchors.leftMargin: 5
+            anchors.top: xPosLabel.bottom
+            width: 50
+            height: 20
+            TextInput {
+                id: yPosInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.yPos
+                validator: DoubleValidator{bottom: -300; top: 300;}
+            }
+        }
+        Label {
+            id: zPosLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: yPosLabel.bottom
+            anchors.topMargin: 5
+            height: 20
+            text: "Z POSITION:"
+        }
+        Rectangle {
+            border.color: "black"
+            anchors.left: zPosLabel.right
+            anchors.leftMargin: 5
+            anchors.top: yPosLabel.bottom
+            width: 50
+            height: 20
+            TextInput {
+                id: zPosInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.zPos
+                validator: DoubleValidator{bottom: -300; top: 300;}
+            }
+        }
+
+        Label {
+            id: xRotLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: zPosLabel.bottom
+            anchors.topMargin: 5
+            height: 20
+            text: "X ROTATION:"
+        }
+        Rectangle {
+            border.color: "black"
+            anchors.top: zPosLabel.bottom
+            anchors.leftMargin: 5
+            anchors.left: xRotLabel.right
+            width: 50
+            height: 20
+            TextInput {
+                id: xRotInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.xRotAnim
+                validator: DoubleValidator{bottom: -360; top: 360;}
+            }
+        }
+        Label {
+            id: yRotLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: xRotLabel.bottom
+            anchors.topMargin: 5
+            height: 20
+            text: "Y ROTATION:"
+        }
+        Rectangle {
+            border.color: "black"
+            anchors.left: yRotLabel.right
+            anchors.leftMargin: 5
+            anchors.top: xRotLabel.bottom
+            width: 50
+            height: 20
+            TextInput {
+                id: yRotInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.yRotAnim
+                validator: DoubleValidator{bottom: -360; top: 360;}
+            }
+        }
+        Label {
+            id: zRotLabel
+            anchors.leftMargin: 5
+            anchors.left: parent.left
+            anchors.top: yRotLabel.bottom
+            anchors.topMargin: 5
+            height: 20
+            text: "Z ROTATION:"
+        }
+        Rectangle {
+            border.color: "black"
+            anchors.left: zRotLabel.right
+            anchors.leftMargin: 5
+            anchors.top: yRotLabel.bottom
+            width: 50
+            height: 20
+            TextInput {
+                id: zRotInput
+                font.pointSize: 16
+                anchors.fill: parent
+                text: canvas3d.zRotAnim
+                validator: DoubleValidator{bottom: -360; top: 360;}
+            }
+        }
+        */
+        Rectangle {
+            id: xCameraContainer
+            width: 200
+            height: 50
+            anchors.top: parent.top
+            anchors.left: parent.left
+            color: "transparent"
+            Label {
+                id: xCameraPos
+                anchors.leftMargin: 5
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                height: 20
+                text: "X CAMARA POSITION:"
+            }
+            Rectangle {
+                border.color: "black"
+    //            anchors.top: zRotLabel.bottom
+                anchors.top: parent.top
+                anchors.leftMargin: 5
+                anchors.left: xCameraPos.right
+                width: 70
+                height: 20
+                TextInput {
+                    id: xCameraInput
+                    font.pointSize: 16
+                    anchors.fill: parent
+                    text: canvas3d.cx
+                    validator: DoubleValidator{bottom: -20; top: 20;}
+                }
+            }
+            Slider {
+                id: xCameraSlider
+                anchors.top: xCameraPos.bottom
+                maximumValue: 30.0
+                minimumValue: -30.0
+                width: 200
+                orientation: Qt.Horizontal
+                value: canvas3d.cx
+                onValueChanged: {
+                    canvas3d.cx = xCameraSlider.value.toFixed(2)
+                }
+            }
+        }
+        Rectangle {
+            id: yCameraContainer
+            width: 200
+            height: 50
+            anchors.top: xCameraContainer.bottom
+            anchors.left: parent.left
+            color: "transparent"
+            Label {
+                id: yCameraPos
+                anchors.leftMargin: 5
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                height: 20
+                text: "Y CAMARA POSITION:"
+            }
+            Rectangle {
+                border.color: "black"
+                anchors.left: yCameraPos.right
+                anchors.leftMargin: 5
+                anchors.top: parent.top
+                width: 70
+                height: 20
+                TextInput {
+                    id: yCameraInput
+                    font.pointSize: 16
+                    anchors.fill: parent
+                    text: canvas3d.cy
+                    validator: DoubleValidator{bottom: -20; top: 20;}
+                }
+            }
+            Slider {
+                id: yCameraSlider
+                anchors.top: yCameraPos.bottom
+                maximumValue: 30.0
+                minimumValue: -30.0
+                width: 200
+                orientation: Qt.Horizontal
+                value: canvas3d.cy
+                onValueChanged: {
+                    canvas3d.cy = yCameraSlider.value.toFixed(2)
+                }
+            }
+        }
+        Rectangle {
+            id: zCameraContainer
+            height: 50
+            width: 200
+            anchors.top: yCameraContainer.bottom
+            anchors.left: parent.left
+            color: "transparent"
+            Label {
+                id: zCameraPos
+                anchors.leftMargin: 5
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                height: 20
+                text: "Z CAMARA POSITION:"
+            }
+            Rectangle {
+                border.color: "black"
+                anchors.left: zCameraPos.right
+                anchors.leftMargin: 5
+                anchors.top: parent.top
+                width: 70
+                height: 20
+                TextInput {
+                    id: zCameraInput
+                    font.pointSize: 16
+                    anchors.fill: parent
+                    text: canvas3d.cz
+                    validator: DoubleValidator{bottom: -20; top: 20;}
+                }
+            }
+            Slider {
+                id: zCameraSlider
+                anchors.top: zCameraPos.bottom
+                maximumValue: 30.0
+                minimumValue: -30.0
+                width: 200
+                orientation: Qt.Horizontal
+                value: canvas3d.cz
+                onValueChanged: {
+                    canvas3d.cz = zCameraSlider.value.toFixed(2)
+                }
+            }
+        }
+
+        Button {
+            id: setButton
+            width: 50
+            height: 20
+            text: "set"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: zCameraContainer.bottom
+            onClicked: {
+//                canvas3d.xRotAnim = parseFloat(xRotInput.text)
+//                canvas3d.yRotAnim = parseFloat(yRotInput.text)
+//                canvas3d.zRotAnim = parseFloat(zRotInput.text)
+
+//                canvas3d.xPos = parseFloat(xPosInput.text)
+//                canvas3d.yPos = parseFloat(yPosInput.text)
+//                canvas3d.zPos = parseFloat(zPosInput.text)
+
+                canvas3d.cx = parseFloat(xCameraInput.text)
+                canvas3d.cy = parseFloat(yCameraInput.text)
+                canvas3d.cz = parseFloat(zCameraInput.text)
+
+                xCameraSlider.value = canvas3d.cx
+                yCameraSlider.value = canvas3d.cy
+                zCameraSlider.value = canvas3d.cz
+            }
+        }
+        Rectangle {
+            id: modeSelection
+            anchors.top: setButton.bottom
+            anchors.left: parent.left
+            height: 25
+            RadioButton {
+                id: lineDrawMode
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.leftMargin: 5
+                text: "line"
+                checked: false
+                width: 20
+                height: 20
+                onClicked: {
+                    selectRB(lineDrawMode);
+                }
+            }
+            RadioButton {
+                id: surfaceDrawMode
+                anchors.top: parent.top
+                anchors.left: lineDrawMode.right
+                anchors.leftMargin: 30
+                text: "surface"
+                checked: false
+                width: 20
+                height: 20
+                onClicked: {
+                    selectRB(surfaceDrawMode);
+                }
+            }
+            RadioButton {
+                id: lessLineDrawMode
+                anchors.top: parent.top
+                anchors.left: surfaceDrawMode.right
+                anchors.leftMargin: 46
+                text: "lessLine"
+                checked: false
+                width: 20
+                height: 20
+                onClicked: {
+                    selectRB(lessLineDrawMode);
+                }
+            }
+
+        }
+
+        Rectangle {
+            id: pitchContainer
+            height: 50
+            width: 200
+            anchors.top: modeSelection.bottom
+            anchors.left: parent.left
+            color: "transparent"
+            Label {
+                id: pitchPos
+                anchors.leftMargin: 5
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                height: 20
+                text: "PITCH:"
+            }
+            Rectangle {
+                border.color: "black"
+                anchors.left: pitchPos.right
+                anchors.leftMargin: 5
+                anchors.top: parent.top
+                width: 70
+                height: 20
+                TextInput {
+                    id: pitchInput
+                    font.pointSize: 16
+                    anchors.fill: parent
+                    text: canvas3d.pitch
+                    validator: DoubleValidator{bottom: -90; top: 90;}
+                }
+            }
+            Slider {
+                id: pitchSlider
+                anchors.top: pitchPos.bottom
+                maximumValue: 90.0
+                minimumValue: -90.0
+                width: 200
+                orientation: Qt.Horizontal
+                value: canvas3d.pitch
+                onValueChanged: {
+                    canvas3d.pitch = pitchSlider.value.toFixed(2)
+                }
+            }
+        }
+
+
+        Rectangle {
+            id: headingContainer
+            height: 50
+            width: 200
+            anchors.top: pitchContainer.bottom
+            anchors.left: parent.left
+            color: "transparent"
+            Label {
+                id: headingPos
+                anchors.leftMargin: 5
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                height: 20
+                text: "HEADING:"
+            }
+            Rectangle {
+                border.color: "black"
+                anchors.left: headingPos.right
+                anchors.leftMargin: 5
+                anchors.top: parent.top
+                width: 70
+                height: 20
+                TextInput {
+                    id: headingInput
+                    font.pointSize: 16
+                    anchors.fill: parent
+                    text: canvas3d.heading
+                    validator: DoubleValidator{bottom: 0; top: 360;}
+                }
+            }
+            Slider {
+                id: headingSlider
+                anchors.top: headingPos.bottom
+                maximumValue: 360.0
+                minimumValue: 0.0
+                width: 200
+                orientation: Qt.Horizontal
+                value: canvas3d.heading
+                onValueChanged: {
+                    canvas3d.heading = headingSlider.value.toFixed(2)
+                }
+            }
+        }
+
+    }
+    function selectRB(rb) {
+        lineDrawMode.checked = false;
+        surfaceDrawMode.checked = false;
+        lessLineDrawMode.checked = false;
+        rb.checked = true;
+//        console.log(rb.text);
+        canvas3d.drawMode = rb.text;
     }
 
     Canvas3D {
@@ -140,10 +517,21 @@ Item {
         property double xPos: 0
         property double yPos: 0
         property double zPos: 0
-        property int gap: 10
+        // camera position
+        property double cx: 12
+        property double cy: 2
+        property double cz: 3
+//        property int gap: 10
+        /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径) */
+        property double heading: 0
+        property double pitch: 0
+//        property double roll: 0
+        property string drawMode: "line"
         property bool isRunning: true
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
+//            selectRB(lessLineDrawMode)
+            selectRB(lineDrawMode)
             GLcode.initializeGL(canvas3d)
         }
 

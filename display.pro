@@ -18,3 +18,5 @@ DISTFILES +=
 
 HEADERS += \
     data.h
+
+RC_FILE = icon.rc
