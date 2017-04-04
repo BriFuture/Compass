@@ -19,7 +19,9 @@ public:
 public slots:
     double getRadius();
     double getHeading();
-
+    double getPitch();
+    double getRoll();
+    double* getData();
 };
 
 #endif // DATA_H

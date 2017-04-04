@@ -451,7 +451,7 @@ function initBuffers() {
     gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
     /*
-     * 顶点所在的面，（顶点顺序与第一个浮点数数组中表示的顶点顺序相同）
+     * 顶点所在的面的法线，（顶点顺序与第一个浮点数数组中表示的顶点顺序相同）
      * example:  0, 0, 1 表示所在的平面为 z = 1
     */
     var cubeVerticesNormalBuffer = gl.createBuffer();

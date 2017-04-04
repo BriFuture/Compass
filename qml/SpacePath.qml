@@ -14,6 +14,9 @@ Item {
         anchors.fill: parent
         onClicked: {
             canvas3d.isRunning = !canvas3d.isRunning
+            if( !canvas3d.isRunning ) {
+//                canvas3d.
+            }
         }
 
     }
@@ -518,13 +521,13 @@ Item {
         property double yPos: 0
         property double zPos: 0
         // camera position
-        property double cx: 12
-        property double cy: 2
-        property double cz: 3
+        property double cx: 16
+        property double cy: 0.0
+        property double cz: 0.0
 //        property int gap: 10
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径) */
         property double heading: 0
-        property double pitch: 0
+        property double pitch: -70
 //        property double roll: 0
         property string drawMode: "line"
         property bool isRunning: true

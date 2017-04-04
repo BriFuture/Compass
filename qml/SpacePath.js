@@ -16,7 +16,7 @@ var translationUniform;
 var mvMatrixUniform;    // 模型视图
 var pMatrixUniform;     // 透视
 var nUniform;           // 法线
-var byteUniform;
+var lightDirectionUniform;
 
 var pMatrix  = mat4.create();
 var mvMatrix = mat4.create();
@@ -25,12 +25,14 @@ var nMatrix  = mat4.create();
 // 绘制缓冲区
 var coordBuffer;
 var pointBuffer;
+var pathBuffer;
 
 var coordIndexBuffer;
 var lineIndexBuffer;
 var lessLineIndexBuffer;
 // 传感器指向
 var pointIndexBuffer;
+var pathIndexBuffer;
 
 var vertexColorBuffer;
 var lineColorBuffer;
@@ -40,9 +42,11 @@ var ball_vertex_count = [];
 var accuracy = 48;
 var ball_radius = 4;
 var calcIndexMode;
-
-var heading = 0;
-var pitch = 0;
+// 传感器路径
+var lastSensorPoint = [-1, -1];
+var sensorPath = [];
+var sensorPathIndex = [];
+var enablePath = true;
 
 function initializeGL(canvas) {
     gl = canvas.getContext("canvas3d", {depth: true, antilias: true});
@@ -91,60 +95,67 @@ function paintGL(canvas) {
     mat4.transpose(nMatrix, nMatrix);
 
     gl.uniformMatrix4fv(nUniform, false, nMatrix);
+    // 设置光照方向
+    gl.uniform3fv(lightDirectionUniform, [0.55, 0.55, 0.55]);
 
-    heading = canvas.heading;
-    pitch = canvas.pitch;
+    var heading = canvas.heading;
+    var pitch = canvas.pitch;
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+    gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
     if(canvas.drawMode === "surface") {
-        // gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
-        // gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
         // 绘制坐标轴
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coordIndexBuffer);
+        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
         // 绘制球形
         gl.drawElements(gl.TRIANGLES, ball_vertex_count[0], gl.UNSIGNED_SHORT, 6*2);
     } else if( canvas.drawMode === "line"){
-//        gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
-//        gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer);
         gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, ball_vertex_count[1], gl.UNSIGNED_SHORT, 0);
 //        gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
-        // 绘制传感器指向的方向
-//        drawPoint(gl);
     } else if (canvas.drawMode === "lessLine") {
 //        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coordIndexBuffer);
 //        gl.drawElements(gl.TRIANGLES, ball_vertex_count[0] - accuracy * accuracy*1.5, gl.UNSIGNED_SHORT, (6 + accuracy * accuracy*1.5)*2);
-        // gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
-        // gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lessLineIndexBuffer);
+        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, ball_vertex_count[2] - accuracy*3*2, gl.UNSIGNED_SHORT, 0);
         // 绘制赤道所在的圆面
         gl.drawElements(gl.TRIANGLES, accuracy*3*2*0.25, gl.UNSIGNED_SHORT, (ball_vertex_count[2] - accuracy*3*2*0.5) * 2);
     }
 
+    // 绘制传感器指向的方向
+    drawPoint(gl, pitch, heading);
 }
 
 function initShaders() {
     var vertCode =  'attribute vec3 aVertexPosition;' +
                     'attribute vec3 aVertexNormal;' +  // 法线
                     'attribute vec3 aColor;' +
+
                     'uniform highp mat4 uPMatrix;' +    // 透视矩阵
                     'uniform highp mat4 uMVMatrix;'+    // 模型视图矩阵
                     'uniform highp mat4 uNormalMatrix;' +   // 模型法线矩阵
-                    'uniform vec3 uLightDirection;'+
+                    'uniform vec3 uLightDirection;'+        // 直射光的方向
+
                     'varying vec3 vLight;'   +
                     'void main(void) {'      +
                         'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); '+
-                        'vLight = aColor;' +
+                        'highp vec3 ambientLight = vec3(0.42, 0.42, 0.42);' +  // 环境光
+                        'highp vec3 directionalLightColor = vec3(0.81, 0.81, 0.81);' +  // 直射光
+                        // 'highp vec3 directionalVector = vec3(0.75, 0.75, 0.75);' +      // 直射光的方向
+                        'highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);' +
+                        'highp float directional = max(dot(transformedNormal.xyz, uLightDirection), 0.0);' +
+                        'vLight = aColor * (ambientLight + (directionalLightColor * directional));' +
                     '}';
     var vertShader = getShader(gl, vertCode, gl.VERTEX_SHADER);
 
-    var fragCode =  'precision mediump float;'+
+    var fragCode =  'precision highp float;'+
                     'varying vec3 vLight;' +
                     'void main(void) {' +
-                        'gl_FragColor = vec4(vLight, 0.39);' +
+                        'gl_FragColor = vec4(vLight, 0.5);' +
                     '}';
     var fragShader = getShader(gl, fragCode, gl.FRAGMENT_SHADER);
 
@@ -158,15 +169,15 @@ function initShaders() {
     gl.enableVertexAttribArray(vertexPositionAttrib);
 
     vertexNormalAttrib  = gl.getAttribLocation(shaderProgram, "aVertexNormal");
-    // gl.enableVertexAttribArray(vertexNormalAttrib);
+    gl.enableVertexAttribArray(vertexNormalAttrib);
 
     colorAttrib = gl.getAttribLocation(shaderProgram, "aColor");
     gl.enableVertexAttribArray(colorAttrib);
 
-    // translationUniform = gl.getUniformLocation(shaderProgram, "translation");
     mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     pMatrixUniform  = gl.getUniformLocation(shaderProgram, "uPMatrix");
     nUniform = gl.getUniformLocation(shaderProgram, "uNormalMatrix");
+    lightDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightDirection");
 }
 
 /**
@@ -194,17 +205,6 @@ function initBuffers() {
                          2, 3,
                          4, 5];
     // 坐标轴的颜色
-    var vertexColorData = [
-                // x red
-                0.1,0.1,0,
-                0.1,0.1,0,
-                // y green
-                0,1,0,
-                0,1,0,
-                // z blue
-                0,0,1,
-                0,0,1,
-            ];
     var lineColorData = [
                 // x 
                 0.1,0.1,0,
@@ -213,8 +213,8 @@ function initBuffers() {
                 0,0.1,0,
                 0,0.1,0,
                 // z blue
-                0,0,1,
-                0,0,1,
+                0,0,0.1,
+                0,0,0.1,
             ];
 
     // 球体表面各处顶点坐标及索引
@@ -224,10 +224,10 @@ function initBuffers() {
     lineIndex.push.apply(lineIndex, ball.lineIndex);
     lessLineIndex.push.apply(lessLineIndex, ball.lessLineIndex);
     // color
-    vertexColorData.push.apply(vertexColorData, ball.vertexColor);
     lineColorData.push.apply(lineColorData, ball.lineColor);
 
     var vertexNormalData = ball.vertexNormal;
+    // vertexNormalData.concat()
 
     ball_vertex_count[0] = ball.vertexIndex.length;
     ball_vertex_count[1] = lineIndex.length;
@@ -262,60 +262,142 @@ function initBuffers() {
 
     var vertexNormalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormalData), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coord), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertexNormalAttrib, 3, gl.FLOAT, false, 0, 0);
 
     // 色彩信息
     lineColorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineColorData), gl.STATIC_DRAW);
-//    gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
-
-    // vertexColorBuffer = gl.createBuffer();
-    // gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
-    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColorData), gl.STATIC_DRAW);
     gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
 
+    // heading & pitch
+    var vertexPoint = [
+                0, 0, 0, 0.0, 0.3, 0.8, 
+                0, 1, 0, 0.0, 0.3, 0.8,
+                0, 1, 1, 0.0, 0.3, 0.8,
+                0, 0, 1, 0.0, 0.3, 0.8
+                // 0,0,0,
+                // 0,0,1,
+                // 0,1,1,
+                // 0,1,0
+            ];
+    pointBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPoint), gl.DYNAMIC_DRAW);
+    pointIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pointIndexBuffer);
+    // 绘制正反两面
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([
+                                                    0, 1, 2, 0, 2, 3, 
+                                                    0, 2, 1, 0, 3, 2
+                                                    ]), 
+                    gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 6*4, 0);
+
+    pathBuffer = gl.createBuffer();
+    // gl.bindBuffer(gl.ARRAY_BUFFER, pathBuffer);
+    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([]), gl.DYNAMIC_DRAW);
+    pathIndexBuffer = gl.createBuffer();
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([]), gl.DYNAMIC_DRAW);
 }
 
 /**
- * @deprecated
- * 通过俯仰角或者航向角计算向量与球面的交汇处
- * heading  航向角的角度，增大的方向为从 Z 轴正无穷远处向原点看时顺时针方向，范围是[0, 360)
- * pitch    俯仰角的角度，范围是[-90, 90]
+ * 绘制传感器指向的方向，如果需要记录路径的话，从当前位置开始记录路径
+ * @param {*} gl 
+ * @param {*} pitch     俯仰角的角度，范围是[-90, 90]
+ * @param {*} heading   航向角的角度，增大的方向为从 Z 轴正无穷远处向原点看时顺时针方向，范围是[0, 360)
  */
-function calcPointIndex(heading, pitch) {
-//    var hp = degToRad(heading)/ (2*Math.PI);
-//    var pp = degToRad(pitch) / (Math.PI);
-//    // 四舍五入计算出 pitch   在圆上的序号，经线序号
-//    var u = (- Math.round(pp*accuracy) + accuracy/2 - 1) % accuracy ;
-//    // 四舍五入计算出 heading 在圆上的序号，纬线序号
-//    var v = Math.round(hp*accuracy) % accuracy;
-//    /** JW:先绘制经线，后绘制纬线时，计算序号时需要用 v 乘上 accuracy 作为偏移 **/
-//    var index = u + v * accuracy;
-
-////    console.log("index: " + index)
-//    return index;
-}
-
-function drawPoint(gl) {
+function drawPoint(gl, pitch, heading) {
     // 将俯仰角转换成绘图时的 theta 角
     var u = (90-pitch)/180;
     // 绘图时的 beta 角
     var v = heading / 360;
-    var vertex = [
-                calcVertex(u, v, ball_radius), calcVertex(u+3/accuracy, v, ball_radius), calcVertex(u+3/accuracy, v+3/accuracy, ball_radius),
-                calcVertex(u, v, ball_radius), calcVertex(u+3/accuracy, v+3/accuracy, ball_radius), calcVertex(u, v+3/accuracy, ball_radius),
-            ];
-    // console.log(vertex);
-     gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex), gl.DYNAMIC_DRAW);
-     gl.vertexAttribPointer(pointPositionAttrib, 3, gl.FLOAT, false, 0, 0);
-     gl.drawArrays(gl.TRIANGLES, 0, 6);
-//    var phindex = calcPointIndex(heading, pitch);
-    /** 绘制方向向量的投影，首先偏移坐标轴的 6 个索引,再偏移 phindex*2*2 个索引（line 绘制时，每次只用 4 个索引） **/
-//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, (6+phindex*4)*2);
-//    gl.drawElements(gl.TRIANGLES)
+ 
+    var sensorPoint = getSensorPoint(u, v, 0.005, 0.0, 1, 0.6);
+//     console.log(sensorPoint);
+    gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(sensorPoint));
+    gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 6*4, 0);
+    gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 6*4, 3*4);          // 偏移量为 3 个数据 * sizeof(float)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pointIndexBuffer);
+    // 绘制斑点
+    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0);
+
+    if( enablePath ) {
+        sensorPoint = getSensorPoint(u, v, 0.002, 0.0, 0.0, 0.6);
+        // 路径相关
+        if( lastSensorPoint[0] !== u || lastSensorPoint[1] !== v) {
+            lastSensorPoint[0] = u;
+            lastSensorPoint[1] = v;
+            // 向路径中添加新的位置
+            sensorPath.push.apply(sensorPath, sensorPoint);  // 每 24 个数据意味着包含一个 SensorPoint
+            var n = sensorPath.length/24-1;
+            sensorPathIndex.push(n*4+0, n*4+1, n*4+2, n*4+0, n*4+2, n*4+3, n*4+0, n*4+2, n*4+1, n*4+0, n*4+3, n*4+2);
+            // console.log(sensorPath)
+            // console.log(sensorPathIndex)
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, pathBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sensorPath), gl.DYNAMIC_DRAW);
+        gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 6*4, 0);
+        gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 6*4, 3*4);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pathIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sensorPathIndex), gl.DYNAMIC_DRAW);
+        gl.drawElements(gl.TRIANGLES, sensorPathIndex.length, gl.UNSIGNED_SHORT, 0);
+    } else {
+        // 重置变量
+        lastSensorPoint = [-1, -1];
+        sensorPath = [];
+        sensorPathIndex = [];
+    }
+}
+/**
+ * 
+ * @param {double} u 
+ * @param {double} v 
+ * @param {*} r 
+ * @param {*} g 
+ * @param {*} b 
+ */
+function getSensorPoint(u, v, offset, r, g, b) {
+       // 控制斑点大小
+    var uoff = 1.5/180;
+    var voffp = 1.5/360/Math.sin(Math.PI*(u+uoff));
+    var voffs = 1.5/360/Math.sin(Math.PI*(u-uoff));
+    var sensorPoint = [];
+    if( u+uoff < 1/accuracy+0.01) {
+        // 进入北极领域（上极点）
+        // console.log("north poly: " + pitch);
+        var pos = calcVertex(u, v, ball_radius+offset);
+        var halflength = Math.PI * 1.6 / accuracy;
+        sensorPoint.push(
+            pos[0]-halflength, pos[1]-halflength, pos[2], r, g, b,
+            pos[0]+halflength, pos[1]-halflength, pos[2], r, g, b,
+            pos[0]+halflength, pos[1]+halflength, pos[2], r, g, b,
+            pos[0]-halflength, pos[1]+halflength, pos[2], r, g, b
+        )
+    } else if( u-uoff > 1-1/accuracy-0.01 ) {
+        // 进入南极领域（下极点）
+        // console.log("south poly: " + pitch);
+        var pos = calcVertex(u, v, ball_radius+offset);
+        var halflength = Math.PI * 1.6 / accuracy;
+        sensorPoint.push(
+            pos[0]+halflength, pos[1]-halflength, pos[2], r, g, b,
+            pos[0]+halflength, pos[1]+halflength, pos[2], r, g, b,
+            pos[0]-halflength, pos[1]+halflength, pos[2], r, g, b,
+            pos[0]-halflength, pos[1]-halflength, pos[2], r, g, b
+        )
+    } else {
+        // 不在两个极点附近
+        // console.log("not poly: " + pitch);
+        sensorPoint = [].concat(
+                    calcVertex(u-uoff, v-voffs, ball_radius+offset, 6), r, g, b,
+                    calcVertex(u+uoff, v-voffp, ball_radius+offset, 6), r, g, b,
+                    calcVertex(u+uoff, v+voffp, ball_radius+offset, 6), r, g, b,
+                    calcVertex(u-uoff, v+voffs, ball_radius+offset, 6), r, g, b
+                    );
+    }
+    return sensorPoint;
 }
 
 /**
@@ -363,47 +445,18 @@ function getBallVertex(n, r, offset, mode) {
 //                             calcIndex(i, j, offset+2), calcIndex(i, j, offset+3)
                              );
 
-//            vn.push.apply(vn, k);
-            /* 设置顶点颜色 */
-//            if( i === n/2-1 ) {
-//                lineColor.push(0.1, 0.1, 0.1,
-//                           0.1, 1, 0.1,
-//                           0.1, 1, 0.1,
-//                           0.1, 0.1, 0.1
-//                           );
-//            } else if( i === n/2 ) {
-//                lineColor.push(0.1, 1, 0.1,
-//                           0.1, 0.1, 0.1,
-//                           0.1, 0.1, 0.1,
-//                           0.1, 1, 0.1
-//                           );
-//            } else {
-//                lineColor.push(0.968*i/n, 0.766, 0.572,
-//                           0.968*i/n, 0.766, 0.572,
-//                           0.968*i/n, 0.766, 0.572,
-//                           0.968*i/n, 0.766, 0.572
-//                           );
+               lineColor.push(0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102
+                          );
 //            }
-            // vertexColor.push((0.7-0.3*i/n), (0.55-0.4*i/n), (0.76-0.7*i*n),
-            //            (0.7-0.3*i/n), (0.55-0.4*i/n), (0.76-0.7*i*n),
-            //            (0.7-0.3*i/n), (0.55-0.4*i/n), (0.76-0.7*i*n),
-            //            (0.7-0.3*i/n), (0.55-0.4*i/n), (0.76-0.7*i*n)
-            //            );
 
-            lineColor.push(0.15-0.1*i/n, 0.3-0.25*i/n, 0.3-0.26*i/n,
-                       0.15-0.1*i/n, 0.3-0.25*i/n, 0.3-0.26*i/n,
-                       0.15-0.1*i/n, 0.3-0.25*i/n, 0.3-0.26*i/n,
-                       0.15-0.1*i/n, 0.3-0.25*i/n, 0.3-0.26*i/n
-                       );
             if( i === n/2-1 ) {
                  lessLineIndex.push(calcIndex(i, j, offset+1), calcIndex(i, j, offset+2));
             }
         }
-//        lineColor.push(1-0.25, 0.3-0.25, 0.3-0.26,
-//                       1-0.25, 0.3-0.25, 0.3-0.26,
-//                       1-0.25, 0.3-0.25, 0.3-0.26,
-//                       1-0.25, 0.3-0.25, 0.3-0.26
-//                       );
+
         // 线条简单绘制
         // 绘制经线
     //  for(var m = 0; m < 12; m++) {
@@ -459,7 +512,7 @@ function calcIndex(i, j, offset) {
  * @param   r   球半径
  * @return      顶点的坐标，用三维数组表示
 */
-function calcVertex(u, v, r) {
+function calcVertex(u, v, r, precesion) {
     var st = Math.sin(Math.PI * u);
     var ct = Math.cos(Math.PI * u);
     var sb = Math.sin(Math.PI * 2 * v);
@@ -467,7 +520,10 @@ function calcVertex(u, v, r) {
     var x = r * st * cb;
     var y = r * st * sb;
     var z = r * ct;
-    return [x.toFixed(8), y.toFixed(8), z.toFixed(8)];
+    if( precesion )
+        return [x.toFixed(precesion), y.toFixed(precesion), z.toFixed(precesion)];
+    else 
+        return [x, y, z]
 }
 
 function createArrayBuffer(data) {

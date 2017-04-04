@@ -294,11 +294,11 @@ function initBuffers() {
                 0,0,0,
                 0,1,0,
                 0,1,1,
-                0,0,1,
-                0,0,0,
-                0,0,1,
-                0,1,1,
-                0,1,0
+                0,0,1
+                // 0,0,0,
+                // 0,0,1,
+                // 0,1,1,
+                // 0,1,0
             ];
     pointBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
@@ -306,7 +306,7 @@ function initBuffers() {
     pointIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pointIndexBuffer);
     // 绘制正反两面
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertexPositionAttrib, 3, gl.FLOAT, false, 0, 0);
 }
 
@@ -341,10 +341,14 @@ function drawPoint(gl, pitch, heading) {
 //                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius, 2), calcVertex(u, v+1/accuracy, ball_radius, 2)
 //            ];
     var sensorPoint = [].concat(
-                calcVertex(u, v, ball_radius+0.01, 2), calcVertex(u+1/accuracy, v, ball_radius+0.01, 2),
-                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius+0.01, 2), calcVertex(u, v+1/accuracy, ball_radius+0.01, 2),
-                calcVertex(u, v, ball_radius+0.01, 2), calcVertex(u, v+1/accuracy, ball_radius+0.01, 2),
-                calcVertex(u+1/accuracy, v+1/accuracy, ball_radius+0.01, 2), calcVertex(u+1/accuracy, v, ball_radius+0.01, 2)
+                // calcVertex(u-0.5/accuracy, v-0.5/accuracy, ball_radius+0.01, 6), calcVertex(u+0.5/accuracy, v-0.5/accuracy, ball_radius+0.01, 6),
+                // calcVertex(u+0.5/accuracy, v+0.5/accuracy, ball_radius+0.01, 6), calcVertex(u-0.5/accuracy, v+0.5/accuracy, ball_radius+0.01, 6),
+                // calcVertex(u, v, ball_radius+0.01, 6), calcVertex(u, v+1/accuracy, ball_radius+0.01, 6),
+                // calcVertex(u+1/accuracy, v+1/accuracy, ball_radius+0.01, 6), calcVertex(u+1/accuracy, v, ball_radius+0.01, 6)
+                calcVertex(u-1/180, v-1/360, ball_radius+0.01, 6), calcVertex(u+1/180, v-1/360, ball_radius+0.01, 6),
+                calcVertex(u+1/180, v+1/360, ball_radius+0.01, 6), calcVertex(u-1/180, v+1/360, ball_radius+0.01, 6)
+                // calcVertex(u-1/180, v-1/360, ball_radius+0.01, 6), calcVertex(u+1/180, v-1/360, ball_radius+0.01, 6),
+                // calcVertex(u+1/180, v+1/360, ball_radius+0.01, 6), calcVertex(u-1/180, v+1/360, ball_radius+0.01, 6),
                 );
 //     console.log(sensorPoint);
     gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);

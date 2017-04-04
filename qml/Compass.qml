@@ -1,6 +1,6 @@
 ﻿import QtQuick 2.0
 
-import "DataSource.js" as DataSource
+//import "DataSource.js" as DataSource
 
 Item {
     visible: true
@@ -55,7 +55,7 @@ Item {
             width: getScaledSize(449)
             height: getScaledSize(449)
             smooth:true
-            source: "img/heading.png"
+            source: "/img/heading.png"
 //            transformOriginPoint: point(winscreen.width/2,winscreen.height/2)
 //            transformOrigin: winscreen.Center
         }
@@ -96,8 +96,8 @@ Item {
         //  设置俯仰角的圆的半径
         property real radius: stdradius / 1000 * container.width
 
-        property string rollCircleImg : "img/compass_roll_circle.png"   // 白色基线图片
-        property string baseOuterImg: "img/compass_pr_base.png"          // 指南针底部黑框
+        property string rollCircleImg : "/img/compass_roll_circle.png"   // 白色基线图片
+        property string baseOuterImg: "/img/compass_pr_base.png"          // 指南针底部黑框
         property real pitch: 0
 //        property real lastPitch: 0
 //        property bool pitchUp: false
@@ -201,12 +201,15 @@ Item {
 
         onTriggered: {
 //            console.log("Timer is triggered! ")
-            var data = DataSource.getData();
-//            var data = [0, 0, 0];
-//            data[0]=dataSource.getHeading();
-//            data[1]=dataSource.getPitch();
-//            data[2]=dataSource.getRoll();
-            refresh(data[0], data[1], data[2])
+//            var data = DataSource.getData();
+            var data = [0, 0, 0];
+            data[0] = dataSource.getHeading();
+            data[1] = dataSource.getPitch();
+            data[2] = dataSource.getRoll();
+//            data[0] = data[0] % 360;
+//            data[1] = data[1] % 181;
+//            data[2] = data[2] % 360;
+            refresh(data[0], data[1], data[2]);
         }
     }
 
@@ -239,7 +242,7 @@ Item {
 
     /*
      * 绘制图形
-     * ctx 画布上下文
+     * @param  ctx 画布上下文
     */
     function repaintCanvas(ctx) {
         var args = getArgs();
@@ -249,7 +252,7 @@ Item {
         /* 绘制图片，位移复杂 */
 //        ctx.drawImage(pitchRoll.rollCircleImg, ox, oy)
 //        ctx.drawImage(pitchRoll.baseOuterImg, ox, oy + 193.5)
-
+        ctx.clearRect(args.ox - pitchRoll.radius, args.oy - pitchRoll.radius, 2*pitchRoll.radius, 2*pitchRoll.radius);
         // 绘制圆形
         fillRound(ctx, args.ox, args.oy, args.pitch, args)
 
@@ -297,9 +300,9 @@ Item {
 
     /**
       * 计算出 Y 轴方向的偏移
-      * line    线的位置
-      * up      上半部分或下半部分
-      * off     偏移量
+      * @param  line    线的位置
+      * @param  up      上半部分或下半部分
+      * @param  off     偏移量
       */
     function moveLineOnY(line, up) {
         var args = getArgs();
@@ -334,7 +337,7 @@ Item {
 
     /*
      * 绘制俯仰仪基线
-     * ctx    画布上下文
+     * @param  ctx    画布上下文
     */
     function drawBaseLine(ctx) {
         var args = getArgs()
@@ -363,15 +366,15 @@ Item {
         ctx.fillText(args.pitch.toFixed(2), args.ox + getScaledSize(6.5), args.oy + getScaledSize(6.5))
     }
 
-    /*
+    /**
      *
      * 画出矩形，或者画出刻度线
-     * ctx          画布上下文
-     * x            绘制位置（相对画布左上角）,向右为正,默认为 0，不用进行修改
-     * y            绘制位置（相对画布左上角），向下为正
-     * longline     绘制的长度
-     * lineheight   绘制线的高度
-     * addon        附加参数，比如是否需要绘出数字
+     * @param  ctx          画布上下文
+     * @param  x            绘制位置（相对画布左上角）,向右为正,默认为 0，不用进行修改
+     * @param  y            绘制位置（相对画布左上角），向下为正
+     * @param  longline     绘制的长度
+     * @param  lineheight   绘制线的高度
+     * @param  addon        附加参数，比如是否需要绘出数字
      */
     function drawLine(ctx, x, y, linelength, lineheight, addon) {
         // 矩形沿 x 负方向再平移 linelength/2，使矩形中心位于原点
@@ -382,14 +385,14 @@ Item {
         }
     }
 
-    /*
+    /**
      * 绘制等腰三角形，该三角形位于，以底（base）为边，以高（height）为长的矩形中
      * 等腰三角形的位移基点在两条腰连接的顶点
-     * ctx          画布上下文
-     * x            绘制位置（相对画布左上角）,向右为正,默认为 0，不用进行修改
-     * y            绘制位置（相对画布左上角），向下为正
-     * base         底边长度
-     * height       高的长度
+     * @param  ctx          画布上下文
+     * @param  x            绘制位置（相对画布左上角）,向右为正,默认为 0，不用进行修改
+     * @param  y            绘制位置（相对画布左上角），向下为正
+     * @param  base         底边长度
+     * @param  height       高的长度
     */
     function drawTriangle(ctx, x, y, base, height) {
         ctx.beginPath()
@@ -406,13 +409,13 @@ Item {
         ctx.stroke()
     }
 
-    /*
+    /**
      * 用蓝色和褐色涂满圆圈
-     * ctx          画布上下文
-     * x            绘制位置（相对画布左上角），向右为正，默认为 0，不用进行修改
-     * y            绘制位置（相对画布左上角），向下为正
-     * pitch        俯仰角
-     * addon        附加参数
+     * @param  ctx          画布上下文
+     * @param  x            绘制位置（相对画布左上角），向右为正，默认为 0，不用进行修改
+     * @param  y            绘制位置（相对画布左上角），向下为正
+     * @param  pitch        俯仰角
+     * @param  addon        附加参数
     */
     function fillRound(ctx, x, y, pitch, addon) {
         // 通过数据得出俯仰角
@@ -467,8 +470,8 @@ Item {
     /*
      * 通过俯仰角 pitch 和 addon 计算出蓝褐区域分界线的开始角度和结束角度
      * 返回上半部分和下半部分的颜色以及角度
-     * pitch  俯仰角
-     * addon  附加参数
+     * @param  pitch  俯仰角
+     * @param  addon  附加参数
     */
     function countArg(pitch, addon) {
         var arg = {start: 0, end: Math.PI, up: addon.color_blue, down: addon.color_gray, all: false}
@@ -584,9 +587,9 @@ Item {
 
     /*
      * 根据 heading, pitch 和 roll 角度刷新图像
-     * heading  航向角
-     * pitch  俯仰角
-     * roll   横滚角
+     * @param  heading  航向角
+     * @param  pitch  俯仰角
+     * @param  roll   横滚角
     */
     function refresh(heading, pitch, roll) {
         headingItem.headingAngle = heading;
@@ -604,16 +607,16 @@ Item {
         // 更新显示文字
         displayText.text = "航向角(heading)：" + heading.toFixed(2) +
                 "\n俯仰角(pitch)：" + pitch.toFixed(2) +
-                "\n横滚角(pitch)：" + roll.toFixed(2);
+                "\n横滚角(roll)：" + roll.toFixed(2);
 
     }
 
     /*
      * @Deprecated 不用画布画出图像
      * 用 ctx 将图片绘制出来
-     * ctx          画布上下文
-     * x            绘制位置（相对画布左上角），向右为正
-     * y            绘制位置（相对画布左上角），向下为正
+     * @param  ctx          画布上下文
+     * @param  x            绘制位置（相对画布左上角），向右为正
+     * @param  y            绘制位置（相对画布左上角），向下为正
     */
     function drawImage(ctx, path, x, y) {
         ctx.drawImage(path, x, y);
