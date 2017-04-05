@@ -17,5 +17,6 @@
         <file>qml/Test.qml</file>
         <file>qml/gl-matrix.js</file>
         <file>qml/SpacePath_copy.js</file>
+        <file>qml/MySlider.qml</file>
     </qresource>
 </RCC>

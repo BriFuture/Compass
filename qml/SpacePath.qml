@@ -2,23 +2,70 @@
 import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
 
-//import "Ball.js" as GLcode
 import "SpacePath.js" as GLcode
 
 Item {
+    id: windowContainer
     width: 1200
     height: 900
     visible: true
 
     MouseArea {
+        id: mouseListener
         anchors.fill: parent
-        onClicked: {
-            canvas3d.isRunning = !canvas3d.isRunning
-            if( !canvas3d.isRunning ) {
-//                canvas3d.
+        property int lpx: 0
+        property int lpy: 0
+        property int mousex: 1
+        property int mousey: 1
+//        onClicked: {
+//            console.log("clicked ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY)
+//        }
+        onMouseXChanged: {
+            if(mouseListener.pressed) {
+//                console.log("clicked x ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY + "  --> " + mouseListener.mousex++);
+                mouseDraged();
+                lpx = mouseListener.mouseX
+            }
+        }
+        onMouseYChanged: {
+            if(mouseListener.pressed) {
+//                console.log("clicked y ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY + "  --> " + mouseListener.mousey++);
+                mouseDraged();
+                lpy = mouseListener.mouseY;
             }
         }
 
+//        onPressAndHold: {
+//            console.log("pressed and hold ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY)
+//        }
+        /** onPressed and onReleased 实现拖拽操作 */
+        onPressed: {
+//            console.log("pressed  ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY)
+            lpx = mouseListener.mouseX;
+            lpy = mouseListener.mouseY;
+        }
+    }
+
+    function mouseDraged() {
+        var uoffset = (mouseListener.mouseY - mouseListener.lpy) / windowContainer.height;
+        var voffset = (mouseListener.mouseX - mouseListener.lpx) / windowContainer.width;
+        var u = canvas3d.ctheta;
+        var v = canvas3d.cbeta;
+//            console.log("released ==> " + uoffset + " ,  " + voffset);
+        u += uoffset;
+        v -= voffset;
+        if( u < 0.001 ) {
+            u = 0.001;
+        } else if ( u > 0.999) {
+            u = 0.999;
+        }
+
+
+        v = (v * 100) % 100 / 100;
+//            console.log("released ==> " + u + " ,  " + v);
+        cameraThetaContainer.sliderValue = u;
+        cameraBetaContainer.sliderValue  = v;
+        moveCamera();
     }
 
     Label {
@@ -44,18 +91,7 @@ Item {
         border.width: 1
         layer.enabled: true
         layer.smooth: true
-//        Label {
-////            anchors.fill: parent
-//            anchors.margins: 16
-//            text: "X Rot:" + (canvas3d.xRotAnim | 0) + "\n"
-//                + "Y Rot:" + (canvas3d.yRotAnim | 0) + "\n"
-//                + "Z Rot:" + (canvas3d.zRotAnim | 0) + "\n"
-//                + "FPS:" + canvas3d.fps
-//            color: "red"
-//            font.pointSize: 20
-//            horizontalAlignment: Text.AlignLeft
-//            verticalAlignment: Text.AlignVCenter
-//        }
+
         /*
         Label {
             id: xPosLabel
@@ -203,168 +239,112 @@ Item {
             }
         }
         */
-        Rectangle {
+        /*
+        MySlider {
             id: xCameraContainer
-            width: 200
+            labelText: "X CAMARA POSITION: "
             height: 50
+            width: 200
+            anchors.left: parent.left
             anchors.top: parent.top
-            anchors.left: parent.left
-            color: "transparent"
-            Label {
-                id: xCameraPos
-                anchors.leftMargin: 5
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                height: 20
-                text: "X CAMARA POSITION:"
-            }
-            Rectangle {
-                border.color: "black"
-    //            anchors.top: zRotLabel.bottom
-                anchors.top: parent.top
-                anchors.leftMargin: 5
-                anchors.left: xCameraPos.right
-                width: 70
-                height: 20
-                TextInput {
-                    id: xCameraInput
-                    font.pointSize: 16
-                    anchors.fill: parent
-                    text: canvas3d.cx
-                    validator: DoubleValidator{bottom: -20; top: 20;}
-                }
-            }
-            Slider {
-                id: xCameraSlider
-                anchors.top: xCameraPos.bottom
-                maximumValue: 30.0
-                minimumValue: -30.0
-                width: 200
-                orientation: Qt.Horizontal
-                value: canvas3d.cx
-                onValueChanged: {
-                    canvas3d.cx = xCameraSlider.value.toFixed(2)
-                }
+            sliderMaxValue: 30.0
+            sliderMinValue: -30.0
+            sliderValue: canvas3d.cx
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.cx = xCameraContainer.sliderValue.toFixed(2)
             }
         }
-        Rectangle {
+
+        MySlider {
             id: yCameraContainer
-            width: 200
+            labelText: "Y CAMARA POSITION: "
             height: 50
+            width: 200
+            anchors.left: parent.left
             anchors.top: xCameraContainer.bottom
-            anchors.left: parent.left
-            color: "transparent"
-            Label {
-                id: yCameraPos
-                anchors.leftMargin: 5
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                height: 20
-                text: "Y CAMARA POSITION:"
-            }
-            Rectangle {
-                border.color: "black"
-                anchors.left: yCameraPos.right
-                anchors.leftMargin: 5
-                anchors.top: parent.top
-                width: 70
-                height: 20
-                TextInput {
-                    id: yCameraInput
-                    font.pointSize: 16
-                    anchors.fill: parent
-                    text: canvas3d.cy
-                    validator: DoubleValidator{bottom: -20; top: 20;}
-                }
-            }
-            Slider {
-                id: yCameraSlider
-                anchors.top: yCameraPos.bottom
-                maximumValue: 30.0
-                minimumValue: -30.0
-                width: 200
-                orientation: Qt.Horizontal
-                value: canvas3d.cy
-                onValueChanged: {
-                    canvas3d.cy = yCameraSlider.value.toFixed(2)
-                }
+            sliderMaxValue: 30.0
+            sliderMinValue: -30.0
+            sliderValue: canvas3d.cy
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.cy = yCameraContainer.sliderValue.toFixed(2)
             }
         }
-        Rectangle {
+
+        MySlider {
             id: zCameraContainer
+            labelText: "Z CAMARA POSITION: "
             height: 50
             width: 200
-            anchors.top: yCameraContainer.bottom
             anchors.left: parent.left
-            color: "transparent"
-            Label {
-                id: zCameraPos
-                anchors.leftMargin: 5
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                height: 20
-                text: "Z CAMARA POSITION:"
+            anchors.top: yCameraContainer.bottom
+            sliderMaxValue: 30.0
+            sliderMinValue: -30.0
+            sliderValue: canvas3d.cz
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.cz = zCameraContainer.sliderValue.toFixed(2)
             }
-            Rectangle {
-                border.color: "black"
-                anchors.left: zCameraPos.right
-                anchors.leftMargin: 5
-                anchors.top: parent.top
-                width: 70
-                height: 20
-                TextInput {
-                    id: zCameraInput
-                    font.pointSize: 16
-                    anchors.fill: parent
-                    text: canvas3d.cz
-                    validator: DoubleValidator{bottom: -20; top: 20;}
-                }
-            }
-            Slider {
-                id: zCameraSlider
-                anchors.top: zCameraPos.bottom
-                maximumValue: 30.0
-                minimumValue: -30.0
-                width: 200
-                orientation: Qt.Horizontal
-                value: canvas3d.cz
-                onValueChanged: {
-                    canvas3d.cz = zCameraSlider.value.toFixed(2)
-                }
+        }
+        */
+
+        MySlider {
+            id: cameraThetaContainer
+            labelText: "CAMARA THETA: "
+            height: 50
+            width: 200
+            anchors.left: parent.left
+            anchors.top: parent.top
+            sliderMaxValue: 0.999
+            sliderMinValue: 0.001
+            sliderValue: canvas3d.ctheta
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.ctheta = cameraThetaContainer.sliderValue.toFixed(3)
+                moveCamera()
             }
         }
 
-        Button {
-            id: setButton
-            width: 50
-            height: 20
-            text: "set"
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: zCameraContainer.bottom
-            onClicked: {
-//                canvas3d.xRotAnim = parseFloat(xRotInput.text)
-//                canvas3d.yRotAnim = parseFloat(yRotInput.text)
-//                canvas3d.zRotAnim = parseFloat(zRotInput.text)
 
-//                canvas3d.xPos = parseFloat(xPosInput.text)
-//                canvas3d.yPos = parseFloat(yPosInput.text)
-//                canvas3d.zPos = parseFloat(zPosInput.text)
 
-                canvas3d.cx = parseFloat(xCameraInput.text)
-                canvas3d.cy = parseFloat(yCameraInput.text)
-                canvas3d.cz = parseFloat(zCameraInput.text)
-
-                xCameraSlider.value = canvas3d.cx
-                yCameraSlider.value = canvas3d.cy
-                zCameraSlider.value = canvas3d.cz
+        MySlider {
+            id: cameraBetaContainer
+            labelText: "CAMARA BETA: "
+            height: 50
+            width: 200
+            anchors.left: parent.left
+            anchors.top: cameraThetaContainer.bottom
+            sliderMaxValue: 0.999
+            sliderMinValue: -0.999
+            sliderValue: canvas3d.cbeta
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.cbeta = cameraBetaContainer.sliderValue.toFixed(3)
+                moveCamera()
             }
         }
+
+        MySlider {
+            id: cameraDisContainer
+            labelText: "DISTANCE: "
+            height: 50
+            width: 200
+            anchors.left: parent.left
+            anchors.top: cameraBetaContainer.bottom
+            sliderMaxValue: 30.0
+            sliderMinValue: -30.0
+            sliderValue: canvas3d.cd
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.cd = cameraDisContainer.sliderValue.toFixed(2)
+                moveCamera()
+            }
+        }
+
         Rectangle {
             id: modeSelection
-            anchors.top: setButton.bottom
+            anchors.top: cameraDisContainer.bottom
             anchors.left: parent.left
             height: 25
             RadioButton {
@@ -409,97 +389,90 @@ Item {
 
         }
 
-        Rectangle {
+        MySlider {
             id: pitchContainer
+            labelText: "PITCH: "
             height: 50
             width: 200
-            anchors.top: modeSelection.bottom
             anchors.left: parent.left
-            color: "transparent"
-            Label {
-                id: pitchPos
-                anchors.leftMargin: 5
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                height: 20
-                text: "PITCH:"
-            }
-            Rectangle {
-                border.color: "black"
-                anchors.left: pitchPos.right
-                anchors.leftMargin: 5
-                anchors.top: parent.top
-                width: 70
-                height: 20
-                TextInput {
-                    id: pitchInput
-                    font.pointSize: 16
-                    anchors.fill: parent
-                    text: canvas3d.pitch
-                    validator: DoubleValidator{bottom: -90; top: 90;}
-                }
-            }
-            Slider {
-                id: pitchSlider
-                anchors.top: pitchPos.bottom
-                maximumValue: 90.0
-                minimumValue: -90.0
-                width: 200
-                orientation: Qt.Horizontal
-                value: canvas3d.pitch
-                onValueChanged: {
-                    canvas3d.pitch = pitchSlider.value.toFixed(2)
-                }
+            anchors.top: modeSelection.bottom
+            sliderMaxValue: 180
+            sliderMinValue: -180
+            sliderValue: canvas3d.pitch
+            sliderWidth: 200
+            onSliderValueChanged: {
+                canvas3d.pitch = pitchContainer.sliderValue.toFixed(3)
             }
         }
 
-
-        Rectangle {
+        MySlider {
             id: headingContainer
+            labelText: "HEADING: "
             height: 50
             width: 200
             anchors.top: pitchContainer.bottom
             anchors.left: parent.left
-            color: "transparent"
-            Label {
-                id: headingPos
-                anchors.leftMargin: 5
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.topMargin: 5
-                height: 20
-                text: "HEADING:"
-            }
-            Rectangle {
-                border.color: "black"
-                anchors.left: headingPos.right
-                anchors.leftMargin: 5
-                anchors.top: parent.top
-                width: 70
-                height: 20
-                TextInput {
-                    id: headingInput
-                    font.pointSize: 16
-                    anchors.fill: parent
-                    text: canvas3d.heading
-                    validator: DoubleValidator{bottom: 0; top: 360;}
-                }
-            }
-            Slider {
-                id: headingSlider
-                anchors.top: headingPos.bottom
-                maximumValue: 360.0
-                minimumValue: 0.0
-                width: 200
-                orientation: Qt.Horizontal
-                value: canvas3d.heading
-                onValueChanged: {
-                    canvas3d.heading = headingSlider.value.toFixed(2)
-                }
+            sliderMaxValue: 360
+            sliderMinValue: 0
+            sliderValue: canvas3d.heading
+            sliderWidth: 200
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                canvas3d.heading = headingContainer.sliderValue.toFixed(3)
             }
         }
 
+        Button {
+            id: setButton
+            width: 50
+            height: 20
+            text: "set"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: -50
+            anchors.top: headingContainer.bottom
+            onClicked: {
+//                canvas3d.xRotAnim = parseFloat(xRotInput.text)
+//                canvas3d.yRotAnim = parseFloat(yRotInput.text)
+//                canvas3d.zRotAnim = parseFloat(zRotInput.text)
+
+//                canvas3d.xPos = parseFloat(xPosInput.text)
+//                canvas3d.yPos = parseFloat(yPosInput.text)
+//                canvas3d.zPos = parseFloat(zPosInput.text)
+
+//                canvas3d.cx = parseFloat(xCameraContainer.text)
+//                canvas3d.cy = parseFloat(yCameraContainer.text)
+//                canvas3d.cz = parseFloat(zCameraContainer.text)
+
+//                xCameraContainer.sliderValue = canvas3d.cx
+//                yCameraContainer.sliderValue = canvas3d.cy
+//                zCameraContainer.sliderValue = canvas3d.cz
+
+                canvas3d.pitch = parseFloat(pitchContainer.text)
+                canvas3d.heading = parseFloat(headingContainer.text)
+
+                pitchContainer.sliderValue = canvas3d.pitch
+                headingContainer.sliderValue = canvas3d.heading
+            }
+        }
+
+        Button {
+            id: enablePathButton
+            width: 70
+            height: 20
+            text: "Cancle Path"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 20
+            anchors.top: headingContainer.bottom
+            onClicked: {
+                if(canvas3d.enablePath) {
+                    canvas3d.enablePath = false;
+                    enablePathButton.text = "Draw Path"
+                } else {
+                    canvas3d.enablePath = true;
+                    enablePathButton.text = "Cancle Path"
+                }
+            }
+        }
     }
     function selectRB(rb) {
         lineDrawMode.checked = false;
@@ -508,6 +481,13 @@ Item {
         rb.checked = true;
 //        console.log(rb.text);
         canvas3d.drawMode = rb.text;
+    }
+
+    function moveCamera() {
+        var pos = GLcode.calcVertex(1-canvas3d.ctheta, canvas3d.cbeta, canvas3d.cd)
+        canvas3d.cx = pos[0].toFixed(2)
+        canvas3d.cy = pos[1].toFixed(2)
+        canvas3d.cz = pos[2].toFixed(2)
     }
 
     Canvas3D {
@@ -521,13 +501,19 @@ Item {
         property double yPos: 0
         property double zPos: 0
         // camera position
-        property double cx: 16
+        // distance between camera's position and origin position
+        property double cd: 15
+        property double ctheta: 0.5
+        property double cbeta: 0.0
+        property double cx: 15
         property double cy: 0.0
         property double cz: 0.0
 //        property int gap: 10
-        /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径) */
+        /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property double heading: 0
         property double pitch: -70
+        property double radius: 4
+        property bool enablePath: true
 //        property double roll: 0
         property string drawMode: "line"
         property bool isRunning: true
