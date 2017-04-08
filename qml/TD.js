@@ -54,6 +54,7 @@ function initializeGL(canvas) {
 
     // load Textures
     var qtLogoImage = TextureImageFactory.newTexImage()
+    qtLogoImage.src = "qrc:/img/compass.ico"
     qtLogoImage.imageLoaded.connect(function() {
         // 成功加载图片
         console.log("Texture loaded, " + qtLogoImage.src);
@@ -81,7 +82,6 @@ function initializeGL(canvas) {
         console.log("Texture load failed, " + qtLogoImage.src)
     })
 
-    qtLogoImage.src = "qrc:/img/compass.ico"
 }
 
 function paintGL(canvas) {

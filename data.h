@@ -15,6 +15,8 @@ public:
     void view();
     void view3D();
     double heading;
+    double pitch;
+    double roll;
 
 public slots:
     double getRadius();

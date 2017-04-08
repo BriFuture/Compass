@@ -10,12 +10,11 @@ Rectangle {
     color: "transparent"
     property string labelText: "label"
 //    property var onSliderValueChanged
-    property double sliderValue: 0
+    property alias sliderValue: slider.value
     property double sliderMaxValue: 0
     property double sliderMinValue: 0
     property double sliderWidth: 0
     property alias text: textInput.text
-//    onSliderValueChanged:
     Label {
         id: labelShow
         anchors.leftMargin: 5
@@ -47,9 +46,9 @@ Rectangle {
         orientation: Qt.Horizontal
         maximumValue: container.sliderMaxValue
         minimumValue: container.sliderMinValue
-        value: container.sliderValue
-        onValueChanged: {
-            container.sliderValue = slider.value;
-        }
+//        value: container.sliderValue
+//        onValueChanged: {
+//            container.sliderValue = slider.value;
+//        }
     }
 }

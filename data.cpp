@@ -4,6 +4,8 @@
 
 Data::Data() {
     heading = 0;
+    pitch = 0;
+    roll = 0;
 }
 
 
@@ -17,14 +19,11 @@ void Data::view() {
     // 设置窗口图标
     QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
     compassview->setIcon(icon);
-//    compassview->set
     // 设置窗口缩放时，根对象也会随之缩放
     compassview->setResizeMode(QQuickView::SizeRootObjectToView);
     compassview->setTitle("Compass heading pitch & roll");
     compassview->show();
 
-//        QQmlApplicationEngine engine;
-//        engine.load(QUrl(QStringLiteral("qrc:/Test.qml")));
 }
 
 void Data::view3D() {
@@ -49,15 +48,18 @@ double Data::getRadius() {
 }
 
 double Data::getHeading() {
-    return heading++;
+    heading += 1.025;
+    return heading;
 }
 
 double Data::getPitch() {
-    return heading++;
+    pitch += 0.5223;
+    return pitch;
 }
 
 double Data::getRoll() {
-    return heading++;
+    roll += 2.3417;
+    return roll;
 }
 
 double* Data::getData() {

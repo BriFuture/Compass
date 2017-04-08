@@ -6,7 +6,7 @@ import "SpacePath.js" as GLcode
 
 Item {
     id: windowContainer
-    width: 1200
+    width: 1400
     height: 900
     visible: true
 
@@ -65,7 +65,7 @@ Item {
 //            console.log("released ==> " + u + " ,  " + v);
         cameraThetaContainer.sliderValue = u;
         cameraBetaContainer.sliderValue  = v;
-        moveCamera();
+        rotateCamera();
     }
 
     Label {
@@ -84,9 +84,9 @@ Item {
     Rectangle {
         id: textureSource
         z: 1
-        color: "transparent"
-        width: 200
-        height: 350
+        color: "#F9F9F9"
+        width: 220
+        height: parent.height
         border.color: "blue"
         border.width: 1
         layer.enabled: true
@@ -239,20 +239,22 @@ Item {
             }
         }
         */
-        /*
+
+        /** xyz controls camera's position **/
         MySlider {
             id: xCameraContainer
             labelText: "X CAMARA POSITION: "
             height: 50
-            width: 200
+            width: parent.width
+            visible: false
             anchors.left: parent.left
             anchors.top: parent.top
             sliderMaxValue: 30.0
             sliderMinValue: -30.0
             sliderValue: canvas3d.cx
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cx = xCameraContainer.sliderValue.toFixed(2)
+                canvas3d.cx = sliderValue.toFixed(2)
             }
         }
 
@@ -260,15 +262,16 @@ Item {
             id: yCameraContainer
             labelText: "Y CAMARA POSITION: "
             height: 50
-            width: 200
+            width: parent.width
+            visible: false
             anchors.left: parent.left
             anchors.top: xCameraContainer.bottom
             sliderMaxValue: 30.0
             sliderMinValue: -30.0
             sliderValue: canvas3d.cy
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cy = yCameraContainer.sliderValue.toFixed(2)
+                canvas3d.cy = sliderValue.toFixed(2)
             }
         }
 
@@ -276,72 +279,53 @@ Item {
             id: zCameraContainer
             labelText: "Z CAMARA POSITION: "
             height: 50
-            width: 200
+            width: parent.width
+            visible: false
             anchors.left: parent.left
             anchors.top: yCameraContainer.bottom
             sliderMaxValue: 30.0
             sliderMinValue: -30.0
             sliderValue: canvas3d.cz
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cz = zCameraContainer.sliderValue.toFixed(2)
+                canvas3d.cz = sliderValue.toFixed(2)
             }
         }
-        */
 
+        /** theta beta radius controls camera's position**/
         MySlider {
             id: cameraThetaContainer
             labelText: "CAMARA THETA: "
             height: 50
-            width: 200
-            visible: false
+            width: parent.width
+//            visible: false
             anchors.left: parent.left
             anchors.top: parent.top
             sliderMaxValue: 0.999
             sliderMinValue: 0.001
             sliderValue: canvas3d.ctheta
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
                 canvas3d.ctheta = sliderValue.toFixed(3)
-                moveCamera()
+                rotateCamera()
             }
         }
-
-
 
         MySlider {
             id: cameraBetaContainer
             labelText: "CAMARA BETA: "
             height: 50
-            width: 200
-            visible: false
+            width: parent.width
+//            visible: false
             anchors.left: parent.left
             anchors.top: cameraThetaContainer.bottom
             sliderMaxValue: 0.999
             sliderMinValue: -0.999
             sliderValue: canvas3d.cbeta
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
                 canvas3d.cbeta = sliderValue.toFixed(3)
-                moveCamera()
-            }
-        }
-
-        MySlider {
-            id: ballRadiusContainer
-            labelText: "BALL RADIUS: "
-            height: 50
-            width: 200
-            anchors.left: parent.left
-//            anchors.top: cameraBetaContainer.bottom
-            anchors.top: parent.top
-            sliderMaxValue: 10.0
-            sliderMinValue: 2.0
-            sliderValue: canvas3d.radius
-            sliderWidth: 200
-            onSliderValueChanged: {
-                canvas3d.radius = sliderValue.toFixed(2)
-//                console.log(canvas3d.radius)
+                rotateCamera()
             }
         }
 
@@ -349,31 +333,51 @@ Item {
             id: cameraDisContainer
             labelText: "DISTANCE: "
             height: 50
-            width: 200
+            width: parent.width
             anchors.left: parent.left
-            anchors.top: ballRadiusContainer.bottom
+            anchors.top: cameraBetaContainer.bottom
 //            anchors.top: parent.top
             sliderMaxValue: 30.0
-            sliderMinValue: -30.0
-            sliderValue: canvas3d.cd
-            sliderWidth: 200
+            sliderMinValue: 0.0
+            sliderValue: canvas3d.cdis
+            sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cd = sliderValue.toFixed(2)
-                moveCamera()
+                canvas3d.cdis = sliderValue.toFixed(3)
+                rotateCamera()
             }
         }
+
+        MySlider {
+            id: ballRadiusContainer
+            labelText: "BALL RADIUS: "
+            height: 50
+            width: parent.width
+            anchors.left: parent.left
+            anchors.top: cameraDisContainer.bottom
+//            anchors.top: parent.top
+            sliderMaxValue: 10.0
+            sliderMinValue: 2.0
+            sliderValue: canvas3d.radius
+            sliderWidth: parent.width
+            onSliderValueChanged: {
+                canvas3d.radius = sliderValue.toFixed(2)
+//                console.log(canvas3d.radius)
+            }
+        }
+
+
 
         MySlider {
             id: lineWidthContainer
             labelText: "LINE WIDTH: "
             height: 50
-            width: 200
+            width: parent.width
             anchors.left: parent.left
-            anchors.top: cameraDisContainer.bottom
+            anchors.top: ballRadiusContainer.bottom
             sliderMaxValue: 10.0
             sliderMinValue: 1.0
             sliderValue: canvas3d.line_width
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
                 canvas3d.line_width = sliderValue.toFixed(2)
             }
@@ -383,21 +387,37 @@ Item {
             id: pointSizeContainer
             labelText: "POINT SIZE: "
             height: 50
-            width: 200
+            width: parent.width
             anchors.left: parent.left
             anchors.top: lineWidthContainer.bottom
-            sliderMaxValue: 1.5
-            sliderMinValue: 0.15
+            sliderMaxValue: 1.0
+            sliderMinValue: 0.05
             sliderValue: canvas3d.point_size
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
                 canvas3d.point_size = sliderValue.toFixed(2)
             }
         }
 
+        MySlider {
+            id: pathSizeContainer
+            labelText: "PATH WIDTH SIZE: "
+            height: 50
+            width: parent.width
+            anchors.left: parent.left
+            anchors.top: pointSizeContainer.bottom
+            sliderMaxValue: 1.0
+            sliderMinValue: 0.1
+            sliderValue: canvas3d.path_size
+            sliderWidth: parent.width
+            onSliderValueChanged: {
+                canvas3d.path_size = sliderValue.toFixed(2)
+            }
+        }
+
         Rectangle {
             id: modeSelection
-            anchors.top: pointSizeContainer.bottom
+            anchors.top: pathSizeContainer.bottom
             anchors.left: parent.left
             height: 25
             RadioButton {
@@ -446,13 +466,13 @@ Item {
             id: pitchContainer
             labelText: "PITCH: "
             height: 50
-            width: 200
+            width: parent.width
             anchors.left: parent.left
             anchors.top: modeSelection.bottom
             sliderMaxValue: 180
             sliderMinValue: -180
             sliderValue: canvas3d.pitch
-            sliderWidth: 200
+            sliderWidth: parent.width
             onSliderValueChanged: {
                 canvas3d.pitch = pitchContainer.sliderValue.toFixed(3)
             }
@@ -462,16 +482,80 @@ Item {
             id: headingContainer
             labelText: "HEADING: "
             height: 50
-            width: 200
+            width: parent.width
             anchors.top: pitchContainer.bottom
             anchors.left: parent.left
             sliderMaxValue: 360
             sliderMinValue: 0
             sliderValue: canvas3d.heading
-            sliderWidth: 200
+            sliderWidth: parent.width
 //            inputText: canvas3d.heading
             onSliderValueChanged: {
                 canvas3d.heading = headingContainer.sliderValue.toFixed(3)
+            }
+        }
+
+        Rectangle {
+            id: checkBoxContainer
+            width: parent.width
+            height: 25
+            anchors.left: parent.left
+            anchors.top: headingContainer.bottom
+            color: "transparent"
+
+            CheckBox {
+                id: drawPathBox
+                height: parent.height
+                text: "drawPath"
+                anchors.left: parent.left
+                checked: true
+                onCheckedChanged: {
+                    if(checked) {
+                        canvas3d.enable_path = true;
+                    } else {
+                        canvas3d.enable_path = false;
+                    }
+                }
+            }
+            CheckBox {
+                id: cubeBox
+                height: parent.height
+                text: "drawCube"
+                anchors.left: drawPathBox.right
+                checked: true
+                onCheckedChanged: {
+                    if(checked) {
+                        canvas3d.enable_cube = true;
+                    } else {
+                        canvas3d.enable_cube = false;
+                    }
+                }
+            }
+            CheckBox {
+                id: axisBox
+                height: parent.height
+                text: "angle-axis"
+                checked: true
+                anchors.left: cubeBox.right
+                onCheckedChanged: {
+                    if(checked) {
+                        cameraBetaContainer.visible = true;
+                        cameraDisContainer.visible  = true;
+                        cameraThetaContainer.visible= true;
+
+                        xCameraContainer.visible    = false;
+                        yCameraContainer.visible    = false;
+                        zCameraContainer.visible    = false;
+                    } else {
+                        cameraBetaContainer.visible = false;
+                        cameraDisContainer.visible  = false;
+                        cameraThetaContainer.visible= false;
+
+                        xCameraContainer.visible    = true;
+                        yCameraContainer.visible    = true;
+                        zCameraContainer.visible    = true;
+                    }
+                }
             }
         }
 
@@ -482,7 +566,7 @@ Item {
             text: "set"
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.horizontalCenterOffset: -50
-            anchors.top: headingContainer.bottom
+            anchors.top: checkBoxContainer.bottom
             onClicked: {
 //                canvas3d.xRotAnim = parseFloat(xRotInput.text)
 //                canvas3d.yRotAnim = parseFloat(yRotInput.text)
@@ -496,35 +580,45 @@ Item {
 //                canvas3d.cy = parseFloat(yCameraContainer.text)
 //                canvas3d.cz = parseFloat(zCameraContainer.text)
 
-//                xCameraContainer.sliderValue = canvas3d.cx
-//                yCameraContainer.sliderValue = canvas3d.cy
-//                zCameraContainer.sliderValue = canvas3d.cz
+                if( axisBox.checked ) {
+                    canvas3d.ctheta = parseFloat(cameraThetaContainer.text)
+                    canvas3d.cbeta  = parseFloat(cameraBetaContainer.text)
+                    canvas3d.cdis   = parseFloat(cameraDisContainer.text)
+                    console.log( "checked " );
+                } else {
+                    canvas3d.cx = parseFloat(xCameraContainer.text)
+                    canvas3d.cy = parseFloat(yCameraContainer.text)
+                    canvas3d.cz = parseFloat(zCameraContainer.text)
+                }
 
                 pitchContainer.sliderValue = parseFloat(pitchContainer.text)
                 headingContainer.sliderValue = parseFloat(headingContainer.text)
                 cameraDisContainer.sliderValue = parseFloat(cameraDisContainer.text)
-                ballRadiusContainer.sliderValue = parserFloat(ballRadiusContainer.text)
+                ballRadiusContainer.sliderValue = parseFloat(ballRadiusContainer.text)
                 lineWidthContainer.sliderValue = parseFloat(lineWidthContainer.text)
                 pointSizeContainer.sliderValue = parseFloat(pointSizeContainer.text)
+
             }
         }
 
         Button {
-            id: enablePathButton
+            id: resetButton
             width: 70
             height: 20
-            text: "Cancle Path"
+            text: "reset"
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.horizontalCenterOffset: 20
-            anchors.top: headingContainer.bottom
+            anchors.top: checkBoxContainer.bottom
             onClicked: {
-                if(canvas3d.enable_path) {
-                    canvas3d.enable_path = false;
-                    enablePathButton.text = "Draw Path"
-                } else {
-                    canvas3d.enable_path = true;
-                    enablePathButton.text = "Cancle Path"
-                }
+                canvas3d.ctheta = 0.65
+                canvas3d.cbeta  = 0.5
+
+                rotateCamera();
+//                canvas3d.pitchOffset = canvas3d.pitch
+                canvas3d.headingOffset = canvas3d.heading
+                var angle = GLcode.calcAngle(canvas3d.pitch, 0);
+                var u = angle[0], v = angle[1];
+                GLcode.resetPath(u, v);
             }
         }
     }
@@ -537,8 +631,8 @@ Item {
         canvas3d.drawMode = rb.text;
     }
 
-    function moveCamera() {
-        var pos = GLcode.calcVertex(1-canvas3d.ctheta, canvas3d.cbeta, canvas3d.cd)
+    function rotateCamera() {
+        var pos = GLcode.calcVertex(1-canvas3d.ctheta, canvas3d.cbeta, canvas3d.cdis)
         canvas3d.cx = pos[0].toFixed(2)
         canvas3d.cy = pos[1].toFixed(2)
         canvas3d.cz = pos[2].toFixed(2)
@@ -557,7 +651,7 @@ Item {
         property double zPos: 0
         // camera position
         // distance between camera's position and origin position
-        property double cd: 15
+        property double cdis: 15
         property double ctheta: 0.5
         property double cbeta: 0.0
         property double cx: 15
@@ -566,20 +660,24 @@ Item {
 //        property int gap: 10
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property double heading: 0
-        property double pitch: -89.3
+        property double pitch: 0
+        property double headingOffset: 0
+//        property double pitchOffset: 0
         property double radius: 4
 //        property double roll: 0
         property double vector_length: 4
         property bool enable_path: true
-        property double line_width: 2.0
-        property double point_size: 0.6
+        property bool enable_cube: true
+        property double line_width: 1.0
+        property double point_size: 0.15
+        property double path_size:  0.3
         property string drawMode: "line"
         property bool isRunning: true
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
 //            selectRB(lessLineDrawMode)
-            selectRB(lineDrawMode)
-            GLcode.initializeGL(canvas3d)
+            selectRB(lineDrawMode);
+            GLcode.initializeGL(canvas3d);
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
@@ -589,96 +687,6 @@ Item {
 
         onResizeGL: {
             GLcode.resizeGL(canvas3d)
-        }
-
-//        Keys.onSpacePressed: {
-//            canvas3d.isRunning = !canvas3d.isRunning
-//            if (canvas3d.isRunning) {
-//                objAnimationX.pause();
-//                objAnimationY.pause();
-//                objAnimationZ.pause();
-//            } else {
-//                objAnimationX.resume();
-//                objAnimationY.resume();
-//                objAnimationZ.resume();
-//            }
-//        }
-
-        /*
-         * x 方向的动画，修改 xRotAnim 的值，在 js 函数中实现旋转
-        */
-        SequentialAnimation {
-            id: objAnimationX
-            loops: Animation.Infinite
-            running: false
-            NumberAnimation {
-                target: canvas3d
-                property: "xRotAnim"
-                from: 0.0
-                to: 100.0
-                duration: 7000
-                easing.type: Easing.InOutQuad
-            }
-            NumberAnimation {
-                target: canvas3d
-                property: "xRotAnim"
-                from: 100.0
-                to: 0.0
-                duration: 7000
-                easing.type: Easing.InOutQuad
-            }
-        }
-
-
-        /*
-         * y 方向的动画，修改 yRotAnim 的值，在 js 函数中实现旋转
-        */
-        SequentialAnimation {
-            id: objAnimationY
-            loops: Animation.Infinite
-            running: false
-            NumberAnimation {
-                target: canvas3d
-                // yRotAnim 变量从 from 变到 to ，用时为 duration ms
-                property: "yRotAnim"
-                from: 0.0
-                to: 30.0
-                duration: 5000
-                easing.type: Easing.InOutCubic
-            }
-            NumberAnimation {
-                target: canvas3d
-                property: "yRotAnim"
-                from: 30.0
-                to: 0.0
-                duration: 5000
-                easing.type: Easing.InOutCubic
-            }
-        }
-
-        /*
-         * z 方向的动画，修改 zRotAnim 的值，在 js 函数中实现旋转
-        */
-        SequentialAnimation {
-            id: objAnimationZ
-            loops: Animation.Infinite   // 重复循环
-            running: false
-            NumberAnimation {
-                target: canvas3d
-                property: "zRotAnim"
-                from: -20.0
-                to: 80.0
-                duration: 3000
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                target: canvas3d
-                property: "zRotAnim"
-                from: 80.0
-                to: -20.0
-                duration: 3000
-                easing.type: Easing.InOutSine
-            }
         }
     }
 
