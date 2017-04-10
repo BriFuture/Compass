@@ -8,9 +8,13 @@ Data::Data() {
     roll = 0;
 }
 
+Data::~Data() {
+    delete compassview;
+}
+
 
 void Data::view() {
-    QQuickView *compassview = new QQuickView;
+    compassview = new QQuickView;
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/Compass.qml")));
 //    compassview->setSource(QUrl(QStringLiteral("qrc:/ThreeD.qml")));
 //    compassview->rootContext()->setContextProperty("dataRadius", this);
@@ -27,7 +31,7 @@ void Data::view() {
 }
 
 void Data::view3D() {
-    QQuickView *compassview = new QQuickView;
+    compassview = new QQuickView;
 
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePath.qml")));
 //    compassview->rootContext()->setContextProperty("dataRadius", this);

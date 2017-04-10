@@ -10,8 +10,12 @@
 
 class Data : public QObject{
     Q_OBJECT
+
+private:
+    QQuickView *compassview;
 public:
     Data();
+    ~Data();
     void view();
     void view3D();
     double heading;

@@ -17,5 +17,6 @@
         <file>qml/gl-matrix.js</file>
         <file>qml/MySlider.qml</file>
         <file>qml/Compass.qml</file>
+        <file>img/test.png</file>
     </qresource>
 </RCC>

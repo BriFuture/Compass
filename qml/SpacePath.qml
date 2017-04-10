@@ -3,6 +3,7 @@ import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
 
 import "SpacePath.js" as GLcode
+//import "square.js" as GLcode
 
 Item {
     id: windowContainer
@@ -44,6 +45,14 @@ Item {
             lpx = mouseListener.mouseX;
             lpy = mouseListener.mouseY;
         }
+
+        onWheel: {
+            canvas3d.cdis -= 0.3 * wheel.angleDelta.y / 120
+        }
+
+        onDoubleClicked: {
+
+        }
     }
 
     function mouseDraged() {
@@ -63,8 +72,10 @@ Item {
 
         v = (v * 100) % 100 / 100;
 //            console.log("released ==> " + u + " ,  " + v);
-        cameraThetaContainer.sliderValue = u;
-        cameraBetaContainer.sliderValue  = v;
+//        cameraThetaContainer.sliderValue = u;
+//        cameraBetaContainer.sliderValue  = v;
+        canvas3d.ctheta = u;
+        canvas3d.cbeta  = v;
         rotateCamera();
     }
 
@@ -254,7 +265,8 @@ Item {
             sliderValue: canvas3d.cx
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cx = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.cx = sliderValue.toFixed(2)
             }
         }
 
@@ -271,7 +283,8 @@ Item {
             sliderValue: canvas3d.cy
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cy = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.cy = sliderValue.toFixed(2)
             }
         }
 
@@ -288,7 +301,8 @@ Item {
             sliderValue: canvas3d.cz
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cz = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.cz = sliderValue.toFixed(2)
             }
         }
 
@@ -306,7 +320,8 @@ Item {
             sliderValue: canvas3d.ctheta
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.ctheta = sliderValue.toFixed(3)
+                if( pressed )
+                    canvas3d.ctheta = sliderValue
                 rotateCamera()
             }
         }
@@ -324,7 +339,8 @@ Item {
             sliderValue: canvas3d.cbeta
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cbeta = sliderValue.toFixed(3)
+                if( pressed )
+                    canvas3d.cbeta = sliderValue
                 rotateCamera()
             }
         }
@@ -342,7 +358,8 @@ Item {
             sliderValue: canvas3d.cdis
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.cdis = sliderValue.toFixed(3)
+                if( pressed )
+                    canvas3d.cdis = sliderValue
                 rotateCamera()
             }
         }
@@ -360,7 +377,8 @@ Item {
             sliderValue: canvas3d.radius
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.radius = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.radius = sliderValue
 //                console.log(canvas3d.radius)
             }
         }
@@ -379,7 +397,8 @@ Item {
             sliderValue: canvas3d.line_width
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.line_width = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.line_width = sliderValue
             }
         }
 
@@ -395,7 +414,8 @@ Item {
             sliderValue: canvas3d.point_size
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.point_size = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.point_size = sliderValue
             }
         }
 
@@ -411,7 +431,8 @@ Item {
             sliderValue: canvas3d.path_size
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.path_size = sliderValue.toFixed(2)
+                if( pressed )
+                    canvas3d.path_size = sliderValue
             }
         }
 
@@ -474,7 +495,8 @@ Item {
             sliderValue: canvas3d.pitch
             sliderWidth: parent.width
             onSliderValueChanged: {
-                canvas3d.pitch = pitchContainer.sliderValue.toFixed(3)
+                if( pressed )
+                    canvas3d.pitch = sliderValue
             }
         }
 
@@ -491,7 +513,26 @@ Item {
             sliderWidth: parent.width
 //            inputText: canvas3d.heading
             onSliderValueChanged: {
-                canvas3d.heading = headingContainer.sliderValue.toFixed(3)
+                if( pressed )
+                    canvas3d.heading = sliderValue
+            }
+        }
+
+        MySlider {
+            id: vectorContainer
+            labelText: "VECTOR LENGTH: "
+            height: 50
+            width: parent.width
+            anchors.top: headingContainer.bottom
+            anchors.left: parent.left
+            sliderMaxValue: 20
+            sliderMinValue: 0.5
+            sliderValue: canvas3d.vector_length
+            sliderWidth: parent.width
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                if( pressed )
+                    canvas3d.vector_length = sliderValue
             }
         }
 
@@ -500,7 +541,7 @@ Item {
             width: parent.width
             height: 25
             anchors.left: parent.left
-            anchors.top: headingContainer.bottom
+            anchors.top: vectorContainer.bottom
             color: "transparent"
 
             CheckBox {
@@ -546,6 +587,7 @@ Item {
                         xCameraContainer.visible    = false;
                         yCameraContainer.visible    = false;
                         zCameraContainer.visible    = false;
+                        
                     } else {
                         cameraBetaContainer.visible = false;
                         cameraDisContainer.visible  = false;
@@ -584,19 +626,20 @@ Item {
                     canvas3d.ctheta = parseFloat(cameraThetaContainer.text)
                     canvas3d.cbeta  = parseFloat(cameraBetaContainer.text)
                     canvas3d.cdis   = parseFloat(cameraDisContainer.text)
-                    console.log( "checked " );
+//                    console.log( "checked " );
                 } else {
                     canvas3d.cx = parseFloat(xCameraContainer.text)
                     canvas3d.cy = parseFloat(yCameraContainer.text)
                     canvas3d.cz = parseFloat(zCameraContainer.text)
                 }
 
-                pitchContainer.sliderValue = parseFloat(pitchContainer.text)
-                headingContainer.sliderValue = parseFloat(headingContainer.text)
-                cameraDisContainer.sliderValue = parseFloat(cameraDisContainer.text)
-                ballRadiusContainer.sliderValue = parseFloat(ballRadiusContainer.text)
-                lineWidthContainer.sliderValue = parseFloat(lineWidthContainer.text)
-                pointSizeContainer.sliderValue = parseFloat(pointSizeContainer.text)
+                canvas3d.pitch = parseFloat(pitchContainer.text)
+                canvas3d.heading = parseFloat(headingContainer.text)
+                canvas3d.cdis = parseFloat(cameraDisContainer.text)
+                canvas3d.radius = parseFloat(ballRadiusContainer.text)
+                canvas3d.line_width = parseFloat(lineWidthContainer.text)
+                canvas3d.point_size = parseFloat(pointSizeContainer.text)
+                canvas3d.vector_length = parseFloat(vectorContainer.text)
 
             }
         }
@@ -618,7 +661,7 @@ Item {
                 canvas3d.headingOffset = canvas3d.heading
                 var angle = GLcode.calcAngle(canvas3d.pitch, 0);
                 var u = angle[0], v = angle[1];
-                GLcode.resetPath(u, v);
+                GLcode.resetPath(u, v, canvas3d.vector_length);
             }
         }
     }
@@ -633,9 +676,9 @@ Item {
 
     function rotateCamera() {
         var pos = GLcode.calcVertex(1-canvas3d.ctheta, canvas3d.cbeta, canvas3d.cdis)
-        canvas3d.cx = pos[0].toFixed(2)
-        canvas3d.cy = pos[1].toFixed(2)
-        canvas3d.cz = pos[2].toFixed(2)
+        canvas3d.cx = pos[0]
+        canvas3d.cy = pos[1]
+        canvas3d.cz = pos[2]
 
     }
 
@@ -661,17 +704,24 @@ Item {
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property double heading: 0
         property double pitch: 0
+        property double roll: 0
         property double headingOffset: 0
 //        property double pitchOffset: 0
         property double radius: 4
-//        property double roll: 0
         property double vector_length: 4
         property bool enable_path: true
         property bool enable_cube: true
         property double line_width: 1.0
         property double point_size: 0.15
-        property double path_size:  0.3
+        property double path_size:  0.35
         property string drawMode: "line"
+        property var args: {
+                    "heading" : heading, "pitch": pitch, "roll": roll,
+                    "headingOffset": headingOffset, "radius": radius,
+                    "vector_length": vector_length, "enable_path": enable_path,
+                    "enable_cube": enable_cube, "line_width": line_width,
+                    "point_size": point_size, "path_size": path_size
+        }
         property bool isRunning: true
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {

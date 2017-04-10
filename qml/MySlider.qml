@@ -5,15 +5,13 @@ Rectangle {
     id: container
 //    height: 50
 //    width: 200
-//    anchors.top: yCameraContainer.bottom
-//    anchors.left: parent.left
     color: "transparent"
     property string labelText: "label"
-//    property var onSliderValueChanged
     property alias sliderValue: slider.value
     property double sliderMaxValue: 0
     property double sliderMinValue: 0
     property double sliderWidth: 0
+    property alias pressed: slider.pressed
     property alias text: textInput.text
     Label {
         id: labelShow
@@ -25,6 +23,7 @@ Rectangle {
         text: container.labelText
     }
     Rectangle {
+
         border.color: "black"
         anchors.left: labelShow.right
         anchors.leftMargin: 5
@@ -37,6 +36,7 @@ Rectangle {
             anchors.fill: parent
             text: sliderValue.toFixed(2)
             validator: DoubleValidator{bottom: slider.minimumValue; top: slider.maximumValue;}
+
         }
     }
     Slider {
