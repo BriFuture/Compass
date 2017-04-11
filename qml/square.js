@@ -16,6 +16,7 @@ var mvMatrixUniform;    // 模型视图
 var pMatrixUniform;     // 透视
 var nUniform;           // 法线
 var cMatrixUniform;
+var uniforms = {};
 //var textureUniform;
 
 var pMatrix  = mat4.create();
@@ -23,6 +24,7 @@ var mvMatrix = mat4.create();
 var nMatrix  = mat4.create();
 
 var xTexture;
+var yTexture;
 var vertex_buffer;
 
 function initializeGL(canvas) {
@@ -39,32 +41,62 @@ function initializeGL(canvas) {
 
     initShaders();
     initBuffers();
-    var qtLogoImage = TextureImageFactory.newTexImage()
-    qtLogoImage.src = "qrc:/img/test.png"
-    qtLogoImage.imageLoaded.connect(function() {
-        // 成功加载图片
-        xTexture = gl.createTexture();
 
-        // 绑定 2D 纹理
-        gl.bindTexture(gl.TEXTURE_2D, xTexture);
-//        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-        // 将图片绘制到 2D 纹理上
-        gl.texImage2D(gl.TEXTURE_2D,   // target
-                       0,               // level
-                       gl.RGBA,         // internalformat
-                       gl.RGBA,         // format
-                       gl.UNSIGNED_BYTE,// type
-                       qtLogoImage )     //
+    loadTextureImage("qrc:/img/compass.png", 0, gl.TEXTURE0);
+    loadTextureImage("qrc:/img/test.png", 1, gl.TEXTURE1);
+//    var image = TextureImageFactory.newTexImage();
+//    image.src = "qrc:/img/compass.png";
+//    image.imageLoaded.connect(function() {
+//        console.log("image loaded")
+//        // 成功加载图片
+//        xTexture = gl.createTexture();
+//        // 绑定 2D 纹理
+//        gl.activeTexture(gl.TEXTURE0);
+//        gl.bindTexture(gl.TEXTURE_2D, xTexture);
+//        gl.uniform1i(uniforms.texture, 0)
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST)
+//        // 将图片绘制到 2D 纹理上
+//        gl.texImage2D(gl.TEXTURE_2D,   // target
+//                       0,               // level
+//                       gl.RGBA,         // internalformat
+//                       gl.RGBA,         // format
+//                       gl.UNSIGNED_BYTE,// type
+//                       image );     //
 
-        // 生成 2D 纹理
-        gl.generateMipmap(gl.TEXTURE_2D)
-        // gl.bindTexture(gl.TEXTURE_2D, 0);
-    })
+//        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+//        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+
+//        // 生成 2D 纹理
+//        gl.generateMipmap(gl.TEXTURE_2D);
+//    });
+//    var image1 = TextureImageFactory.newTexImage();
+//    image1.src = "qrc:/img/test.png";
+//    image1.imageLoaded.connect(function() {
+//        console.log("y image loaded")
+//        // 成功加载图片
+//        yTexture = gl.createTexture();
+//        // 绑定 2D 纹理
+//        gl.activeTexture(gl.TEXTURE1);
+//        gl.bindTexture(gl.TEXTURE_2D, yTexture);
+//        gl.uniform1i(uniforms.sampler, 0);
+
+//        // 将图片绘制到 2D 纹理上
+//        gl.texImage2D(gl.TEXTURE_2D,   // target
+//                       0,               // level
+//                       gl.RGBA,         // internalformat
+//                       gl.RGBA,         // format
+//                       gl.UNSIGNED_BYTE,// type
+//                       image1 );     //
+
+//        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+//        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+
+//        // 生成 2D 纹理
+//        gl.generateMipmap(gl.TEXTURE_2D);
+//    });
     
 }
+
 
 function paintGL(canvas) {
     var pixelRatio = canvas.devicePixelRatio;
@@ -97,8 +129,17 @@ function paintGL(canvas) {
 //    gl.drawArrays(gl.POINTS, 0, 6);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
     gl.vertexAttribPointer(vertexPostionAttrib, 3, gl.FLOAT, false, 0, 0);
-    gl.drawElements(gl.TRIANGLES, vertexIndex.length, gl.UNSIGNED_SHORT, 0);
 //    gl.drawElements(gl.LINES, 3, gl.UNSIGNED_SHORT, 0);
+//    gl.drawElements(gl.TRIANGLES, vertexIndex.length, gl.UNSIGNED_SHORT, 0);
+    if( xTexture )
+        gl.bindTexture(gl.TEXTURE_2D, xTexture);
+    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0);
+    if( yTexture )
+        gl.bindTexture(gl.TEXTURE_2D, yTexture);
+    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 12*2);
+    if( xTexture )
+        gl.bindTexture(gl.TEXTURE_2D, xTexture);
+    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 24*2);
 }
 
 function initShaders() {
@@ -123,13 +164,15 @@ function initShaders() {
 
     var fragCode =  'precision mediump float;'+
                     'uniform sampler2D texture;' +
+                    'uniform sampler2D uSampler1;' +
                     'uniform int t;' +
                     'varying vec3 vColor;' +
                     'varying vec2 vTextureCoord;' +
                     'void main(void) {' +
                         'vec3 sampler = texture2D(texture, vTextureCoord).rgb;' +
-                        'if( t == 1) {sampler = vec3(1.0, 1.0, 1.0);}' +
-                        'gl_FragColor = vec4(vColor * sampler, 0.8) ;' +
+                        'vec3 sampler1 = texture2D(uSampler1, vTextureCoord).rgb;' +
+                        'if( t == 0) {sampler = vec3(1.0, 1.0, 1.0);sampler1 = vec3(1.0, 1.0, 1.0);}' +
+                        'gl_FragColor = vec4(vColor * sampler1 * sampler, 0.8) ;' +
                     '}';
     var fragShader = getShader(gl, fragCode, gl.FRAGMENT_SHADER);
 
@@ -141,22 +184,25 @@ function initShaders() {
 
     vertexPostionAttrib = gl.getAttribLocation(shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(vertexPostionAttrib);
+
     colorAttrib = gl.getAttribLocation(shaderProgram, "aColor");
     gl.enableVertexAttribArray(colorAttrib);
+    console.log("after colorAttrib")
     textureAttrib = gl.getAttribLocation(shaderProgram, "aTextureCoord");
     gl.enableVertexAttribArray(textureAttrib);
-
+    console.log("after use attrib")
     mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     pMatrixUniform  = gl.getUniformLocation(shaderProgram, "uPMatrix");
     cMatrixUniform  = gl.getUniformLocation(shaderProgram, "uCMatrix");
-    var textureUniform  = gl.getUniformLocation(shaderProgram, "texture");
 
+
+    uniforms.texture  = gl.getUniformLocation(shaderProgram, "texture");
+//    gl.uniform1i(textureUniform, 0);
+    uniforms.sampler = gl.getUniformLocation(shaderProgram, "uSampler1");
+//    gl.uniform1i(sampler1Uniform, 1);
     var tUniform = gl.getUniformLocation(shaderProgram, "t");
-    gl.uniform1i(tUniform, 0);
+    gl.uniform1i(tUniform, 1);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(textureUniform, 0);
-    gl.bindTexture(gl.TEXTURE_2D, 0);
 }
 
 /**
@@ -164,40 +210,40 @@ function initShaders() {
  */
 function initBuffers() {
     var vertexPosition = [   // Front face
-                              -1.0, -1.0,  1.0,
-                              1.0, -1.0,  1.0,
-                              1.0,  1.0,  1.0,
-                              -1.0,  1.0,  1.0,
+                              1.0, -1.0, 1.0,
+                              1.0, -1.0, -1.0,
+                              1.0,  1.0, -1.0,
+                              1.0,  1.0, 1.0,
 
                               // Back face
+                              -1.0, 1.0, 1.0,
+                              -1.0, 1.0, -1.0,
                               -1.0, -1.0, -1.0,
-                              -1.0,  1.0, -1.0,
-                              1.0,  1.0, -1.0,
-                              1.0, -1.0, -1.0,
+                              -1.0, -1.0, 1.0,
 
-                              // Top face
-                              -1.0,  1.0, -1.0,
-                              -1.0,  1.0,  1.0,
-                              1.0,  1.0,  1.0,
-                              1.0,  1.0, -1.0,
-
-                              // Bottom face
+                              // left face
+                              -1.0, -1.0, 1.0,
                               -1.0, -1.0, -1.0,
-                              1.0, -1.0, -1.0,
-                              1.0, -1.0,  1.0,
-                              -1.0, -1.0,  1.0,
+                              1.0,  -1.0, -1.0,
+                              1.0,  -1.0, 1.0,
 
-                              // Right face
-                              1.0, -1.0, -1.0,
-                              1.0,  1.0, -1.0,
-                              1.0,  1.0,  1.0,
-                              1.0, -1.0,  1.0,
+                              // right face
+                              1.0, 1.0, 1.0,
+                              1.0, 1.0, -1.0,
+                              -1.0, 1.0, -1.0,
+                              -1.0, 1.0, 1.0,
 
-                              // Left face
+                              // up face
+                              -1.0, -1.0, 1.0,
+                              1.0, -1.0, 1.0,
+                              1.0,  1.0, 1.0,
+                              -1.0,  1.0, 1.0,
+
+                              // down face
+                              1.0, -1.0, -1.0,
                               -1.0, -1.0, -1.0,
-                              -1.0, -1.0,  1.0,
-                              -1.0,  1.0,  1.0,
-                              -1.0,  1.0, -1.0
+                              -1.0, 1.0,  -1.0,
+                              1.0, 1.0,  -1.0
                              ];
 
 //    for(var i = 0; i < vertexPosition.length; i++) {
@@ -205,13 +251,17 @@ function initBuffers() {
 //    }
 
     vertexIndex = [
-                    0,  1,  2,      0,  2,  3,    // front
-                    4,  5,  6,      4,  6,  7,    // back
-                    8,  9,  10,     8,  10, 11,   // top
-                    12, 13, 14,     12, 14, 15,   // bottom
-                    16, 17, 18,     16, 18, 19,   // right
-                    20, 21, 22,     20, 22, 23    // left
+//                    0,  1,  2,      0,  2,  3,    // front
+//                    4,  5,  6,      4,  6,  7,    // back
+//                    8,  9,  10,     8,  10, 11,   // top
+//                    12, 13, 14,     12, 14, 15,   // bottom
+//                    16, 17, 18,     16, 18, 19,   // right
+//                    20, 21, 22,     20, 22, 23    // left
                 ];
+    var i;
+    for(i = 0; i < 6; i++) {
+        vertexIndex.push(i*4, i*4+1, i*4+2, i*4, i*4+2, i*4+3);
+    }
 
     var colors = [
                 0.1, 0.1, 1,
@@ -268,37 +318,38 @@ function initBuffers() {
 
     /** 由于 2D 纹理只需要 xy 坐标，因此只用两个坐标表示纹理的位置即可 */
     var textureCoord = [
+                // front
+                0.0, 0.0,
+                0.0, 1.0,
+                1.0, 1.0,
+                1.0, 0.0,
+                // back
+                0.0, 0.0,
+                0.0, 1.0,
+                1.0, 1.0,
+                1.0, 0.0,
+
+                // left
+                0.0, 0.0,
+                0.0, 1.0,
+                1.0, 1.0,
+                1.0, 0.0,
+                // right
+                0.0, 0.0,
+                0.0, 1.0,
+                1.0, 1.0,
+                1.0, 0.0,
                 // up
                 0.0, 0.0,
                 0.0, 1.0,
                 1.0, 1.0,
                 1.0, 0.0,
-                // down
-                0.0, 1.0,
-                1.0, 1.0,
-                1.0, 0.0,
-                0.0, 0.0,
 
-                // right
-                1.0, 1.0,
-                1.0, 0.0,
+                // down
                 0.0, 0.0,
-                0.0, 1.0,
-                // left
                 0.0, 1.0,
                 1.0, 1.0,
                 1.0, 0.0,
-                0.0, 0.0,
-                // front
-                0.0, 1.0,
-                1.0, 1.0,
-                1.0, 0.0,
-                0.0, 0.0,
-                // back
-                1.0, 1.0,
-                1.0, 0.0,
-                0.0, 0.0,
-                0.0, 1.0,
             ];
     var textureBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
@@ -306,6 +357,43 @@ function initBuffers() {
 
     gl.vertexAttribPointer(textureAttrib, 2, gl.FLOAT, false, 0, 0);
 
+}
+
+
+function loadTextureImage(imgsrc, index, textureUnit) {
+    var image = TextureImageFactory.newTexImage();
+    image.src = imgsrc;
+    image.imageLoaded.connect(function() {
+        // 成功加载图片
+        var texture = gl.createTexture();
+        // 绑定 2D 纹理
+        gl.activeTexture(textureUnit);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        if( index === 0) {
+            xTexture = texture;
+            gl.uniform1i(uniforms.texture, 0);
+        } else {
+            yTexture = texture;
+            gl.uniform1i(uniforms.sampler, 1);
+        }
+
+        // 将图片绘制到 2D 纹理上
+        gl.texImage2D(gl.TEXTURE_2D,   // target
+                       0,               // level
+                       gl.RGBA,         // internalformat
+                       gl.RGBA,         // format
+                       gl.UNSIGNED_BYTE,// type
+                       image );     //
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+
+        // 生成 2D 纹理
+        gl.generateMipmap(gl.TEXTURE_2D);
+    });
+    image.imageLoadingFailed.connect(function() {
+        console.log("Texture load failed, " + image.src)
+    });
 }
 
 function createArrayBuffer(data) {

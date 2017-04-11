@@ -32,7 +32,6 @@ var nMatrix  = mat4.create();
 // 纹理
 var xTexture;
 var yTexture;
-var zTexture;
 
 // 顶点索引
 var ball_vertex_count = [];
@@ -66,9 +65,8 @@ function initializeGL(canvas) {
     initArguments(canvas);
     initShaders();
     initBuffers();
-    loadTextureImage("qrc:/img/x.png", 0, gl.TEXTURE0);
-    loadTextureImage("qrc:/img/y.png", 1, gl.TEXTURE1);
-    loadTextureImage("qrc:/img/z.png", 2, gl.TEXTURE2);
+    loadTextureImage("qrc:/img/compass.png", 0, gl.TEXTURE0);
+    loadTextureImage("qrc:/img/test.png", 1, gl.TEXTURE1);
 }
 
 function initArguments(canvas) {
@@ -109,17 +107,14 @@ function initShaders() {
                     'varying vec3 vLight;' +
                     'varying vec2 vXTexture;' +
                     'uniform sampler2D uXSampler;' +
-                    'uniform sampler2D uYSampler;' +
-                    'uniform sampler2D uZSampler;' +
+                    'uniform sampler2D uYSmapler;' +
                     'uniform int uEnableTexture;' +
                     'void main(void) {' +
-                        'mediump vec4 xtextureColor = texture2D(uXSampler, vec2(vXTexture.s, vXTexture.t));' +
-                        'mediump vec4 ytextureColor = texture2D(uYSampler, vec2(vXTexture.s, vXTexture.t));' +
-                        'mediump vec4 ztextureColor = texture2D(uZSampler, vec2(vXTexture.s, vXTexture.t));' +
+                        'mediump vec3 xtextureColor = texture2D(uXSampler, vec2(vXTexture.s, vXTexture.t)).rgb;' +
+                        'mediump vec3 ytextureColor = texture2D(uYSmapler, vec2(vXTexture.s, vXTexture.t)).rgb;' +
                         'if( uEnableTexture == 0 ) {gl_FragColor = vec4(vLight, 0.5);}' +
-                        'else if( uEnableTexture == 1 ) {gl_FragColor = vec4(vLight, 0.5) * xtextureColor;}'+
-                        'else if( uEnableTexture == 2 ) {gl_FragColor = vec4(vLight, 0.5) * ytextureColor;}' +
-                        'else if( uEnableTexture == 3 ) {gl_FragColor = vec4(vLight, 0.5) * ztextureColor;}' +
+                        'else if(uEnableTexture == 1 ) {gl_FragColor = vec4(vLight * xtextureColor, 0.5);}'+
+                        'else if(uEnableTexture == 2) {gl_FragColor = vec4(vLight * ytextureColor, 0.5);}' +
 //                        'gl_FragColor = vec4(vLight, 0.5);' +
                     '}';
     var fragShader = getShader(gl, fragCode, gl.FRAGMENT_SHADER);
@@ -139,6 +134,7 @@ function initShaders() {
     attributes.color = gl.getAttribLocation(shaderProgram, "aColor");
     gl.enableVertexAttribArray(attributes.color);
 
+
     attributes.xtexture = gl.getAttribLocation(shaderProgram, "aXTexture");
 //    gl.enableVertexAttribArray(attributes.xtexture);
 
@@ -149,12 +145,11 @@ function initShaders() {
     uniforms.light_direction    = gl.getUniformLocation(shaderProgram, "uLightDirection");  // 光照
 
     uniforms.xSamplerUniform = gl.getUniformLocation(shaderProgram, "uXSampler");
-    uniforms.ySamplerUniform = gl.getUniformLocation(shaderProgram, "uYSampler");
-    uniforms.zSamplerUniform = gl.getUniformLocation(shaderProgram, "uZSampler");
 //    gl.bindTexture(gl.TEXTURE_2D, xTexture);
 //    gl.activeTexture(gl.TEXTURE0);
 //    gl.uniform1i(uniforms.xSamplerUniform, 0);  // 使用第一个纹理单元
 
+    uniforms.ySamplerUniform = gl.getUniformLocation(shaderProgram, "uYSampler");
 //    gl.bindTexture(gl.TEXTURE_2D, yTexture);
 //    gl.activeTexture(gl.TEXTURE1);
 //    gl.uniform1i(uniforms.ySamplerUniform, 1);
@@ -333,13 +328,28 @@ function createArrayBuffer(type, data, drawtype, unbind) {
 }
 
 function loadTextureImage(imgsrc, index, textureUnit) {
-    var image = TextureImageFactory.newTexImage();
-    image.src = imgsrc;
-    image.imageLoaded.connect(function() {
+    var testImage = TextureImageFactory.newTexImage();
+    testImage.src = imgsrc;
+    testImage.imageLoaded.connect(function() {
         // 成功加载图片
+        var texture = gl.createTexture();
+        // 绑定 2D 纹理
         gl.activeTexture(textureUnit);
-        var texture = gl.createTexture();   // 绑定 2D 纹理
         gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // 将图片绘制到 2D 纹理上
+        gl.texImage2D(gl.TEXTURE_2D,   // target
+                       0,               // level
+                       gl.RGBA,         // internalformat
+                       gl.RGBA,         // format
+                       gl.UNSIGNED_BYTE,// type
+                       testImage );     //
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+
+        // 生成 2D 纹理
+        gl.generateMipmap(gl.TEXTURE_2D);
         switch (index) {
         case 0:
             xTexture = texture;
@@ -349,26 +359,8 @@ function loadTextureImage(imgsrc, index, textureUnit) {
             yTexture = texture;
             gl.uniform1i(uniforms.ySamplerUniform, 1);
             break;
-        case 2:
-            zTexture = texture;
-            gl.uniform1i(uniforms.zSamplerUniform, 2);
-            break;
         }
-
-        // 将图片绘制到 2D 纹理上
-        gl.texImage2D(gl.TEXTURE_2D,   // target
-                       0,               // level
-                       gl.RGBA,         // internalformat
-                       gl.RGBA,         // format
-                       gl.UNSIGNED_BYTE,// type
-                       image );     //
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-
-        // 生成 2D 纹理
-        gl.generateMipmap(gl.TEXTURE_2D);
-//        gl.bindTexture(gl.TEXTURE_2D, 0);
+        gl.bindTexture(gl.TEXTURE_2D, 0);
     })
 }
 
@@ -450,8 +442,8 @@ function paintGL(canvas) {
     } else {
         resetPath(u, v, canvasArgs.vector_length);
     }
-    // 绘制传感器指向的方向
     drawPoint(gl, u, v);
+    // 绘制传感器指向的方向
     /******** 绘制长方体表示的传感器 **********/
     if( canvasArgs.enable_cube ) {
         drawCube(gl, u, v);
@@ -513,9 +505,7 @@ function drawCube(gl, u, v) {
      * 由于需要在长方体上添加纹理，实际上需要 24 个顶点，首先计算出 8 个顶点的位置
      * 然后根据各自的方位按逆时针（前后左右上下，正对面时的左上角顶点开始）放置顶点
     **/
-    var rgblight  = [0.8, 0.1, 0.1].concat(canvasArgs.light_direction);
-    var right_rgb = [0.1, 0.8, 0.1].concat(canvasArgs.light_direction);
-    var down_rgb  = [0.1, 0.1, 0.8].concat(canvasArgs.light_direction);
+    var rgblight = [0.3, 0.3, 0.3].concat(canvasArgs.light_direction);
     var sback = getCubePoint(1-u, v+0.5, 0.125, canvasArgs.radius*0.375*0.3);
     var sfront = getCubePoint(u, v, 0.125, canvasArgs.radius*0.375*0.6);
     var i;
@@ -525,32 +515,17 @@ function drawCube(gl, u, v) {
 //    console.log(sfront + "  " + sfront.length)
 
     var surface = [];
-    // direction is based on vector (10, 0, 0) to (0, 0, 0)
     var surfaceIndex = [
-                2, 3, 0, 1,     // front
-                6, 7, 4, 5,     // back
-                2, 5, 4, 3,    // left
-                0, 7, 6, 1,    // right
-                5, 2, 1, 6,     // up
-                3, 4, 7, 0      // down
+                2, 3, 0, 1,
+                6, 7, 4, 5,
+                5, 4, 3, 2,
+                1, 0, 7, 6,
+                5, 2, 1, 6,
+                3, 4, 7, 0
             ];
-    for(i = 0; i < 8; i++) {
-        surface = surface.concat(sfront[surfaceIndex[i]], rgblight);
-    }
-    for(i = 8; i < 16; i++) {
-        surface = surface.concat(sfront[surfaceIndex[i]], right_rgb);
-    }
-    for(i = 16; i < 24; i++) {
-        surface = surface.concat(sfront[surfaceIndex[i]], down_rgb);
-    }
-
-//    var surfaceIndex = {
-//        "front" : [2, 3, 0, 1], "left": [6, 7, 4, 5], "up": [5, 2, 1, 6],
-//        "right": [0, 7, 6,1], "back" : [6, 7, 4, 5], "down": [3, 4, 7, 0]
-//    }
-//    surfaceIndex.forEach(function(elements) {
-//        surface = surface.concat(sfront[elements], rgblight);
-//    });
+    surfaceIndex.forEach(function(elements) {
+        surface = surface.concat(sfront[elements], rgblight);
+    });
 //    console.log(surface);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.sensor_simulator_buffer);
@@ -561,29 +536,23 @@ function drawCube(gl, u, v) {
     gl.vertexAttribPointer(attributes.vertex_normal, 3, gl.FLOAT, false, 9*4, 6*4);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.sensor_simulator_index_buffer);
 
-//    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
 
 //    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.texture_coord_buffer);   // 启用纹理顶点数据
-     gl.enableVertexAttribArray(attributes.xtexture);                // 使用纹理
+//    gl.enableVertexAttribArray(attributes.xtexture);                // 使用纹理
     /** 每个面采用不同的贴图，需要分别进行绘制 **/
-    gl.bindTexture(gl.TEXTURE_2D, xTexture);
-    gl.uniform1i(uniforms.enable_texture, 1);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-    gl.uniform1i(uniforms.enable_texture, 0);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 6*2);
-    gl.uniform1i(uniforms.enable_texture, 0);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 12*2);
-    gl.bindTexture(gl.TEXTURE_2D, yTexture);
-    gl.uniform1i(uniforms.enable_texture, 2);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 18*2);
-    gl.bindTexture(gl.TEXTURE_2D, zTexture);
-    gl.uniform1i(uniforms.enable_texture, 3);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 24*2);
-    gl.uniform1i(uniforms.enable_texture, 0);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 30*2);
+//    gl.bindTexture(gl.TEXTURE_2D, xTexture);
+//    gl.uniform1i(uniforms.enable_texture, 1);
+//    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0);
+//    gl.bindTexture(gl.TEXTURE_2D, yTexture);
+//    gl.uniform1i(uniforms.enable_texture, 2);
+//    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 12*2);
+//    gl.bindTexture(gl.TEXTURE_2D, 0);
+//    gl.uniform1i(uniforms.enable_texture, 0);
+//    gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 24*2);
     /** 取消纹理，如果不取消使用纹理的话，会导致之后的图形无法正常显示 **/
-    gl.uniform1i(uniforms.enable_texture, 0);
-    gl.disableVertexAttribArray(attributes.xtexture);
+//    gl.uniform1i(uniforms.enable_texture, 0);
+//    gl.disableVertexAttribArray(attributes.xtexture);
 }
 
 /**

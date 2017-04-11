@@ -61,7 +61,7 @@ Item {
         var u = canvas3d.ctheta;
         var v = canvas3d.cbeta;
 //            console.log("released ==> " + uoffset + " ,  " + voffset);
-        u += uoffset;
+        u -= uoffset;
         v -= voffset;
         if( u < 0.001 ) {
             u = 0.001;
@@ -83,7 +83,7 @@ Item {
         z: 1
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.rightMargin: 80
+        anchors.rightMargin: 120
         width: 30
         height: 20
         text: "FPS: " + canvas3d.fps
@@ -102,154 +102,6 @@ Item {
         border.width: 1
         layer.enabled: true
         layer.smooth: true
-
-        /*
-        Label {
-            id: xPosLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.topMargin: 5
-            height: 20
-            text: "X POSITION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.top: parent.top
-            anchors.leftMargin: 5
-            anchors.left: xPosLabel.right
-            width: 50
-            height: 20
-            TextInput {
-                id: xPosInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.xPos
-                validator: DoubleValidator{bottom: -300; top: 300;}
-            }
-        }
-        Label {
-            id: yPosLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: xPosLabel.bottom
-            anchors.topMargin: 5
-            height: 20
-            text: "Y POSITION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.left: yPosLabel.right
-            anchors.leftMargin: 5
-            anchors.top: xPosLabel.bottom
-            width: 50
-            height: 20
-            TextInput {
-                id: yPosInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.yPos
-                validator: DoubleValidator{bottom: -300; top: 300;}
-            }
-        }
-        Label {
-            id: zPosLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: yPosLabel.bottom
-            anchors.topMargin: 5
-            height: 20
-            text: "Z POSITION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.left: zPosLabel.right
-            anchors.leftMargin: 5
-            anchors.top: yPosLabel.bottom
-            width: 50
-            height: 20
-            TextInput {
-                id: zPosInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.zPos
-                validator: DoubleValidator{bottom: -300; top: 300;}
-            }
-        }
-
-        Label {
-            id: xRotLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: zPosLabel.bottom
-            anchors.topMargin: 5
-            height: 20
-            text: "X ROTATION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.top: zPosLabel.bottom
-            anchors.leftMargin: 5
-            anchors.left: xRotLabel.right
-            width: 50
-            height: 20
-            TextInput {
-                id: xRotInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.xRotAnim
-                validator: DoubleValidator{bottom: -360; top: 360;}
-            }
-        }
-        Label {
-            id: yRotLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: xRotLabel.bottom
-            anchors.topMargin: 5
-            height: 20
-            text: "Y ROTATION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.left: yRotLabel.right
-            anchors.leftMargin: 5
-            anchors.top: xRotLabel.bottom
-            width: 50
-            height: 20
-            TextInput {
-                id: yRotInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.yRotAnim
-                validator: DoubleValidator{bottom: -360; top: 360;}
-            }
-        }
-        Label {
-            id: zRotLabel
-            anchors.leftMargin: 5
-            anchors.left: parent.left
-            anchors.top: yRotLabel.bottom
-            anchors.topMargin: 5
-            height: 20
-            text: "Z ROTATION:"
-        }
-        Rectangle {
-            border.color: "black"
-            anchors.left: zRotLabel.right
-            anchors.leftMargin: 5
-            anchors.top: yRotLabel.bottom
-            width: 50
-            height: 20
-            TextInput {
-                id: zRotInput
-                font.pointSize: 16
-                anchors.fill: parent
-                text: canvas3d.zRotAnim
-                validator: DoubleValidator{bottom: -360; top: 360;}
-            }
-        }
-        */
 
         /** xyz controls camera's position **/
         MySlider {
@@ -318,6 +170,7 @@ Item {
             sliderMaxValue: 0.999
             sliderMinValue: 0.001
             sliderValue: canvas3d.ctheta
+            rate: 90
             sliderWidth: parent.width
             onSliderValueChanged: {
                 if( pressed )
@@ -337,6 +190,7 @@ Item {
             sliderMaxValue: 0.999
             sliderMinValue: -0.999
             sliderValue: canvas3d.cbeta
+            rate: 180
             sliderWidth: parent.width
             onSliderValueChanged: {
                 if( pressed )
@@ -374,6 +228,7 @@ Item {
 //            anchors.top: parent.top
             sliderMaxValue: 10.0
             sliderMinValue: 2.0
+            rate: 10000
             sliderValue: canvas3d.radius
             sliderWidth: parent.width
             onSliderValueChanged: {
@@ -489,6 +344,7 @@ Item {
             height: 50
             width: parent.width
             anchors.left: parent.left
+            visible: false
             anchors.top: modeSelection.bottom
             sliderMaxValue: 180
             sliderMinValue: -180
@@ -505,7 +361,8 @@ Item {
             labelText: "HEADING: "
             height: 50
             width: parent.width
-            anchors.top: pitchContainer.bottom
+            visible: true
+            anchors.top: setButton.bottom
             anchors.left: parent.left
             sliderMaxValue: 360
             sliderMinValue: 0
@@ -519,11 +376,31 @@ Item {
         }
 
         MySlider {
+            id: rollContainer
+            labelText: "ROLL: "
+            height: 50
+            width: parent.width
+            visible: false
+            anchors.top: headingContainer.bottom
+            anchors.left: parent.left
+            sliderMaxValue: 180
+            sliderMinValue: -180
+            sliderValue: canvas3d.roll
+            sliderWidth: parent.width
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                if( pressed )
+                    canvas3d.roll = sliderValue
+            }
+        }
+
+        MySlider {
             id: vectorContainer
             labelText: "VECTOR LENGTH: "
             height: 50
             width: parent.width
-            anchors.top: headingContainer.bottom
+            visible: false
+            anchors.top: rollContainer.bottom
             anchors.left: parent.left
             sliderMaxValue: 20
             sliderMinValue: 0.5
@@ -541,7 +418,7 @@ Item {
             width: parent.width
             height: 25
             anchors.left: parent.left
-            anchors.top: vectorContainer.bottom
+            anchors.top: modeSelection.bottom
             color: "transparent"
 
             CheckBox {
@@ -549,6 +426,7 @@ Item {
                 height: parent.height
                 text: "drawPath"
                 anchors.left: parent.left
+                anchors.leftMargin: 5
                 checked: true
                 onCheckedChanged: {
                     if(checked) {
@@ -653,7 +531,7 @@ Item {
             anchors.horizontalCenterOffset: 20
             anchors.top: checkBoxContainer.bottom
             onClicked: {
-                canvas3d.ctheta = 0.65
+                canvas3d.ctheta = 0.35
                 canvas3d.cbeta  = 0.5
 
                 rotateCamera();
@@ -675,11 +553,10 @@ Item {
     }
 
     function rotateCamera() {
-        var pos = GLcode.calcVertex(1-canvas3d.ctheta, canvas3d.cbeta, canvas3d.cdis)
+        var pos = GLcode.calcVertex(canvas3d.ctheta, canvas3d.cbeta, canvas3d.cdis)
         canvas3d.cx = pos[0]
         canvas3d.cy = pos[1]
         canvas3d.cz = pos[2]
-
     }
 
     Canvas3D {
@@ -720,7 +597,8 @@ Item {
                     "headingOffset": headingOffset, "radius": radius,
                     "vector_length": vector_length, "enable_path": enable_path,
                     "enable_cube": enable_cube, "line_width": line_width,
-                    "point_size": point_size, "path_size": path_size
+                    "point_size": point_size, "path_size": path_size,
+                    "light_direction": [-0.88, 0.78, 0.78]
         }
         property bool isRunning: true
         // 渲染节点就绪时，进行初始化时触发

@@ -8,7 +8,6 @@
         <file>qml/Button.qml</file>
         <file>qml/Coordinate3D.js</file>
         <file>qml/DataSource.js</file>
-        <file>qml/SpacePath.js</file>
         <file>qml/SpacePath.qml</file>
         <file>qml/square.js</file>
         <file>qml/TD.js</file>
@@ -17,6 +16,9 @@
         <file>qml/gl-matrix.js</file>
         <file>qml/MySlider.qml</file>
         <file>qml/Compass.qml</file>
-        <file>img/test.png</file>
+        <file>qml/SpacePath.js</file>
+        <file>img/x.png</file>
+        <file>img/y.png</file>
+        <file>img/z.png</file>
     </qresource>
 </RCC>

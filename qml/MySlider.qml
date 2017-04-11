@@ -11,6 +11,7 @@ Rectangle {
     property double sliderMaxValue: 0
     property double sliderMinValue: 0
     property double sliderWidth: 0
+    property double rate: 1
     property alias pressed: slider.pressed
     property alias text: textInput.text
     Label {
@@ -28,13 +29,13 @@ Rectangle {
         anchors.left: labelShow.right
         anchors.leftMargin: 5
         anchors.top: parent.top
-        width: 70
+        width: 90
         height: 20
         TextInput {
             id: textInput
             font.pointSize: 16
             anchors.fill: parent
-            text: sliderValue.toFixed(2)
+            text: ((sliderValue)*rate).toFixed(2)
             validator: DoubleValidator{bottom: slider.minimumValue; top: slider.maximumValue;}
 
         }
