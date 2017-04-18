@@ -1,11 +1,14 @@
 ﻿#include "data.h"
 #include <QPixmap>
 #include <QQmlApplicationEngine>
+#include <time.h>
+#include <QDebug>
 
 Data::Data() {
     heading = 0;
     pitch = 0;
     roll = 0;
+    srand((unsigned) time(NULL));
 }
 
 Data::~Data() {
@@ -15,11 +18,9 @@ Data::~Data() {
 
 void Data::view() {
     compassview = new QQuickView;
+    compassview->rootContext()->setContextProperty("dataSource", this);
+    compassview->rootContext()->setContextProperty("windowContainer", compassview);
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/Compass.qml")));
-//    compassview->setSource(QUrl(QStringLiteral("qrc:/ThreeD.qml")));
-//    compassview->rootContext()->setContextProperty("dataRadius", this);
-    QQmlContext *context = compassview->rootContext();
-    context->setContextProperty("dataSource", this);
     // 设置窗口图标
     QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
     compassview->setIcon(icon);
@@ -32,11 +33,9 @@ void Data::view() {
 
 void Data::view3D() {
     compassview = new QQuickView;
-
+    compassview->rootContext()->setContextProperty("dataSource", this);
+    compassview->rootContext()->setContextProperty("windowContainer", compassview);
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePath.qml")));
-//    compassview->rootContext()->setContextProperty("dataRadius", this);
-    QQmlContext *context = compassview->rootContext();
-    context->setContextProperty("dataSource", this);
     // 设置窗口图标
     QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
     compassview->setIcon(icon);
@@ -52,13 +51,18 @@ double Data::getRadius() {
 }
 
 double Data::getHeading() {
-    heading += 1.025;
+    heading +=  1.0252;
     return heading;
 }
 
 double Data::getPitch() {
-    pitch += 0.5223;
+    pitch += 0.5274;
+//    qDebug() << rand()*052;
     return pitch;
+}
+
+double Data::getMagicVectorLength() {
+    return 10000*(4);
 }
 
 double Data::getRoll() {

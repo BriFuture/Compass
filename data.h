@@ -28,6 +28,7 @@ public slots:
     double getPitch();
     double getRoll();
     double* getData();
+    double getMagicVectorLength();
 };
 
 #endif // DATA_H

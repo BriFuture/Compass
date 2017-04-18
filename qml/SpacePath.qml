@@ -6,7 +6,7 @@ import "SpacePath.js" as GLcode
 //import "square.js" as GLcode
 
 Item {
-    id: windowContainer
+    id: container
     width: 1400
     height: 900
     visible: true
@@ -56,8 +56,8 @@ Item {
     }
 
     function mouseDraged() {
-        var uoffset = (mouseListener.mouseY - mouseListener.lpy) / windowContainer.height;
-        var voffset = (mouseListener.mouseX - mouseListener.lpx) / windowContainer.width;
+        var uoffset = (mouseListener.mouseY - mouseListener.lpy) / container.height;
+        var voffset = (mouseListener.mouseX - mouseListener.lpx) / container.width;
         var u = canvas3d.ctheta;
         var v = canvas3d.cbeta;
 //            console.log("released ==> " + uoffset + " ,  " + voffset);
@@ -72,8 +72,6 @@ Item {
 
         v = (v * 100) % 100 / 100;
 //            console.log("released ==> " + u + " ,  " + v);
-//        cameraThetaContainer.sliderValue = u;
-//        cameraBetaContainer.sliderValue  = v;
         canvas3d.ctheta = u;
         canvas3d.cbeta  = v;
         rotateCamera();
@@ -264,8 +262,8 @@ Item {
             width: parent.width
             anchors.left: parent.left
             anchors.top: lineWidthContainer.bottom
-            sliderMaxValue: 1.0
-            sliderMinValue: 0.05
+            sliderMaxValue: 0.5
+            sliderMinValue: 0.01
             sliderValue: canvas3d.point_size
             sliderWidth: parent.width
             onSliderValueChanged: {
@@ -281,8 +279,8 @@ Item {
             width: parent.width
             anchors.left: parent.left
             anchors.top: pointSizeContainer.bottom
-            sliderMaxValue: 1.0
-            sliderMinValue: 0.1
+            sliderMaxValue: 0.5
+            sliderMinValue: 0.01
             sliderValue: canvas3d.path_size
             sliderWidth: parent.width
             onSliderValueChanged: {
@@ -361,8 +359,8 @@ Item {
             labelText: "HEADING: "
             height: 50
             width: parent.width
-            visible: true
-            anchors.top: setButton.bottom
+            visible: false
+            anchors.top: pitchContainer.bottom
             anchors.left: parent.left
             sliderMaxValue: 360
             sliderMinValue: 0
@@ -416,15 +414,15 @@ Item {
         Rectangle {
             id: checkBoxContainer
             width: parent.width
-            height: 25
+            height: 35
             anchors.left: parent.left
             anchors.top: modeSelection.bottom
             color: "transparent"
 
             CheckBox {
                 id: drawPathBox
-                height: parent.height
-                text: "drawPath"
+                height: parent.height/3
+                text: "绘制路径"
                 anchors.left: parent.left
                 anchors.leftMargin: 5
                 checked: true
@@ -436,11 +434,35 @@ Item {
                     }
                 }
             }
+
+            CheckBox {
+                id: pathModeBox
+                height: parent.height/3
+                text: "实线路径"
+                anchors {
+                    left: drawPathBox.right
+                    leftMargin: 20
+                }
+                checked: true
+                onCheckedChanged: {
+                    if(checked) {
+                        canvas3d.path_real_line = true;
+                    } else {
+                        canvas3d.path_real_line = false;
+                    }
+                }
+            }
+
             CheckBox {
                 id: cubeBox
-                height: parent.height
-                text: "drawCube"
-                anchors.left: drawPathBox.right
+                height: parent.height/3
+                text: "绘制模拟器"
+                anchors {
+                    top: drawPathBox.bottom
+                    topMargin: 5
+                    left: parent.left
+                    leftMargin: 5
+                }
                 checked: true
                 onCheckedChanged: {
                     if(checked) {
@@ -452,10 +474,16 @@ Item {
             }
             CheckBox {
                 id: axisBox
-                height: parent.height
-                text: "angle-axis"
+                height: parent.height/3
+                text: "球坐标系"
                 checked: true
-                anchors.left: cubeBox.right
+
+                anchors {
+                    top: drawPathBox.bottom
+                    topMargin: 5
+                    left: cubeBox.right
+                    leftMargin: 8
+                }
                 onCheckedChanged: {
                     if(checked) {
                         cameraBetaContainer.visible = true;
@@ -501,8 +529,8 @@ Item {
 //                canvas3d.cz = parseFloat(zCameraContainer.text)
 
                 if( axisBox.checked ) {
-                    canvas3d.ctheta = parseFloat(cameraThetaContainer.text)
-                    canvas3d.cbeta  = parseFloat(cameraBetaContainer.text)
+                    canvas3d.ctheta = parseFloat(cameraThetaContainer.text)/cameraThetaContainer.rate
+                    canvas3d.cbeta  = parseFloat(cameraBetaContainer.text)/cameraBetaContainer.rate
                     canvas3d.cdis   = parseFloat(cameraDisContainer.text)
 //                    console.log( "checked " );
                 } else {
@@ -514,7 +542,7 @@ Item {
                 canvas3d.pitch = parseFloat(pitchContainer.text)
                 canvas3d.heading = parseFloat(headingContainer.text)
                 canvas3d.cdis = parseFloat(cameraDisContainer.text)
-                canvas3d.radius = parseFloat(ballRadiusContainer.text)
+                canvas3d.radius = parseFloat(ballRadiusContainer.text)/ballRadiusContainer.rate
                 canvas3d.line_width = parseFloat(lineWidthContainer.text)
                 canvas3d.point_size = parseFloat(pointSizeContainer.text)
                 canvas3d.vector_length = parseFloat(vectorContainer.text)
@@ -531,15 +559,11 @@ Item {
             anchors.horizontalCenterOffset: 20
             anchors.top: checkBoxContainer.bottom
             onClicked: {
-                canvas3d.ctheta = 0.35
+                canvas3d.ctheta = 0.25
                 canvas3d.cbeta  = 0.5
 
                 rotateCamera();
-//                canvas3d.pitchOffset = canvas3d.pitch
-                canvas3d.headingOffset = canvas3d.heading
-                var angle = GLcode.calcAngle(canvas3d.pitch, 0);
-                var u = angle[0], v = angle[1];
-                GLcode.resetPath(u, v, canvas3d.vector_length);
+                reset();
             }
         }
     }
@@ -557,6 +581,15 @@ Item {
         canvas3d.cx = pos[0]
         canvas3d.cy = pos[1]
         canvas3d.cz = pos[2]
+    }
+
+    function reset() {
+//        canvas3d.pitchOffset = canvas3d.pitch
+        canvas3d.headingOffset = canvas3d.heading
+        var angle = GLcode.calcAngle(canvas3d.pitch, 0);
+        var u = angle[0], v = angle[1];
+        GLcode.resetAllPath(u, v, canvas3d.vector_length);
+//        console.log("reset!");
     }
 
     Canvas3D {
@@ -587,10 +620,11 @@ Item {
         property double radius: 4
         property double vector_length: 4
         property bool enable_path: true
+        property bool path_real_line: true
         property bool enable_cube: true
         property double line_width: 1.0
         property double point_size: 0.15
-        property double path_size:  0.35
+        property double path_size:  0.3
         property string drawMode: "line"
         property var args: {
                     "heading" : heading, "pitch": pitch, "roll": roll,
@@ -598,9 +632,10 @@ Item {
                     "vector_length": vector_length, "enable_path": enable_path,
                     "enable_cube": enable_cube, "line_width": line_width,
                     "point_size": point_size, "path_size": path_size,
-                    "light_direction": [-0.88, 0.78, 0.78]
+                    "light_direction": [-0.88, 0.78, 0.78], "path_real_line": path_real_line
         }
         property bool isRunning: true
+        property int timerCount: 0
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
 //            selectRB(lessLineDrawMode)
@@ -618,4 +653,30 @@ Item {
         }
     }
 
+    Timer {
+        id: updateArgumentsTimer
+        running: false
+        repeat: true
+        interval: 1000/60
+        onTriggered: {
+            canvas3d.timerCount++;
+//            if(canvas3d.timerCount > 1000) {
+//                updateArgumentsTimer.running = false;
+//                updateArgumentsTimer.repeat = false;
+//            }
+
+            canvas3d.heading = dataSource.getHeading();
+            canvas3d.pitch   = dataSource.getPitch();
+            canvas3d.roll    = dataSource.getRoll();
+            canvas3d.vector_length = dataSource.getMagicVectorLength() !== 0 ? dataSource.getMagicVectorLength()/10000 : 4;
+//            console.log("Length: " +dataSource.getMagicVectorLength())
+        }
+    }
+    Connections {
+        target: windowContainer
+        onVisibleChanged : {
+//            console.log(windowContainer.visible);
+            updateArgumentsTimer.running = windowContainer.visible;
+        }
+    }
 }

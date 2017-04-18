@@ -6,18 +6,7 @@ Item {
     visible: true
     width: 800
     height: 600
-//    title: qsTr("Display compress(Pitch)")
     id: container
-
-    MouseArea {
-        anchors.fill: parent
-        onClicked: {
-            if(updateTimer.running)
-                updateTimer.stop()
-            else
-                updateTimer.restart()
-        }
-    }
 
     /* 矩形，用于设置背景色 */
     Rectangle {
@@ -42,10 +31,6 @@ Item {
         id: headingItem
         height: container.height
         width:  container.width/2
-        anchors {
-//            fill:parent
-//            centerIn: parent
-        }
 
         property real headingAngle: 0
 
@@ -54,17 +39,17 @@ Item {
             anchors.centerIn: parent
             width: getScaledSize(449)
             height: getScaledSize(449)
-            smooth:true
+            smooth: true
             source: "/img/heading.png"
-//            transformOriginPoint: point(winscreen.width/2,winscreen.height/2)
-//            transformOrigin: winscreen.Center
+            rotation: -headingItem.headingAngle
         }
 
-        PropertyAnimation {
+        SmoothedAnimation {
            id: aroundAnimation
-           target: compass_heading_img
-           properties:"rotation"
-           duration:100
+           target: headingItem
+           properties:"headingAngle"
+           duration: 100
+           maximumEasingTime : 100
         }
 
         Canvas {
@@ -78,6 +63,16 @@ Item {
                 var ctx = getContext("2d");
                 h_repaintCanvas(ctx);
             }
+        }
+
+        property var args: {
+            // 画布中心
+            "ox": headingItem.width/2,
+            "oy": headingItem.height/2,
+            /* 颜色 */
+            "color_red": "rgba(255, 0, 0, 0.75)",
+            "heading": headingItem.headingAngle,
+            "heading_img_height": compass_heading_img.height
         }
     }
 
@@ -99,9 +94,30 @@ Item {
         property string rollCircleImg : "/img/compass_roll_circle.png"   // 白色基线图片
         property string baseOuterImg: "/img/compass_pr_base.png"          // 指南针底部黑框
         property real pitch: 0
-//        property real lastPitch: 0
+        property real lastPitch: 0
 //        property bool pitchUp: false
         property real roll: 0
+        property var args : {
+            "pitch": pitchRoll.pitch,
+            "roll": pitchRoll.roll,
+            // 画布中心
+            "ox": pitchRoll.width/2,
+            "oy": pitchRoll.height/2,
+            /* 颜色 */
+            "color_gray": "#513928",
+            "color_blue": "#558db9",
+            "color_orange": "rgba(255, 122, 0, 0.8)",
+            "color_red": Qt.rgba(1, 0, 0, 0.5),
+            /** 线的参数 **/
+            "longline": getScaledSize(30),       // 长刻度线的长度
+            "shortline": getScaledSize(15),      // 短刻度线的长度
+            "lineheight": getScaledSize(2),      // 线宽
+            "mainLines": 3,                           // 每一边的长刻度线数
+            "linegap": pitchRoll.radius / 3.5,        // 两条长刻度线之间的距离
+            "degrees": 5,                             // 相邻长线和短线之间的刻度间隔
+            "heading": headingItem.headingAngle,
+            "heading_img_height": compass_heading_img.height
+        }
 
         // 画布，用于绘制俯仰仪，动态变化
         Canvas {
@@ -110,7 +126,7 @@ Item {
                 centerIn: parent
                 fill: parent
             }
-
+            rotation: pitchRoll.roll
 //            z:1
             contextType: "2d"
             visible: true
@@ -118,12 +134,16 @@ Item {
                 var ctx = getContext("2d")
                 repaintCanvas(ctx)
             }
-//            Component.onCompleted: {
-//                loadImage(pitchRoll.rollCircleImg)
-//                loadImage(pitchRoll.baseOuterImg)
-//            }
+        }
 
-//            onImageLoaded: requestPaint()
+
+        SmoothedAnimation {
+            id: rollAnimation
+            target: pitchCanvas
+            property: "roll"
+            duration: 100
+            maximumEasingTime : 100
+
         }
 
         /* 绘制俯仰仪基线 */
@@ -162,13 +182,7 @@ Item {
                     horizontalCenter: parent.horizontalCenter
                     verticalCenter: parent.verticalCenter
                 }
-//                transform:
-//                    Scale {
-//                        id: compass_item_img_scale
-//                        origin {x: container.width/2; y: container.height/2}
-//                        xScale: 1
-//                        yScale: 1
-//                    }
+                rotation: pitchRoll.roll
             }
 
             // 指南针底部黑框
@@ -196,7 +210,7 @@ Item {
     Timer {
         id: updateTimer
         interval: 100
-        running: true
+        running: false
         repeat: true
 
         onTriggered: {
@@ -212,40 +226,22 @@ Item {
             refresh(data[0], data[1], data[2]);
         }
     }
-
-    /**************************  javascript functions for pitch&roll  **********************************/
-
-    /* 统一设置 js 函数的参数 */
-    function getArgs() {
-        return {
-            pitch: pitchRoll.pitch,
-            roll: pitchRoll.roll,
-            // 画布中心
-            ox: pitchRoll.width/2,
-            oy: pitchRoll.height/2,
-            /* 颜色 */
-            color_gray: "#513928",
-            color_blue: "#558db9",
-            color_orange: "rgba(255, 122, 0, 0.8)",
-            color_red: Qt.rgba(1, 0, 0, 0.5),
-            /** 线的参数 **/
-            longline: getScaledSize(30),       // 长刻度线的长度
-            shortline: getScaledSize(15),      // 短刻度线的长度
-            lineheight: getScaledSize(2),      // 线宽
-            mainLines: 3,                           // 每一边的长刻度线数
-            linegap: pitchRoll.radius / 3.5,        // 两条长刻度线之间的距离
-            degrees: 5,                             // 相邻长线和短线之间的刻度间隔
-            heading: headingItem.headingAngle,
-            heading_img_height: compass_heading_img.height
+    Connections {
+        target: windowContainer
+        onVisibleChanged : {
+//            console.log(windowContainer.visible);
+            updateTimer.running = windowContainer.visible;
         }
     }
+
+    /**************************  javascript functions for pitch&roll  **********************************/
 
     /*
      * 绘制图形
      * @param  ctx 画布上下文
     */
     function repaintCanvas(ctx) {
-        var args = getArgs();
+        var args = pitchRoll.args;
         ctx.lineWidth = 1;
         ctx.strokeStyle = "#f0f0f0";
 
@@ -305,7 +301,7 @@ Item {
       * @param  off     偏移量
       */
     function moveLineOnY(line, up) {
-        var args = getArgs();
+        var args = pitchRoll.args;
         var off = 0;
 //        if(pitchRoll.lastPitch !== args.pitch) {
 //            /**
@@ -340,7 +336,7 @@ Item {
      * @param  ctx    画布上下文
     */
     function drawBaseLine(ctx) {
-        var args = getArgs()
+        var args = pitchRoll.args;
         /*
          * 用 color_orange 绘制圆的水平方向直径
          * 然后用 color_orange 绘制顶部的三角形
@@ -553,39 +549,6 @@ Item {
     }
 
     /*
-     * @Depracted  直接通过俯仰角计算角度过于复杂，颜色无法正确分配
-     * 通过俯仰角 pitch 计算出蓝色区域的开始角度和结束角度
-     * pitch  俯仰角
-    */
-    function countAngle1(pitch) {
-//        var angle = [0, 0]  // angle[0] 为起始角度，angle[1] 为结束角度
-
-        var startAngle = 0, endAngle = 0
-        var length = 0
-        if(Math.abs(pitch) < 90) {
-            length = Math.abs(pitch) / 90 * pitchRoll.radius
-        } else {
-            length = (Math.abs(pitch) - 90 ) / 90 * pitchRoll.radius
-        }
-
-        startAngle = Math.asin(length / pitchRoll.radius)
-//        console.log(startAngle + " == " + startAngle*Math.PI)
-        if(pitch > 90) {                //  90 ~ 180
-            startAngle = -startAngle
-        } else if (pitch > 0) {         //  0 ~ 90
-            startAngle = startAngle
-        } else if (pitch > -90) {       //  -90 ~ 0
-            startAngle = -startAngle
-        } else {                        //  -180 ~ -90
-            startAngle = startAngle
-        }
-
-        endAngle = Math.PI - startAngle
-
-        return [startAngle, endAngle]
-    }
-
-    /*
      * 根据 heading, pitch 和 roll 角度刷新图像
      * @param  heading  航向角
      * @param  pitch  俯仰角
@@ -593,13 +556,10 @@ Item {
     */
     function refresh(heading, pitch, roll) {
         headingItem.headingAngle = heading;
-        compass_heading_img.rotation = -heading;
+//        compass_heading_img.rotation = -heading;
         // 更新数据
         pitchRoll.pitch = pitch;
         pitchRoll.roll = roll;
-        // 旋转图像
-        roll_circle.rotation = roll;
-        pitchCanvas.rotation = roll;
         // 重新绘制 Canvas
         pitchCanvas.requestPaint();
         pitchStaticCanvas.requestPaint();
@@ -625,20 +585,8 @@ Item {
 
     /***************  js functions for heading  ************************/
 
-    function h_getArgs() {
-        return {
-            // 画布中心
-            ox: headingItem.width/2,
-            oy: headingItem.height/2,
-            /* 颜色 */
-            color_red: "rgba(255, 0, 0, 0.75)",
-            heading: headingItem.headingAngle,
-            heading_img_height: compass_heading_img.height
-        }
-    }
-
     function h_repaintCanvas(ctx) {
-        var args = h_getArgs();
+        var args = headingItem.args;
         var base = getScaledSize(24);
         var height = getScaledSize(50);
         var yoffset = - (pitchRoll.radius - getScaledSize(25));
@@ -663,14 +611,4 @@ Item {
         ctx.fillText(args.heading.toFixed(2), args.ox - getScaledSize(16), args.oy );
 
     }
-
-    /*
-     * @Deprecated  在 refresh 函数里面更新数据
-     * 刷新 heading 图像
-     * heading  航向角
-    */
-//    function h_refresh(heading) {
-//        compass_heading_img.rotation = heading
-//    }
-
 }
