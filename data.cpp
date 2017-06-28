@@ -3,6 +3,7 @@
 #include <QQmlApplicationEngine>
 #include <time.h>
 #include <QDebug>
+#include <QTimer>
 
 Data::Data() {
     heading = 0;
@@ -28,7 +29,6 @@ void Data::view() {
     compassview->setResizeMode(QQuickView::SizeRootObjectToView);
     compassview->setTitle("Compass heading pitch & roll");
     compassview->show();
-
 }
 
 void Data::view3D() {
@@ -42,11 +42,14 @@ void Data::view3D() {
 //    compassview->set
     // 设置窗口缩放时，根对象也会随之缩放
     compassview->setResizeMode(QQuickView::SizeRootObjectToView);
-    compassview->setTitle("3D Viewer");
+    compassview->setTitle("Space State");
     compassview->show();
 }
 
+
+
 double Data::getRadius() {
+    emit headingChanged();
     return 125.0;
 }
 

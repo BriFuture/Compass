@@ -22,6 +22,9 @@ public:
     double pitch;
     double roll;
 
+signals:
+    void headingChanged();
+
 public slots:
     double getRadius();
     double getHeading();

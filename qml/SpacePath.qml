@@ -69,7 +69,6 @@ Item {
             u = 0.999;
         }
 
-
         v = (v * 100) % 100 / 100;
 //            console.log("released ==> " + u + " ,  " + v);
         canvas3d.ctheta = u;
@@ -293,7 +292,7 @@ Item {
             id: modeSelection
             anchors.top: pathSizeContainer.bottom
             anchors.left: parent.left
-            height: 25
+            height: 50
             RadioButton {
                 id: lineDrawMode
                 anchors.top: parent.top
@@ -331,6 +330,21 @@ Item {
                 height: 20
                 onClicked: {
                     selectRB(lessLineDrawMode);
+                }
+            }
+
+            RadioButton {
+                id: caliDrawMode
+                anchors.top: lineDrawMode.top
+                anchors.left: parent.left
+                anchors.leftMargin: 5
+                anchors.topMargin: 25
+                text: "calibration"
+                checked: false
+                width: 20
+                height: 20
+                onClicked: {
+                    selectRB(caliDrawMode);
                 }
             }
 
@@ -425,7 +439,7 @@ Item {
                 text: "绘制路径"
                 anchors.left: parent.left
                 anchors.leftMargin: 5
-                checked: true
+                checked: canvas3d.enable_path
                 onCheckedChanged: {
                     if(checked) {
                         canvas3d.enable_path = true;
@@ -443,7 +457,7 @@ Item {
                     left: drawPathBox.right
                     leftMargin: 20
                 }
-                checked: true
+                checked: canvas3d.path_real_line
                 onCheckedChanged: {
                     if(checked) {
                         canvas3d.path_real_line = true;
@@ -463,7 +477,7 @@ Item {
                     left: parent.left
                     leftMargin: 5
                 }
-                checked: true
+                checked: canvas3d.enable_cube
                 onCheckedChanged: {
                     if(checked) {
                         canvas3d.enable_cube = true;
@@ -493,7 +507,7 @@ Item {
                         xCameraContainer.visible    = false;
                         yCameraContainer.visible    = false;
                         zCameraContainer.visible    = false;
-                        
+
                     } else {
                         cameraBetaContainer.visible = false;
                         cameraDisContainer.visible  = false;
@@ -566,11 +580,99 @@ Item {
                 reset();
             }
         }
+
+        Button {
+            id: recordButton
+            width: 70
+            height: 20
+            text: "record"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: -60
+            anchors.top: setButton.bottom
+            anchors.topMargin: 5
+            onClicked: {
+                GLcode.recordPoint();
+            }
+        }
+
+        Button {
+            id: resetRecordButton
+            width: 80
+            height: 20
+            text: "reset record"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 20
+            anchors.top: setButton.bottom
+            anchors.topMargin: 5
+            onClicked: {
+                GLcode.resetRecordPoint();
+            }
+        }
+
+        MySlider {
+            id: xPosContainer
+            labelText: "BALL X POS: "
+            height: 50
+            width: parent.width
+            visible: true
+            anchors.top: recordButton.bottom
+            anchors.left: parent.left
+            sliderMaxValue: 20
+            sliderMinValue: -20
+            sliderValue: canvas3d.xPos
+            sliderWidth: parent.width
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                if( pressed )
+                    canvas3d.xPos = sliderValue
+            }
+        }
+
+        MySlider {
+            id: yPosContainer
+            labelText: "BALL Y POS: "
+            height: 50
+            width: parent.width
+            visible: true
+            anchors.top: xPosContainer.bottom
+            anchors.left: parent.left
+            sliderMaxValue: 20
+            sliderMinValue: -20
+            sliderValue: canvas3d.yPos
+            sliderWidth: parent.width
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                if( pressed )
+                    canvas3d.yPos = sliderValue
+            }
+        }
+
+        MySlider {
+            id: zPosContainer
+            labelText: "BALL Z POS: "
+            height: 50
+            width: parent.width
+            visible: true
+            anchors.top: yPosContainer.bottom
+            anchors.left: parent.left
+            sliderMaxValue: 20
+            sliderMinValue: -20
+            sliderValue: canvas3d.zPos
+            sliderWidth: parent.width
+//            inputText: canvas3d.heading
+            onSliderValueChanged: {
+                if( pressed )
+                    canvas3d.zPos = sliderValue
+            }
+        }
     }
+
     function selectRB(rb) {
         lineDrawMode.checked = false;
         surfaceDrawMode.checked = false;
         lessLineDrawMode.checked = false;
+        caliDrawMode.checked = false;
+
         rb.checked = true;
 //        console.log(rb.text);
         canvas3d.drawMode = rb.text;
@@ -589,7 +691,9 @@ Item {
         var angle = GLcode.calcAngle(canvas3d.pitch, 0);
         var u = angle[0], v = angle[1];
         GLcode.resetAllPath(u, v, canvas3d.vector_length);
-//        console.log("reset!");
+    }
+    function recordAPoint() {
+        GLcode.recordPoint();
     }
 
     Canvas3D {
@@ -604,7 +708,7 @@ Item {
         property double zPos: 0
         // camera position
         // distance between camera's position and origin position
-        property double cdis: 15
+        property double cdis: 18
         property double ctheta: 0.5
         property double cbeta: 0.0
         property double cx: 15
@@ -617,9 +721,9 @@ Item {
         property double roll: 0
         property double headingOffset: 0
 //        property double pitchOffset: 0
-        property double radius: 4
+        property double radius: 5
         property double vector_length: 4
-        property bool enable_path: true
+        property bool enable_path: false
         property bool path_real_line: true
         property bool enable_cube: true
         property double line_width: 1.0
@@ -632,7 +736,7 @@ Item {
                     "vector_length": vector_length, "enable_path": enable_path,
                     "enable_cube": enable_cube, "line_width": line_width,
                     "point_size": point_size, "path_size": path_size,
-                    "light_direction": [-0.88, 0.78, 0.78], "path_real_line": path_real_line
+                    "light_direction": [-0.25, 0.7, 0.7], "path_real_line": path_real_line
         }
         property bool isRunning: true
         property int timerCount: 0
@@ -656,15 +760,10 @@ Item {
     Timer {
         id: updateArgumentsTimer
         running: false
-        repeat: true
+        repeat: false
         interval: 1000/60
         onTriggered: {
             canvas3d.timerCount++;
-//            if(canvas3d.timerCount > 1000) {
-//                updateArgumentsTimer.running = false;
-//                updateArgumentsTimer.repeat = false;
-//            }
-
             canvas3d.heading = dataSource.getHeading();
             canvas3d.pitch   = dataSource.getPitch();
             canvas3d.roll    = dataSource.getRoll();
@@ -675,8 +774,7 @@ Item {
     Connections {
         target: windowContainer
         onVisibleChanged : {
-//            console.log(windowContainer.visible);
-            updateArgumentsTimer.running = windowContainer.visible;
+//            updateArgumentsTimer.running = windowContainer.visible;
         }
     }
 }

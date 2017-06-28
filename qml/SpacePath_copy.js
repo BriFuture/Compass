@@ -23,13 +23,10 @@ var uniforms = {}
 // 绘制缓冲区
 var buffers = {};
 
-var vertexes = {};
-var indexes  = {};
-
 // matrixs
 var pMatrix  = mat4.create();
 var cMatrix  = mat4.create();
-var mvMatrix = mat4.create();
+var mMatrix = mat4.create();
 var nMatrix  = mat4.create();
 
 // 纹理
@@ -49,12 +46,12 @@ var lastSensorPoint = [-1, -1, 1];
 var sensorPath = [];
 var maxPathNum = 4800;  // 每条路径上的最多点的个数,由于每个 sensorPoint 面有 8*3 个数据，该数值最好为 24 的整数倍
 var currentPath = 0;    // 当前路径的序号
+var sensorPathIndex = [];
+var sensorPathIndex2 = [];
 var pointVertexSides = 12;
 
 // 相关绘图变量
 var canvasArgs;
-var u, v;
-var recordPointsAngle = [];
 
 function initializeGL(canvas) {
     gl = canvas.getContext("canvas3d", {depth: true, antilias: true});
@@ -64,7 +61,7 @@ function initializeGL(canvas) {
     gl.depthFunc(gl.LESS);
     gl.enable(gl.CULL_FACE);  // 设置遮挡剔除有效
     gl.cullFace(gl.BACK);
-    gl.clearColor(0.97, 0.97, 0.97, 1.0);   // background color
+    gl.clearColor(0.98, 0.98, 0.98, 1.0);
     gl.clearDepth(1.0);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.enable(gl.BLEND);        // 开启混合，启用透明层
@@ -83,12 +80,6 @@ function initArguments(canvas) {
     lastSensorPoint = calcAngle(canvas.pitch, canvas.heading);
     lastSensorPoint[2] = canvas.vector_length;
     canvasArgs = canvas.args;
-
-    indexes.sensor_path_index  = [];
-    indexes.sensor_path_index2 = [];
-
-    indexes.record_point = [];
-    vertexes.record_point      = [];
 }
 
 function initShaders() {
@@ -99,7 +90,7 @@ function initShaders() {
 
                     'uniform highp mat4 uPMatrix;' +    // 透视矩阵
                     'uniform highp mat4 uCMatrix;' +    // 摄像机
-                    'uniform highp mat4 uMVMatrix;'+    // 模型视图矩阵
+                    'uniform highp mat4 umMatrix;'+    // 模型视图矩阵
                     'uniform highp mat4 uNormalMatrix;' +   // 模型法线矩阵
                     'uniform vec3 uLightDirection;'+        // 直射光的方向
                     'uniform vec4 uColor;'+
@@ -108,14 +99,13 @@ function initShaders() {
                     'varying vec2 vXTexture;'+
 
                     'void main(void) {'      +
-                        'gl_Position = uPMatrix * uMVMatrix * uCMatrix * vec4(aVertexPosition, 1.0); '+
+                        'gl_Position = uPMatrix * uCMatrix * umMatrix * vec4(aVertexPosition, 1.0); '+
                         'highp vec3 ambientLight = vec3(0.42, 0.42, 0.42);' +  // 环境光
-                        'highp vec3 directionalLightColor = vec3(0.51, 0.55, 0.52);' +  // 直射光，与物体的颜色矩阵相乘
+                        'highp vec3 directionalLightColor = vec3(0.79, 0.79, 0.79);' +  // 直射光，与物体的颜色矩阵相乘
                         // 'highp vec3 directionalVector = vec3(0.75, 0.75, 0.75);' +      // 直射光的方向
                         'highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);' +
                         'highp float directional = max(dot(transformedNormal.xyz, uLightDirection), 0.0);' +
-                        'if( uColor[3] > 1.0 ) {vLight = vec3(uColor);}' + // 通过uniform 改变颜色
-                        'else if( uColor[3] > 0.0 ) {vLight = vec3(uColor) * (ambientLight + (directionalLightColor * directional));}' +
+                        'if( uColor[3] > 0.0 ) {vLight = vec3(uColor) * (ambientLight + (directionalLightColor * directional));}' +
                         'else {vLight = aColor * (ambientLight + (directionalLightColor * directional));}' +
                         'vXTexture = aXTexture;' +
                     '}';
@@ -158,7 +148,7 @@ function initShaders() {
     attributes.xtexture = gl.getAttribLocation(shaderProgram, "aXTexture");
 //    gl.enableVertexAttribArray(attributes.xtexture);
 
-    uniforms.model_view_matrix  = gl.getUniformLocation(shaderProgram, "uMVMatrix");    // 模型视图
+    uniforms.model_view_matrix  = gl.getUniformLocation(shaderProgram, "umMatrix");    // 模型视图
     uniforms.camera_matrix      = gl.getUniformLocation(shaderProgram, "uCMatrix");     // 摄像机
     uniforms.perspective_matrix = gl.getUniformLocation(shaderProgram, "uPMatrix");     // 透视
     uniforms.normal_matrix      = gl.getUniformLocation(shaderProgram, "uNormalMatrix");    // 法线
@@ -187,21 +177,27 @@ function initBuffers() {
                  0.0, 0.0, 0.0,
                  0.0, 0.0, 10.0
             ];
-    var coordIndex      = [0, 1, 2, 3, 4, 5];
-    var lineIndex       = [0, 1, 2, 3, 4, 5];
-    var lessLineIndex   = [0, 1, 2, 3, 4, 5];
+    var coordIndex = [0, 1,
+                      2, 3,
+                      4, 5];
+    var lineIndex = [0, 1,
+                     2, 3,
+                     4, 5];
+    var lessLineIndex = [0, 1,
+                         2, 3,
+                         4, 5];
     // 坐标轴的颜色
     var lineColorData = [
-        // x
-        0.1, 0.1, 0,
-        0.1, 0.1, 0,
-        // y
-        0, 0.1, 0,
-        0, 0.1, 0,
-        // z blue
-        0, 0, 0.1,
-        0, 0, 0.1,
-    ];
+                // x 
+                0.1,0.1,0,
+                0.1,0.1,0,
+                // y 
+                0,0.1,0,
+                0,0.1,0,
+                // z blue
+                0,0,0.1,
+                0,0,0.1,
+            ];
 
     // 球体表面各处顶点坐标及索引
     var ball = getBallVertex(accuracy, canvasArgs.radius, coordIndex.length, "JW");
@@ -218,11 +214,17 @@ function initBuffers() {
     ball_vertex_count[1] = lineIndex.length;
     ball_vertex_count[2] = lessLineIndex.length;
 
+//    console.log("==========");
+//    console.log(coord);
+//    console.log(coordIndex.length-6);
+//    console.log(coordIndex);
+//    console.log("==========");
+
     // 顶点信息
-    buffers.coord           = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(coord), gl.DYNAMIC_DRAW);
-    buffers.coord_index     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex), gl.STATIC_DRAW);
-    buffers.line_index      = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lineIndex), gl.STATIC_DRAW);
-    buffers.less_line_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lessLineIndex), gl.STATIC_DRAW);
+    buffers.coord_buffer           = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(coord), gl.DYNAMIC_DRAW);
+    buffers.coord_index_buffer     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex), gl.STATIC_DRAW);
+    buffers.line_index_buffer      = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lineIndex), gl.STATIC_DRAW);
+    buffers.less_line_index_buffer = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lessLineIndex), gl.STATIC_DRAW);
     gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);   // 传递顶点数据
 
     // 法线
@@ -233,66 +235,36 @@ function initBuffers() {
     buffers.color_buffer = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(lineColorData), gl.STATIC_DRAW);
     gl.vertexAttribPointer(attributes.color, 3, gl.FLOAT, false, 0, 0);
 
-    // 绘制参考圆圈
-    coord = getRefCirclePoints();
-//    console.log(coord.length);
-    var i = 0, j = 0;
-    coordIndex = [];
-    for(i = 0; i < 26; i++) {
-        for(j = 1; j < pointVertexSides; j++) {
-            coordIndex.push(i*(pointVertexSides+1)+j);
-            coordIndex.push(i*(pointVertexSides+1)+j+1);
-        }
-        coordIndex.push(i*(pointVertexSides+1)+12);
-        coordIndex.push(i*(pointVertexSides+1)+1);
-    }
-
-    buffers.refcircle = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(coord), gl.DYNAMIC_DRAW);
-    buffers.refcircle_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-
     /** 将 sensor point 显示为圆形  **/
     // 初始化顶点，以便在缓冲区分配空间
     var vertexPoint = getSensorPoint([0.5, 0.0, 0.0], 1, canvasArgs.point_size, pointVertexSides, [0.0, 0.0, 0.0]);
     vertexPoint = vertexPoint.concat([0, 0, 0], [0.0, 0.0, 0.0])   // 手动将原点添加进去
-    buffers.point = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(vertexPoint), gl.DYNAMIC_DRAW);
+    buffers.point_buffer = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(vertexPoint), gl.DYNAMIC_DRAW);
     // 绘制正反两面，索引不需要改变
     var vertexIndex = [];
-
+    var i = 0;
     for(i = 1; i < pointVertexSides; i++) {
-//        vertexIndex.push(0, i, i+1, 0, i+1, i, pointVertexSides+1, i, i+1, pointVertexSides+1, i+1, i);
-        vertexIndex.push(0, i, i+1,
-                         0, i+1, i);
+        vertexIndex.push(0, i, i+1, 0, i+1, i, pointVertexSides+1, i, i+1, pointVertexSides+1, i+1, i)
     }
-//    vertexIndex.push(0, 1, pointVertexSides, 0, pointVertexSides, 1, pointVertexSides+1, 1, pointVertexSides, pointVertexSides+1, pointVertexSides, 1);
-    vertexIndex.push(0, 1, pointVertexSides,
-                     0, pointVertexSides, 1);
-    for(i = 0; i < pointVertexSides; i++) {
-//        vertexIndex.push(0, i, i+1, 0, i+1, i, pointVertexSides+1, i, i+1, pointVertexSides+1, i+1, i);
-        vertexIndex.push(pointVertexSides+1, i, i+1,
-                         pointVertexSides+1, i+1, i);
-    }
-    buffers.point_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndex), gl.STATIC_DRAW);
+    vertexIndex.push(0, 1, pointVertexSides, 0, pointVertexSides, 1, pointVertexSides+1, 1, pointVertexSides, pointVertexSides+1, pointVertexSides, 1);
+    buffers.point_index_buffer = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndex), gl.STATIC_DRAW);
     gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0);
 
     // path Buffer initialization
-    buffers.path = [];
-    buffers.path_index  = [];
-    buffers.path_index2 = [];
-    buffers.path[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-    buffers.path_index[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-    buffers.path_index2[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
-
-    buffers.record_point       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-    buffers.record_point_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 8*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_buffer = [];
+    buffers.path_index_buffer  = [];
+    buffers.path_index2_buffer = [];
+    buffers.path_buffer[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_index_buffer[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_index2_buffer[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
 
     // sensor simulator and line 长方体共需 6*4 个顶点, 每个顶点 9 个数据，数据类型为 Float32，4字节
-    buffers.sensor_simulator = createArrayBuffer(gl.ARRAY_BUFFER, 4*24*9, gl.DYNAMIC_DRAW);
+    buffers.sensor_simulator_buffer = createArrayBuffer(gl.ARRAY_BUFFER, 4*24*9, gl.DYNAMIC_DRAW);
     vertexIndex = [];
     for(i = 0; i < 6; i++) {
         vertexIndex.push(i*4, i*4+1, i*4+2, i*4, i*4+2, i*4+3);
     }
-    buffers.sensor_simulator_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndex), gl.STATIC_DRAW);  // 索引不需改变
+    buffers.sensor_simulator_index_buffer = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndex), gl.STATIC_DRAW);  // 索引不需改变
 
     /** 由于 2D 纹理只需要 xy 坐标，因此只用两个坐标表示纹理的位置即可 */
     var textureCoord = [
@@ -327,9 +299,8 @@ function initBuffers() {
                 1.0, 1.0,
                 1.0, 0.0,
             ];
-    buffers.texture_coord = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(textureCoord), gl.STATIC_DRAW);
+    buffers.texture_coord_buffer = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(textureCoord), gl.STATIC_DRAW);
     gl.vertexAttribPointer(attributes.xtexture, 2, gl.FLOAT, false, 0, 0);
-
 
 }
 
@@ -412,22 +383,20 @@ function paintGL(canvas) {
     /* 清除给定的标志位 */
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     /* 平移变换 */
-    mat4.fromTranslation(mvMatrix, vec3.fromValues(canvas.xPos, canvas.yPos, canvas.zPos) );
-//    mat4.identity(mvMatrix);
-    // 设置观察点
-//    mat4.lookAt(mvMatrix, [canvas.cx, canvas.cy, canvas.cz], [0, 0, 0], [0, 0, 1]);
-//    mat4.translate(mvMatrix, mvMatrix, [canvas.xPos, canvas.yPos, canvas.zPos]);
+//    mat4.fromTranslation(mMatrix, vec3.fromValues(canvas.xPos, canvas.yPos, canvas.zPos) );
+    mat4.identity(mMatrix);
+//    mat4.translate(mMatrix, mMatrix, [canvas.xPos, canvas.yPos, canvas.zPos]);
     /* 进行旋转，fromRotation() 函数创造一个新的矩阵，所以之后调用该函数会覆盖掉前面的操作 */
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(canvas.xRotAnim), [1, 0, 0]);
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(canvas.yRotAnim), [0, 1, 0]);
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(canvas.zRotAnim), [0, 0, 1]);
-    gl.uniformMatrix4fv(uniforms.model_view_matrix, false, mvMatrix);
+//    mat4.rotate(mMatrix, mMatrix, degToRad(canvas.xRotAnim), [1, 0, 0]);
+//    mat4.rotate(mMatrix, mMatrix, degToRad(canvas.yRotAnim), [0, 1, 0]);
+//    mat4.rotate(mMatrix, mMatrix, degToRad(canvas.zRotAnim), [0, 0, 1]);
+    gl.uniformMatrix4fv(uniforms.model_view_matrix, false, mMatrix);
 
-    /** 由于使用 mvMatrix 对球体进行观察时，直射光源的位置也会随之变化，因此单独使用一个 cMatrixUniform 变量控制摄像机的方位 **/
+    /** 设置观察点。由于使用 mMatrix 对球体进行观察时，直射光源的位置也会随之变化，因此单独使用一个 cMatrixUniform 变量控制摄像机的方位 **/
     mat4.lookAt(cMatrix, [canvas.cx, canvas.cy, canvas.cz], [0, 0, 0], [0, 0, 1]);
     gl.uniformMatrix4fv(uniforms.camera_matrix, false, cMatrix);
 
-    mat4.invert(nMatrix, mvMatrix);
+    mat4.invert(nMatrix, mMatrix);
     mat4.transpose(nMatrix, nMatrix);
 
     gl.uniformMatrix4fv(uniforms.normal_matrix, false, nMatrix);
@@ -440,89 +409,52 @@ function paintGL(canvas) {
     startPaint(canvas);
 }
 
-/** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
+/** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体*/
 function startPaint(canvas) {
     var angle = calcAngle(canvasArgs.pitch, canvasArgs.heading);
-    u = angle[0];
-    v = angle[1];
+    var u = angle[0], v = angle[1];
     /********* 绘制路径 *********/
     if( canvasArgs.enable_path ) {
         drawPath(gl, u, v);
-        drawPoint(gl, u, v, canvasArgs.vector_length, true);
     } else {
         resetAllPath(u, v, canvasArgs.vector_length);
-        drawPoint(gl, u, v, canvasArgs.radius);
     }
     // 绘制传感器指向的方向
+    drawPoint(gl, u, v);
     /******** 绘制长方体表示的传感器 **********/
     if( canvasArgs.enable_cube ) {
         drawCube(gl, u, v);
     }
-    if( canvas.drawMode === "calibration" ) {
-        paintRefcircle();
-    }
+
     // 在绘制球面的时候不使用纹理
     gl.uniform1i(uniforms.enable_texture, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color_buffer);
     gl.vertexAttribPointer(attributes.color, 3, gl.FLOAT, false, 0, 0);
     // 顶点数据和法线数据
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coord);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coord_buffer);
     gl.vertexAttribPointer(attributes.vertex_normal, 3, gl.FLOAT, false, 0, 0);
-    switch( canvas.drawMode ) {
-    case "line":
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.line_index);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-        gl.drawElements(gl.LINES, ball_vertex_count[1], gl.UNSIGNED_SHORT, 0);
-//        gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
-        break;
-    case "lessLine":
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.less_line_index);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-        gl.drawElements(gl.LINES, ball_vertex_count[2] - accuracy*3*2, gl.UNSIGNED_SHORT, 0);
-        // 绘制赤道所在的圆面
-        gl.drawElements(gl.TRIANGLES, accuracy*3*2*0.25, gl.UNSIGNED_SHORT, (ball_vertex_count[2] - accuracy*3*2*0.5) * 2);
-        break;
-    case "calibration":
-    case "surface":
-    default:
+    if(canvas.drawMode === "surface") {
         // 绘制坐标轴
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.coord_index);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.coord_index_buffer);
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
         gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
         // 绘制球形
         gl.drawElements(gl.TRIANGLES, ball_vertex_count[0], gl.UNSIGNED_SHORT, 6*2);
-        break;
+    } else if( canvas.drawMode === "line"){
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.line_index_buffer);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.drawElements(gl.LINES, ball_vertex_count[1], gl.UNSIGNED_SHORT, 0);
+//        gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
+    } else if (canvas.drawMode === "lessLine") {
+//        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coordIndexBuffer);
+//        gl.drawElements(gl.TRIANGLES, ball_vertex_count[0] - accuracy * accuracy*1.5, gl.UNSIGNED_SHORT, (6 + accuracy * accuracy*1.5)*2);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.less_line_index_buffer);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.drawElements(gl.LINES, ball_vertex_count[2] - accuracy*3*2, gl.UNSIGNED_SHORT, 0);
+        // 绘制赤道所在的圆面
+        gl.drawElements(gl.TRIANGLES, accuracy*3*2*0.25, gl.UNSIGNED_SHORT, (ball_vertex_count[2] - accuracy*3*2*0.5) * 2);
     }
 
-}
-
-/**
-*  绘制球面上的参考圆圈
-*  首先设置线宽和颜色
-**/
-function paintRefcircle() {
-    gl.lineWidth(3.0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.refcircle);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.refcircle_index);
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-//    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-    var refIndexes = pointVertexSides;
-    var greenNum = 6;
-    // 画出经纬度同时为0的圆圈
-    gl.uniform4fv(uniforms.color_unit, [0.05, 1.0, 0.1, 1.0]);
-    gl.drawElements(gl.LINES, refIndexes*2*greenNum, gl.UNSIGNED_SHORT, 0);     // x2 是线段需要的索引数
-    gl.uniform4fv(uniforms.color_unit, [0.05, 0.1, 1.0, 1.0]);
-    gl.drawElements(gl.LINES, (26-greenNum)*refIndexes*2, gl.UNSIGNED_SHORT, refIndexes*2*greenNum*2);
-    gl.lineWidth(canvasArgs.line_width);
-//    return;
-    // 进行采点操作
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.record_point);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.record_point_index);
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-//    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-    gl.uniform4fv(uniforms.color_unit, [0.1, 0.1, 0.95, 1.1]);    // 传入颜色 uniform，就不再需要颜色顶点数据
-    gl.drawElements(gl.TRIANGLES, indexes.record_point.length, gl.UNSIGNED_SHORT, 0);
-    gl.uniform4fv(uniforms.color_unit, [0.0, 0.0, 0.0, 0.0]);
 }
 
 function setArguments(canvas) {
@@ -544,17 +476,13 @@ function setArguments(canvas) {
                 ];
         var ball = getBallVertex(accuracy, canvasArgs.radius, 6, "JW");
         coord.push.apply(coord, ball.vertex);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coord);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coord_buffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(coord));
-
-        var refcirclePoints = getRefCirclePoints();
-        updateSubBuffer(gl.ARRAY_BUFFER, buffers.refcircle, 0, new Float32Array(refcirclePoints));
     }
 
     canvasArgs = canvas.args;
-    /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
+    /** 如果 heading 有偏移，应把偏移算上 **/
     canvasArgs.heading = canvas.heading - canvas.headingOffset;
-
 }
 
 
@@ -563,24 +491,19 @@ function setArguments(canvas) {
  * @param {*} gl 
  * @param {*} pitch     俯仰角的角度，范围是[-180, 180]
  * @param {*} heading   航向角的角度，增大的方向为从 Z 轴正无穷远处向原点看时顺时针方向，范围是[0, 360)
- * @param {*} offset    斑点到原点的距离
  */
-function drawPoint(gl, u, v, offset, radial) {
+function drawPoint(gl, u, v) {
     gl.uniform4fv(uniforms.color_unit, [0.0, 0.8, 0.6, 1.0]);
     /******** 在球面上绘制斑点，连接原点到球面斑点的线段 **********/
-    var sensorPoint = getSensorPoint([u, v, 0], offset, canvasArgs.point_size, pointVertexSides);
-    updateSubBuffer(gl.ARRAY_BUFFER, buffers.point, 0, new Float32Array(sensorPoint))
+    var sensorPoint = getSensorPoint([u, v, 0], canvasArgs.vector_length + 0.008, canvasArgs.point_size, pointVertexSides);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.point_buffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(sensorPoint));
     gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
     gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);            // 认为顶点方向就是法线方向
 //    gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 6*4, 3*4);          // 偏移量为 3 个数据 * sizeof(float)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.point_index);
-    if( radial ) {
-        // 由于需要绘制射线，因此索引数目需要加倍
-        gl.drawElements(gl.TRIANGLES, pointVertexSides*6*2, gl.UNSIGNED_SHORT, 0);
-    } else {
-        gl.drawElements(gl.TRIANGLES, pointVertexSides*6, gl.UNSIGNED_SHORT, 0);
-    }
-
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.point_index_buffer);
+    // 由于需要绘制射线，因此索引数目需要加倍
+    gl.drawElements(gl.TRIANGLES, pointVertexSides*6*2, gl.UNSIGNED_SHORT, 0);
     gl.uniform4fv(uniforms.color_unit, [0.0, 0.0, 0.0, 0.0]);
 }
 
@@ -588,7 +511,6 @@ function drawPoint(gl, u, v, offset, radial) {
  * 根据 u，v 计算传感器当前位置四周的点的位置
  * 获取点位置用的方法是：先在 XOY 平面上绘制出相应图形，根据 u, v 进行旋转，
  * 然后根据 u, v, offset 确定的向量进行平移
- * 注意：由于可能需要原点，因此这里的顶点个数为n+1。
  * @param {array} angles   angles[0] = u, angles[1] = v, angles[2] = f
  * @param {double} offset 与原点的距离
  * @param {double} pointSize  中心点到顶点的距离
@@ -601,11 +523,10 @@ function getSensorPoint(angles, offset, pointSize, n, rgb) {
     var v = angles[1];
     var f = angles[2];
     var sensorPoint = [];
-
     var points = [ [0, 0, 0] ];        // 二维数组，每个元素是一个三维数组，包含顶点的 xyz 坐标
     // 优化数组连接，concat 在这里的时间复杂度为 O(n2)
-//    points = points.concat(drawSurfaceAndMove([u, v, 0], pointSize, n));
-    points.push.apply(points, drawSurfaceAndMove([u, v, f], pointSize, n));
+//    points = points.concat(getSpinnedSurfaceVertex([u, v, 0], pointSize, n));
+    points.push.apply(points, getSpinnedSurfaceVertex([u, v, f], pointSize, n));
 
     // 将顶点添加到 sensorPoint 数组中，并将得到的平面进行平移
     points.forEach(function(element){
@@ -616,61 +537,8 @@ function getSensorPoint(angles, offset, pointSize, n, rgb) {
 }
 
 /**
-*  球面上的参考圆圈
+  * 绘制长方体
 **/
-function getRefCirclePoints() {
-    var i, j;
-    var points = [];
-    var sensorPoint;
-
-    // 赤道上 0 90 180 270 位置上的四个圆圈
-    i = 2;
-    for(j = 0; j < 8; j = j + 2) {
-        sensorPoint = getSensorPoint([i/4, j/8, 0], canvasArgs.radius, 0.15, pointVertexSides);
-        points.push.apply(points, sensorPoint);
-    }
-
-    points.push.apply(points, getSensorPoint([0, 0, 0], canvasArgs.radius, 0.15, pointVertexSides));    // north polar
-    points.push.apply(points, getSensorPoint([1, 0, 0], canvasArgs.radius, 0.15, pointVertexSides));    // south polar
-
-    for(j = 0; j < 8; j++) {
-        for(i = 1; i < 4; i++) {
-            sensorPoint = getSensorPoint([i/4, j/8, 0], canvasArgs.radius, 0.15, pointVertexSides);
-            points.push.apply(points, sensorPoint);
-        }
-    }
-    return points;
-}
-
-/***
- *  球面上的打点操作
-**/
-function recordPoint() {
-    var n = vertexes.record_point.length/3;
-    var i;
-    var sensorPoint = getSensorPoint([u, v, 0], canvasArgs.radius, canvasArgs.point_size, pointVertexSides);
-    vertexes.record_point.push.apply(vertexes.record_point, sensorPoint);
-    var vertexIndex = [];
-    for(i = 1; i < pointVertexSides; i++) {
-        vertexIndex.push(n+0, n+i, n+i+1,
-                         n+0, n+i+1, n+i);
-    }
-    vertexIndex.push(n+0, n+pointVertexSides, n+1,
-                     n+0, n+1, n+pointVertexSides);
-    indexes.record_point.push.apply(indexes.record_point, vertexIndex);
-    updateSubBuffer(gl.ARRAY_BUFFER, buffers.record_point, 0, new Float32Array(vertexes.record_point));
-    updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.record_point_index, 0, new Uint16Array(indexes.record_point));
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-    //    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-}
-
-
-function resetRecordPoint() {
-    recordPointsAngle = [];
-    vertexes.record_point = [];
-    indexes.record_point  = [];
-}
-
 function drawCube(gl, u, v) {
     /**
      * 在颜色信息数组中添加法线信息，之后对数据的处理需要做相应的改变
@@ -680,8 +548,10 @@ function drawCube(gl, u, v) {
     var rgblight  = [0.6, 0.1, 0.1].concat(canvasArgs.light_direction);
     var right_rgb = [0.1, 0.6, 0.1].concat(canvasArgs.light_direction);
     var down_rgb  = [0.1, 0.1, 0.6].concat(canvasArgs.light_direction);
-    var sback = getCubePoint(1-u, v+0.5, 0.125, canvasArgs.radius*0.375*0.3);
-    var sfront = getCubePoint(u, v, 0.125, canvasArgs.radius*0.375*0.6);
+//    var sback  = getCubePoint(1-u, v+0.5, 0.125, canvasArgs.radius*0.375*0.3);
+//    var sfront = getCubePoint(u, v, 0.125, canvasArgs.radius*0.375*0.6);
+    var sback  = getCubePoint(1, 0.5, 0.125, canvasArgs.radius*0.375*0.3);
+    var sfront = getCubePoint(0, 0, 0.125, canvasArgs.radius*0.375*0.6);
     var i;
     for(i = 0; i < 4; i++) {
         sfront.push(sback[i]);
@@ -720,14 +590,24 @@ function drawCube(gl, u, v) {
         surface = surface.concat(sfront[elements], rgblight);
     });
     */
+    /* 用矩阵进行旋转操作，就不用对顶点进行操作 */
+    var localmMatrix = mat4.create();
+    var cinvMatrix = mat4.create();
+    mat4.invert(cinvMatrix, cMatrix);
+//    mat4.fromRotation(localmMatrix, degToRad(u*180), [0, 1, 0]);
+    mat4.identity(localmMatrix);
+    mat4.rotate(mMatrix, mMatrix, degToRad(u*180), [0, 1, 0]);    // 沿Y轴旋转u对应的角度
+//    mat4.rotate(mMatrix, mMatrix, degToRad(v*360), [0, 0, 1]);    // 沿Z轴旋转v对应的角度
+    mat4.multiply(localmMatrix, localmMatrix, cinvMatrix);
+//    gl.uniformMatrix4fv(uniforms.model_view_matrix, false, localmMatrix);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.sensor_simulator);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.sensor_simulator_buffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(surface));
     gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 9*4, 0);       // 顶点间隔变为 9
-    gl.vertexAttribPointer(attributes.color, 3, gl.FLOAT, false, 9*4, 3*4);
+    gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 9*4, 3*4);
     // 设置法线，确保模拟器的亮度始终是最亮的
     gl.vertexAttribPointer(attributes.vertex_normal, 3, gl.FLOAT, false, 9*4, 6*4);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.sensor_simulator_index);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.sensor_simulator_index_buffer);
 
 //    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
 
@@ -743,12 +623,15 @@ function drawCube(gl, u, v) {
     gl.uniform1i(uniforms.enable_texture, 3);
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 24*2);
     gl.uniform1i(uniforms.enable_texture, 0);
-//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 6*2);
-//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 12*2);
-//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 30*2);
     gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
     /** 取消纹理，如果不取消使用纹理的话，会导致之后的图形无法正常显示 **/
     gl.disableVertexAttribArray(attributes.xtexture);
+
+//    mat4.copy(mMatrix, localmMatrix);
+//    console.log(localmMatrix + " ===>  " + mMatrix);
+//    console.log("==================================");
+    gl.uniformMatrix4fv(uniforms.model_view_matrix, false, mMatrix);
+//    gl.uniformMatrix4fv(uniforms.camera_matrix, false, cMatrix);
 }
 
 /**
@@ -761,7 +644,7 @@ function drawCube(gl, u, v) {
  */
 function getCubePoint(u, v, f, offset) {
     var cubePoint = [];
-    var points = drawSurfaceAndMove([u, v, f], canvasArgs.radius*0.375*0.2, 4);
+    var points = getSpinnedSurfaceVertex([u, v, f], canvasArgs.radius*0.375*0.2, 4);
     var i = 0;
     for(i = 0; i < 4; i++) {
         cubePoint.push(movePointByAngle(points[i], [u,v], offset));
@@ -788,7 +671,7 @@ function drawPath(gl, u, v) {
         // 向路径中添加新的位置
 //      ** 当 sensorPath.length 超过 20000 时，数组过大，不再显示顶点
         sensorPath.push.apply(sensorPath, sensorPoint);  // 每 24 个数据意味着包含一个 SensorPoint, 每 6 个数据代表一个点
-        indexes.sensor_path_index.push(
+        sensorPathIndex.push(
             n*8+0, n*8+4, n*8+1, n*8+1, n*8+4, n*8+5,     // 0 - 1 - 0' - 1'
             n*8+1, n*8+5, n*8+2, n*8+2, n*8+6, n*8+5,     // 1 - 2 - 1' - 2'
             n*8+2, n*8+6, n*8+3, n*8+3, n*8+7, n*8+6,     // 2 - 3 - 2' - 3'
@@ -798,50 +681,48 @@ function drawPath(gl, u, v) {
             n*8+2, n*8+3, n*8+6, n*8+3, n*8+6, n*8+7,     // 2 - 3 - 3' - 2'
             n*8+3, n*8+0, n*8+7, n*8+0, n*8+7, n*8+4      // 3 - 0 - 0' - 3'
         );
-        indexes.sensor_path_index2.push(
+        sensorPathIndex2.push(
             n*8+0, n*8+1, n*8+4, n*8+0, n*8+1, n*8+5,     // 0 - 1 - 0' - 1'
             n*8+1, n*8+2, n*8+5, n*8+1, n*8+2, n*8+6,     // 1 - 2 - 1' - 2'
             n*8+2, n*8+3, n*8+6, n*8+2, n*8+3, n*8+7,     // 2 - 3 - 2' - 3'
             n*8+3, n*8+0, n*8+7, n*8+3, n*8+0, n*8+4      // 3 - 0 - 3' - 0'
         );
-//        console.log(count + " === " + sensorPath.length + " === " + indexes.sensor_path_index.length )
-        count++;
-        updateSubBuffer(gl.ARRAY_BUFFER, buffers.path[currentPath], 0, new Float32Array(sensorPath));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index[currentPath], 0, new Uint16Array(indexes.sensor_path_index));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2[currentPath], 0, new Uint16Array(indexes.sensor_path_index2));
-        if(indexes.sensor_path_index.length >= 2*maxPathNum ) {
+//        console.log(count + " === " + sensorPath.length + " === " + sensorPathIndex.length )
+        count++
+        updateSubBuffer(gl.ARRAY_BUFFER, buffers.path_buffer[currentPath], 0, new Float32Array(sensorPath));
+        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index_buffer[currentPath], 0, new Uint16Array(sensorPathIndex));
+        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2_buffer[currentPath], 0, new Uint16Array(sensorPathIndex2));
+        if( sensorPathIndex.length >= 2*maxPathNum ) {
             currentPath++;
-            buffers.path[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-            buffers.path_index[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-            buffers.path_index2[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
+            buffers.path_buffer[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+            buffers.path_index_buffer[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+            buffers.path_index2_buffer[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
             resetCurrentPath(u, v, canvasArgs.vector_length);
         }
     }
-    // 分批绘制路径
     for(var i = 0; i < currentPath;i++) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.path[i]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.path_buffer[i]);
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
         if( canvasArgs.path_real_line ) {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index[i]);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index_buffer[i]);
             gl.drawElements(gl.TRIANGLES, 2*maxPathNum, gl.UNSIGNED_SHORT, 0);
         } else {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2[i]);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2_buffer[i]);
             gl.drawElements(gl.TRIANGLES, maxPathNum, gl.UNSIGNED_SHORT, 0);
         }
     }
-    if( indexes.sensor_path_index.length > 0 ) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.path[currentPath]);
+    if( sensorPathIndex.length > 0 ) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.path_buffer[currentPath]);
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
         if( canvasArgs.path_real_line) {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index[currentPath]);
-            gl.drawElements(gl.TRIANGLES, indexes.sensor_path_index.length, gl.UNSIGNED_SHORT, 0);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index_buffer[currentPath]);
+            gl.drawElements(gl.TRIANGLES, sensorPathIndex.length, gl.UNSIGNED_SHORT, 0);
         } else {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2[i]);
-            gl.drawElements(gl.TRIANGLES, indexes.sensor_path_index2.length, gl.UNSIGNED_SHORT, 0);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.path_index2_buffer[i]);
+            gl.drawElements(gl.TRIANGLES, sensorPathIndex2.length, gl.UNSIGNED_SHORT, 0);
         }
     }
 //    */
-
     gl.uniform4fv(uniforms.color_unit, [0.0, 0.0, 0.0, 0.0]);
 }
 
@@ -860,21 +741,21 @@ function updateSubBuffer(type, buffer, offset, data) {
 */
 function resetCurrentPath(u ,v, length) {
     lastSensorPoint = [u, v, length];
-    sensorPath      = [];
-    indexes.sensor_path_index = [];
-    indexes.sensor_path_index2 = [];
+    sensorPath = [];
+    sensorPathIndex = [];
+    sensorPathIndex2 = [];
 }
 
 function resetAllPath(u, v, length) {
     for(var i = 0; i < currentPath; i++) {
-        gl.deleteBuffer(buffers.path[i]);
-        gl.deleteBuffer(buffers.path_index[i]);
+        gl.deleteBuffer(buffers.path_buffer[i]);
+        gl.deleteBuffer(buffers.path_index_buffer[i]);
     }
 
     currentPath = 0;
-    buffers.path[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-    buffers.path_index[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
-    buffers.path_index2[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_buffer[currentPath]       = createArrayBuffer(gl.ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_index_buffer[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4*maxPathNum, gl.DYNAMIC_DRAW);
+    buffers.path_index2_buffer[currentPath]= createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2*maxPathNum, gl.DYNAMIC_DRAW);
     resetCurrentPath(u, v, length);
 }
 
@@ -910,9 +791,6 @@ function movePointByAngle(pos, angles, movement) {
     return movePointByVector(pos, vector);
 }
 
-/**
- *  add vector to pos
- **/
 function movePointByVector(pos, vector) {
     return [pos[0]+vector[0] , pos[1]+vector[1], pos[2]+vector[2]];
 }
@@ -923,7 +801,7 @@ function getSensorPathPoint(angles, offset, pointSize, n) {
     var f = angles[2];
     var sensorPoint = [];
     var points = [];        // 二维数组，每个元素是一个三维数组，包含顶点的 xyz 坐标
-    points.push.apply(points, drawSurfaceAndMove([u, v, f], pointSize, n));
+    points.push.apply(points, getSpinnedSurfaceVertex([u, v, f], pointSize, n));
 
     // 将顶点添加到 sensorPoint 数组中，并将得到的平面进行平移
     points.forEach(function(element){
@@ -941,7 +819,7 @@ function getSensorPathPoint(angles, offset, pointSize, n) {
  * @param {int}    n          边数，至少为 4
  * @returns 二级数组
  */
-function drawSurfaceAndMove(angles, pointSize, n) {
+function getSpinnedSurfaceVertex(angles, pointSize, n) {
     var u = angles[0];
     var v = angles[1];
     var f = angles[2];
@@ -955,13 +833,20 @@ function drawSurfaceAndMove(angles, pointSize, n) {
         var tp1 = point[1];
         point[0] = tp0 * Math.cos(Math.PI*2*f) - tp1 * Math.sin(Math.PI*2*f);
         point[1] = tp1 * Math.cos(Math.PI*2*f) + tp0 * Math.sin(Math.PI*2*f);
-        // 处理 u 带来的变化
+        /**************
+            处理 u 带来的变化
+            需要添加负号的原因在于，圆的法线在XOZ平面上绕Y轴旋转θ角，
+            x坐标为正的点，其变换之后的z坐标应该为负，因此添加负号作为修正因子。
+        *************/
         tp0 = point[0]
-        point[0] = tp0 * Math.cos(-Math.PI*u);
+        point[0] = tp0 * Math.cos(Math.PI*u);
         point[2] = tp0 * Math.sin(-Math.PI*u);
-        // 处理 v 带来的变化
-        tp0 = point[0] * Math.cos(-Math.PI*2*v) + point[1] * Math.sin(-Math.PI*2*v);
-        tp1 = point[1] * Math.cos(-Math.PI*2*v) - point[0] * Math.sin(-Math.PI*2*v);
+        /********************
+            处理 v 带来的变化
+            经过旋转之后，X本是正的坐标将会移到负半轴上，Y同理，
+        ********************/
+        tp0 = point[0] * Math.cos(Math.PI*2*v) + point[1] * Math.sin(-Math.PI*2*v);
+        tp1 = point[1] * Math.cos(Math.PI*2*v) - point[0] * Math.sin(-Math.PI*2*v);
         point[0] = tp0;
         point[1] = tp1;
         points.push(point);
@@ -970,7 +855,7 @@ function drawSurfaceAndMove(angles, pointSize, n) {
 }
 
 /**
- * 线性插值，得到一系列补充的 sensorPoint
+ * 连接前后两个斑点圆面的对应顶点，形成平面
  * @param {Array} p     p[0] = u    p[1] = v    p[2] = radius
  * @param {Array} lp    lp[0] = lu  lp[1] = lv  lp[2] = lradius
  * @param {*} u         与 theta 角对应，l 前缀表示上一个点
@@ -1003,6 +888,7 @@ function getLinearSensorPoint(p, lp) {
 
 //    linearSensorPoint.push.apply(linearSensorPoint, getSensorPathPoint([u, v, -0.375], offset, canvasArgs.path_size, 4));
 //    linearSensorPoint.push.apply(linearSensorPoint, getSensorPathPoint([lu, lv, -0.375], loffset, canvasArgs.path_size, 4));
+
     return linearSensorPoint;
 }
 
@@ -1016,7 +902,7 @@ function calcVertexDistance(p, lp) {
     var p2 = calcVertex(lp[0], lp[1], lp[2]);
     var dis2 = (p1[0]-p2[0]) * (p1[0]-p2[0]) + (p1[1]-p2[1]) * (p1[1]-p2[1]) + (p1[2]-p2[2]) * (p1[2]-p2[2]);
     var dis = Math.sqrt(dis2);
-    /** 如果在同一球面上时，可以通过角度算出距离 **/
+    /** 如果在同一球面上时，可以通过角度算出距离 */
     // var dis = 2 - 2 * (Math.sin(Math.PI * p[0])*Math.sin(Math.PI * lp[0])*Math.cos(Math.PI*2*(p[1]-lp[1])) + Math.cos(Math.PI*p[0])*Math.cos(Math.PI * lu));
     // dis = Math.sqrt(dis) * radius;
     return dis;
@@ -1028,7 +914,6 @@ function calcVertexDistance(p, lp) {
  *  r   球体的半径
  * modeWJ 先绘制纬线，后绘制经线
  * modeJW 先绘制经线，后绘制纬线
- *
  */
 function getBallVertex(n, r, offset, mode) {
     calcIndexMode = mode;
@@ -1045,7 +930,7 @@ function getBallVertex(n, r, offset, mode) {
 
     /**
       * Z 轴上的两端点相当于球体的两个极点，
-      * i 负责绘制纬线（不经过极点）， j 负责绘制经线（每条都经过极点）
+      * j 负责绘制纬线（不经过极点）， i 负责绘制经线（每条都经过极点）
       * 横向连线 (0, 0) - (0, 1)  or  (1, 0) - (1, 1)
       * 纵向连线 (0, 0) - (1, 0)  or  (1, 1) - (0, 1)
       * modeWJ 时:  i 等分 u,  j 等分 v
@@ -1069,24 +954,13 @@ function getBallVertex(n, r, offset, mode) {
                              calcBallIndex(i, j, offset+1), calcBallIndex(i, j, offset+2)     // modeJW = 纬线
 //                             calcBallIndex(i, j, offset+2), calcBallIndex(i, j, offset+3)
                              );
-//            if( j === 0 ) {  // 经度为0
-//                lineColor.push(0.0, 0.0, 0.0,
-//                               0.0, 0.0, 0.0,
-//                          0.992, 0.126, 0.102,
-//                          0.992, 0.126, 0.102
-//                          );
-//            } else {
-//                lineColor.push(0.992, 0.126, 0.102,
-//                          0.992, 0.126, 0.102,
-//                          0.992, 0.126, 0.102,
-//                          0.992, 0.126, 0.102
-//                          );
+
+               lineColor.push(0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102,
+                          0.982, 0.086, 0.102
+                          );
 //            }
-            lineColor.push(0.992, 0.126, 0.102,
-                      0.992, 0.126, 0.102,
-                      0.992, 0.126, 0.102,
-                      0.992, 0.126, 0.102
-                      );
 
             if( i === n/2-1 ) {
                  lessLineIndex.push(calcBallIndex(i, j, offset+1), calcBallIndex(i, j, offset+2));
@@ -1095,6 +969,9 @@ function getBallVertex(n, r, offset, mode) {
 
         // 线条简单绘制
         // 绘制经线
+    //  for(var m = 0; m < 12; m++) {
+    //      lessLineIndex.push(calcBallIndex(i, m/12*n, offset), calcBallIndex(i, m/12*n, offset+1));
+    //  }
         // 绘出 4 条经线
         lessLineIndex.push(calcBallIndex(j, 0, offset), calcBallIndex(j, 0, offset+1));
         lessLineIndex.push(calcBallIndex(j, 1/4*n, offset), calcBallIndex(j, 1/4*n, offset+1));
