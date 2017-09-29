@@ -35,6 +35,7 @@ void Data::view3D() {
     compassview = new QQuickView;
     compassview->rootContext()->setContextProperty("dataSource", this);
     compassview->rootContext()->setContextProperty("windowContainer", compassview);
+//    compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePathHUD.qml")));
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePath.qml")));
     // 设置窗口图标
     QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));

@@ -5,8 +5,6 @@
         <file>img/compass.ico</file>
         <file>img/compass_pr_base.png</file>
         <file>img/heading.png</file>
-        <file>qml/Button.qml</file>
-        <file>qml/Coordinate3D.js</file>
         <file>qml/DataSource.js</file>
         <file>qml/SpacePath.qml</file>
         <file>qml/TD.js</file>
@@ -19,5 +17,8 @@
         <file>img/x.png</file>
         <file>img/y.png</file>
         <file>img/z.png</file>
+        <file>qml/PaintObj.js</file>
+        <file>qml/SpacePathHUD.qml</file>
+        <file>qml/SpacePathHUD.js</file>
     </qresource>
 </RCC>

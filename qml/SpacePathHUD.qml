@@ -2,7 +2,7 @@
 import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
 
-import "SpacePath.js" as GLcode
+import "SpacePathHUD.js" as GLcode
 //import "DataSource.js" as GdataSource
 //import "square.js" as GLcode
 
@@ -24,9 +24,7 @@ Item {
         property int lpy: 0
         property int mousex: 1
         property int mousey: 1
-//        onClicked: {
-//            console.log("clicked ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY)
-//        }
+
         onMouseXChanged: {
             if(mouseListener.pressed) {
 //                console.log("clicked x ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY + "  --> " + mouseListener.mousex++);
@@ -80,6 +78,8 @@ Item {
         canvas3d.ctheta = u;
         canvas3d.cbeta  = v;
         rotateCamera();
+        // hud
+        hudPanel.xPos=[0, 0];
     }
 
     Label {
@@ -597,7 +597,7 @@ Item {
             anchors.top: setButton.bottom
             anchors.topMargin: 5
             onClicked: {
-                GLcode.refCircle.record();
+                GLcode.recordPoint();
             }
         }
 
@@ -611,7 +611,7 @@ Item {
             anchors.top: setButton.bottom
             anchors.topMargin: 5
             onClicked: {
-                GLcode.refCircle.reset();
+                GLcode.resetRecordPoint();
             }
         }
 
@@ -693,13 +693,26 @@ Item {
     }
 
     function reset() {
+//        canvas3d.pitchOffset = canvas3d.pitch
         canvas3d.headingOffset = canvas3d.heading
         var angle = GLcode.calcAngle(canvas3d.pitch, 0);
         var u = angle[0], v = angle[1];
-        GLcode.sensorPoint.resetAllPath(u, v, canvas3d.vector_length);
+        GLcode.resetAllPath(u, v, canvas3d.vector_length);
     }
     function recordAPoint() {
-        GLcode.refCircle.record();
+        GLcode.recordPoint();
+    }
+
+    Canvas {
+        id: hudPanel
+        anchors.fill: parent
+        visible: true
+        z: 10
+        property var xPos: [0, 0]
+        property var yPos: [0, 0]
+        onPaint: {
+            GLcode.startHud(hudPanel);
+        }
     }
 
     Canvas3D {
@@ -748,6 +761,7 @@ Item {
         property int timerCount: 0
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
+//            selectRB(lessLineDrawMode)
             selectRB(lineDrawMode);
             GLcode.initializeGL(canvas3d);
         }
@@ -768,11 +782,16 @@ Item {
         repeat: true
         interval: 1000/60
         onTriggered: {
+            //2d hud panel
+            hudPanel.requestPaint();
+
+            // 3d
             canvas3d.timerCount++;
             canvas3d.heading = dataSource.getHeading();
             canvas3d.pitch   = dataSource.getPitch();
             canvas3d.roll    = dataSource.getRoll();
             canvas3d.vector_length = dataSource.getMagicVectorLength() !== 0 ? dataSource.getMagicVectorLength()/10000 : 4;
+//            console.log("Length: " +dataSource.getMagicVectorLength())
         }
     }
     Connections {
