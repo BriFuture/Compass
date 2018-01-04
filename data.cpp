@@ -55,14 +55,16 @@ double Data::getRadius() {
 }
 
 double Data::getHeading() {
-    heading +=  1.0252;
-    return heading;
+    heading +=  0.5252;
+//    return heading;
+    return 0;
 }
 
 double Data::getPitch() {
-    pitch += 0.5274;
+    pitch += 0.2274;
 //    qDebug() << rand()*052;
-    return pitch;
+//    return pitch;
+    return 0;
 }
 
 double Data::getMagicVectorLength() {

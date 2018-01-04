@@ -1,55 +1,99 @@
 ﻿import QtQuick 2.0
 import QtQuick.Controls 1.4
 
+/**
+ * author: BriFuture
+ * date  : 2018.01.03
+ * usage : custom slider which could be set by either slider or button,
+        do not support modifying value from keyboard directly
+**/
 Rectangle {
     id: container
-//    height: 50
-//    width: 200
-    color: "transparent"
-    property string labelText: "label"
-    property alias sliderValue: slider.value
-    property double sliderMaxValue: 0
-    property double sliderMinValue: 0
-    property double sliderWidth: 0
-    property double rate: 1
-    property alias pressed: slider.pressed
-    property alias text: textInput.text
+    color : "transparent"
+    height: 40
+
+    property int ratio : 1
+    property alias maxValue : slider.maximumValue
+    property alias minValue : slider.minimumValue
+    property alias text :     name.text
+    property double value:     slider.minimumValue
+    property alias stepSize:  slider.stepSize
+
     Label {
-        id: labelShow
-        anchors.leftMargin: 5
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.topMargin: 5
-        height: 20
-        text: container.labelText
-    }
-    Rectangle {
-
-        border.color: "black"
-        anchors.left: labelShow.right
-        anchors.leftMargin: 5
-        anchors.top: parent.top
-        width: 90
-        height: 20
-        TextInput {
-            id: textInput
-            font.pointSize: 16
-            anchors.fill: parent
-            text: ((sliderValue)*rate).toFixed(2)
-            validator: DoubleValidator{bottom: slider.minimumValue; top: slider.maximumValue;}
-
+        id: name
+        text: "MySlider"
+        font.pixelSize: 18
+        anchors {
+            top: container.top
+            topMargin: 5
         }
     }
+
+    Text {
+        // for value showing
+        id: value
+        anchors {
+            top : container.top
+            topMargin: 5
+            right: incBtn.left
+            rightMargin: 15
+        }
+        text: "0"
+        font.pixelSize: 18
+    }
+
+    Button {
+        // this is for value increment
+        id: incBtn
+        anchors {
+            top : container.top
+            right: container.right
+            rightMargin: 5
+        }
+
+        height: container.height * 0.36
+        width : 20
+        text  : "+"
+        onClicked: btnClick(1)
+    }
+
+    Button {
+        // this is for value decrement
+        id: decBtn
+        anchors {
+            top: incBtn.bottom
+            topMargin: container.height * 0.05
+            right: container.right
+            rightMargin: 5
+        }
+        height: incBtn.height
+        width : incBtn.width
+        text  : "-"
+        onClicked: btnClick(-1)
+    }
+
     Slider {
         id: slider
-        anchors.top: labelShow.bottom
-        width: container.sliderWidth
-        orientation: Qt.Horizontal
-        maximumValue: container.sliderMaxValue
-        minimumValue: container.sliderMinValue
-//        value: container.sliderValue
-//        onValueChanged: {
-//            container.sliderValue = slider.value;
-//        }
+        anchors {
+            top  : name.bottom
+            topMargin: 6
+            left : container.left
+            right: container.right
+        }
+        property alias value: container.value
+        onValueChanged: {
+            value.text = this.value.toFixed(1)
+        }
+    }
+
+    function btnClick(op) {
+        var v = parseFloat(value.text);
+        v += op;
+        // in case of out of range
+        if( v > container.maxValue || v < container.minValue ) {
+            v -= op;
+        }
+        // because of slider being binded to text, just set slider will be fine
+        slider.value = v;
     }
 }
