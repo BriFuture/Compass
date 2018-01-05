@@ -55,6 +55,10 @@ Item {
                     text: "摄像机θ角："
                     maxValue: 180.0
                     minValue: 0.0
+                    onValueChanged: {
+                        argItem.cam_theta = this.value;
+                        GLcode.rotateCamera();
+                    }
                 }
 
                 MySlider {
@@ -67,6 +71,10 @@ Item {
                     text: "摄像机β角："
                     maxValue: 180.0
                     minValue: -180.0
+                    onValueChanged: {
+                        argItem.cam_beta = this.value;
+                        GLcode.rotateCamera();
+                    }
                 }
 
                 MySlider {
@@ -168,9 +176,9 @@ Item {
                     }
                     width: controller.width
                     text: "指示器大小："
-                    maxValue: 50
+                    maxValue: 20
                     minValue: 1
-                    stepSize: 1.0
+                    stepSize: 0.2
                 }
 
                 MySlider {
@@ -195,7 +203,7 @@ Item {
                     width: controller.width
                     text:  "球面透明度"
                     maxValue: 1.0
-                    minValue: 0.3
+                    minValue: 0.1
                 }
             }
 
@@ -416,7 +424,7 @@ Item {
                 text: "pitch："
                 maxValue: 90
                 minValue: -90
-                value   : 0
+//                value   : 0
             }
 
             MySlider {
@@ -486,8 +494,8 @@ Item {
     Item {
         id: argItem
         property alias  cam_dis:     camDis.value
-        property alias  cam_theta:   camTheta.value
-        property alias  cam_beta:    camBeta.value
+//        property alias  cam_theta:   camTheta.value
+//        property alias  cam_beta:    camBeta.value
         property alias  cam_x:       cameraXPos.value
         property alias  cam_y:       cameraYPos.value
         property alias  cam_z:       cameraZPos.value
@@ -498,7 +506,9 @@ Item {
         property alias  ball_alpha:  ballAlpha.value
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value
-        property alias  pitch:  pitch.value
+        property alias  pitch:   pitch.value
+        property double cam_theta:   0.0
+        property double cam_beta:    0.0
         property double roll: 0
         property double heading_offset: 0
         property double vector_length:  4
@@ -507,6 +517,13 @@ Item {
         property bool   enable_cube:    true
         property var    light_direction: [0.35, 0.35, 0.7]
         property string drawMode: "line"
+
+        onCam_thetaChanged: {
+            camTheta.value = this.cam_theta
+        }
+        onCam_betaChanged: {
+            camBeta.value  = this.cam_beta
+        }
     }
 
     Canvas3D {
@@ -537,10 +554,10 @@ Item {
         repeat: true
         interval: 1000/60
         onTriggered: {
-            argItem.heading = dataSource.getHeading();
-            argItem.pitch   = dataSource.getPitch();
-            argItem.roll    = dataSource.getRoll();
-            argItem.vector_length = dataSource.getMagicVectorLength() !== 0 ? dataSource.getMagicVectorLength()/10000 : 4;
+//            argItem.heading = dataSource.getHeading();
+//            argItem.pitch   = dataSource.getPitch();
+//            argItem.roll    = dataSource.getRoll();
+//            argItem.vector_length = dataSource.getMagicVectorLength() !== 0 ? dataSource.getMagicVectorLength()/10000 : 4;
         }
     }
 

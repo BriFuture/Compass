@@ -13,10 +13,11 @@ Rectangle {
     height: 40
 
     property int ratio : 1
+    property int precision  : 1
     property alias maxValue : slider.maximumValue
     property alias minValue : slider.minimumValue
     property alias text :     name.text
-    property double value:     slider.minimumValue
+    property alias value:     slider.value
     property alias stepSize:  slider.stepSize
 
     Label {
@@ -80,9 +81,8 @@ Rectangle {
             left : container.left
             right: container.right
         }
-        property alias value: container.value
         onValueChanged: {
-            value.text = this.value.toFixed(1)
+            value.text = this.value.toFixed(container.precision)
         }
     }
 

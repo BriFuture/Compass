@@ -2,7 +2,6 @@
 #include <QQmlApplicationEngine>
 #include <QFile>
 #include <QTextStream>
-#include <QDebug>
 #include "data.h"
 
 
