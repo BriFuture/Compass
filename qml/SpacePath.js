@@ -14,7 +14,6 @@ var accuracy = 48;
 
 // 传感器路径
 var maxPathNum  = 4800; // 每条路径上的最多点的个数,由于每个 sensorPoint 面有 8*3 个数据，该数值最好为 24 的整数倍
-var currentPath = 0; // 当前路径的序号
 var pointVertexSides = 48;
 
 // 相关绘图变量
@@ -26,17 +25,14 @@ var u, v;
 **/
 function initUI() {
     selectDrawMode(lineRB);
-    argItem.ball_radius = 5
+    argItem.ball_radius = 8.0
     argItem.cam_dis     = 18.0
-    argItem.cam_theta   = 90
-    argItem.cam_beta    = 0
-    argItem.cam_x       = 15
-    argItem.cam_y       = 5
-    argItem.cam_z       = 5
+    argItem.cam_theta   = 70
+    argItem.cam_beta    = 50
     argItem.line_width  = 1.0
     argItem.point_size  = 3
     argItem.path_width  = 30
-    argItem.ball_alpha  = 0.5
+    argItem.ball_alpha  = 0.1
     canvasArgs = argItem
 
     axisBox.checked = false;
@@ -44,17 +40,17 @@ function initUI() {
 }
 
 function selectDrawMode(mode) {
-    lineRB.checked    = false;
-    surfaceRB.checked = false;
-    lessLineRB.checked= false;
-    caliRB.checked    = false;
+    for(var cbi in drawMode.children) {
+        drawMode.children[cbi].checked = false;
+    }
+
     mode.checked      = true;
     argItem.drawMode  = mode.text;
 }
 
 // some problem occurred when cam_x or cam_y equals to zero
 function rotateCamera() {
-    var pos = calcVertex(argItem.cam_theta / 180, argItem.cam_beta / 360, argItem.cam_dis);
+    var pos = calcVertex(degToRad(argItem.cam_theta), degToRad(argItem.cam_beta), argItem.cam_dis);
     argItem.cam_x = pos[0];
     argItem.cam_y = pos[1];
     argItem.cam_z = pos[2];
@@ -103,9 +99,11 @@ var pvMatrix  = mat4.create();
 var mvpMatrix = mat4.create();
 var nMatrix   = mat4.create();
 
+var obj = {};
 var coord;
 var ball;
 var sensorPoint;
+var sensorPath;
 var cube;
 
 function initializeGL(canvas) {
@@ -210,12 +208,14 @@ function initShaders() {
  */
 function initBuffers() {
     coord       = new Coord();
-    ball        = new Ball(accuracy);
-    sensorPoint = new SensorPoint(pointVertexSides);
-    cube        = new Cube(canvasArgs.ball_radius);
-    ball.init(gl);
     coord.init(gl);
+    ball        = new Ball(accuracy);
+    ball.init(gl);
+    sensorPoint = new SensorPoint(pointVertexSides);
     sensorPoint.init(gl);
+    sensorPath  = new SensorPath();
+    sensorPath.init(gl);
+    cube        = new Cube(canvasArgs.ball_radius);
     cube.init(gl);
 }
 
@@ -259,8 +259,10 @@ function paintGL(canvas, args) {
 /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
 function startPaint(canvas) {
     var angle = calcAngle(canvasArgs.pitch, canvasArgs.heading);
-    var vangle = calcAngle(canvasArgs.pitch+45, canvasArgs.heading);  // vertical of angle
-    sensorPoint.paint(gl, vangle[0], vangle[1], 0);
+    var vangle = calcSensorNormal();  // vertical of angle
+    var pos = calcVertex(degToRad(90-canvasArgs.pitch), degToRad(canvasArgs.heading), canvasArgs.vector_length);
+    sensorPoint.paint(gl, {"pos": pos, "angle": vangle, "offset": 0});
+    sensorPath.paint(gl,  {"pos": pos, "angle": vangle});
     coord.paint(gl);
     ball.paint(gl, canvasArgs.ball_radius);
 }
@@ -291,6 +293,14 @@ function getShader(gl, codestr, type) {
     return shader;
 }
 
+function degToRad(deg) {
+    return deg * Math.PI /180;
+}
+
+/**
+* @param {Number} pitch   range [-90, 90]
+* @param {Number} heading range [0, 360]
+*/
 function calcAngle(pitch, heading) {
     var u, v;
     if (Math.abs(pitch) <= 90) {
@@ -311,24 +321,42 @@ function calcAngle(pitch, heading) {
     return [u, -v];
 }
 
+/**
+* @param {Number} pitch   range [-90, 90]
+* @param {Number} heading range [0, 360]
+* @returns {Array} the angle returned is in unit of rad
+*/
+function calcSensorNormal() {
+    var pitch = canvasArgs.pitch;
+    var heading = canvasArgs.heading;
+    var u = (90-pitch)/180 * Math.PI;
+    var v = heading/180 * Math.PI;
+//    return [u, v, canvasArgs.vector_length];
+    return vec3.fromValues(u, v, canvasArgs.vector_length)
+}
+
 
 
 /**
  * 假设球心即为原点，将球面坐标系转换成平面直角坐标系
- * @param   u   球心到顶点的连线与 Z 轴正方向的夹角为 theta, u = theta / pi,   0<= u <= 1
- * @param   v   球心到顶点的连线在 xoy 平面上的投影与 X 轴正方向的夹角为 beta, v = beta / (2*pi), 0<= v <= 1
- * @param   r   球半径
+ * @param   theta {Rad}     球心到顶点的连线与 Z 轴正方向的夹角为 theta
+ * @param   beta  {Rad}     球心到顶点的连线在 xoy 平面上的投影与 X 轴正方向的夹角为 beta
+ * @param   r     {Number}  球半径
  * @return      顶点的坐标，用三维数组表示
  */
-function calcVertex(u, v, r) {
-    var st = Math.sin(Math.PI * u);
-    var ct = Math.cos(Math.PI * u);
-    var sb = Math.sin(Math.PI * 2 * v);
-    var cb = Math.cos(Math.PI * 2 * v);
-    var x = r * st * cb;
-    var y = r * st * sb;
-    var z = r * ct;
+function calcVertex(theta, beta, r) {
+    var st = Math.sin(theta);
+    var ct = Math.cos(theta);
+    var sb = Math.sin(beta);
+    var cb = Math.cos(beta);
+    var x  = r * st * cb;
+    var y  = r * st * sb;
+    var z  = r * ct;
     return [x, y, z];
+}
+
+function vectorPos(vec) {
+    return calcVertex(vec[0], vec[1], vec[2]);
 }
 
 /**
@@ -363,24 +391,27 @@ function calcCircle(sides, dis, color) {
     };
 }
 
+/**
+*  @param offset {Number}  the bytes of the offset
+*/
+function updateSubBuffer(type, buffer, offset, data) {
+    gl.bindBuffer(type, buffer);
+    gl.bufferSubData(type, offset, data);
+}
+
 
 // **************** SensorPoint Object **************** //
 function SensorPoint(sides) {
     this.sides        = sides;
-    this.pathCount    = 0;
-    this.lastPoint    = [-1, -1, -1];
-    this.sensorPath   = [];
-
     this.vscale   = vec3.create();
+    // the reason why rotation and then translation is out of expections
+    // but if rMatrix is introduced, the result seems good
     this.mMatrix  = mat4.create();
+    this.rMatrix  = mat4.create();
     this.d_size   = 1.0;
-    this.color  = [0.1, 0.9, 0.1];      // default color
-    this.inv_color = [1.0, 0.0, 0.0];
     this.alpha    = 1.0;
-}
-
-SensorPoint.prototype.setLastPoint = function(u, v, l) {
-    this.lastPoint = [u, v, l];
+    this.color    = [0.1, 0.9, 0.1];      // default color
+    this.inv_color = [1.0, 0.0, 0.0];
 }
 
 SensorPoint.prototype.init = function(gl) {
@@ -388,8 +419,8 @@ SensorPoint.prototype.init = function(gl) {
 
     var circle = calcCircle(this.sides, this.d_size, this.color);
     var color  = circle.color;
-    color = color.concat(this.color);
     var vertex = circle.vertex;
+    color  = color.concat(this.color);
     vertex = vertex.concat([0.0, 0.0, 0.0]) // add origin point
     // inv sides
     circle = calcCircle(this.sides, this.d_size, this.inv_color);
@@ -400,32 +431,25 @@ SensorPoint.prototype.init = function(gl) {
 
     var index = [];       // sensor point need both sides
     var i = 0;
-    index.push(this.sides);
-    for (i = 0; i < this.sides; i++) {
-        index.push(i);
-    }
-    index.push(0);
+
     // inv sides
     index.push(2*this.sides+1);
     for (i = 2*this.sides; i >= this.sides+1; i--) {
         index.push(i);
     }
     index.push(2*this.sides);
+
+    index.push(this.sides);
+    for (i = 0; i < this.sides; i++) {
+        index.push(i);
+    }
+    index.push(0);
     this.index = index;
 
     this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(vertex),  gl.STATIC_DRAW);
     this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),   gl.STATIC_DRAW);
     this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),    gl.STATIC_DRAW);
 
-    // path Buffer initialization
-    this.path_buffer        = [];
-    this.path_index_buffer  = [];
-    this.path_index2_buffer = [];
-    this.path_buffer[currentPath]        = createArrayBuffer(gl.ARRAY_BUFFER,         4 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.path_index_buffer[currentPath]  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.path_index2_buffer[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.path_index = [];
-    this.path_index2 = [];
 }
 
 /**
@@ -436,15 +460,22 @@ SensorPoint.prototype.init = function(gl) {
  * @param {*} offset    斑点到原点的距离
  * @param {*} radial    是否绘制射线
  */
-SensorPoint.prototype.paint = function(gl, u, v, offset, radial) {
+SensorPoint.prototype.paint = function(gl, addon) {
     this.vscale  = vec3.fromValues(1.0, 1.0, 1.0);
     vec3.scale(this.vscale, this.vscale, canvasArgs.point_size / this.d_size / 10);
-//    mat4.identity(this.mMatrix);
-    mat4.fromRotation(this.mMatrix, u * Math.PI * 2, [0, 1, 0]);
-    mat4.rotate(this.mMatrix, this.mMatrix, v * Math.PI * 2, [1, 0, 0]);
-    mat4.scale(this.mMatrix, this.mMatrix, this.vscale);
 
-    mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
+    mat4.fromZRotation(this.rMatrix,         addon.angle[1]);
+    mat4.rotateY(this.rMatrix, this.rMatrix, addon.angle[0]);
+    mat4.identity(this.mMatrix);
+    mat4.translate(this.mMatrix, this.mMatrix, addon.pos);
+//    mat4.fromTranslation(this.mMatrix, this.mMatrix, addon.pos);
+//    mat4.fromRotationTranslation(this.mMatrix, this.rMatrix, addon.pos);
+//    mat4.rotateZ(this.mMatrix, this.mMatrix, addon.angle[1] * Math.PI*2);
+//    mat4.rotateY(this.mMatrix, this.mMatrix, addon.angle[0] * Math.PI);
+    mat4.mul(this.mMatrix,   this.mMatrix, this.rMatrix);
+    mat4.scale(this.mMatrix, this.mMatrix, this.vscale);            // scale by pointSize
+
+    mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
     gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
@@ -458,57 +489,174 @@ SensorPoint.prototype.paint = function(gl, u, v, offset, radial) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
     gl.drawElements(gl.TRIANGLE_FAN, this.index.length, gl.UNSIGNED_SHORT, 0);
 }
+// ================= SensorPoint Object ======================= //
 
+// ****************  SensorPath Object  **************** //
+function SensorPath() {
+    this.mMatrix      = mat4.create();
+    this.alpha        = 1.0;
+    this.path_count   = 0;
+    this.index_count  = 0;
+    this.cur_path     = 0; // 当前路径的序号
+    this.color        = [0.9, 0.5, 0.2];      // path color
+}
 
+SensorPath.prototype.init = function(gl) {
+    this.last_point = calcSensorNormal();
+    this.path         = [];  // path records point with the form xyz
+    this.index  = [];
+    this.index2 = [];
+
+    this.buffers = {};
+    // path Buffer initialization
+    this.buffers.path        = [];
+    this.buffers.index  = [];
+    this.buffers.index2 = [];
+
+    this.buffers.path[this.cur_path]   = createArrayBuffer(gl.ARRAY_BUFFER,         4 * 6 * maxPathNum, gl.DYNAMIC_DRAW);
+    this.buffers.index[this.cur_path]  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum,     gl.DYNAMIC_DRAW);
+//    this.buffers.path_index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
+}
 
 /**
  * 绘制路径
  * 全部改成用直线相连
  * 通过线性插值后，不用记录每个顶点，如果前后两点之间的距离过大，用线性插值加入路径中
  **/
-SensorPoint.prototype.drawPath = function(gl, u, v) {
-    
+SensorPath.prototype.paint = function(gl, addon) {
+    var lpos = vectorPos(this.last_point);
+    var pos  = vectorPos(addon.angle);
+    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length/1000 ) {
+        var presult      = this.getLinearPoint(addon.angle, this.last_point);
+        this.last_point  = addon.angle;
+        this.path_count  += presult.point.length;
+        this.index_count += presult.index.length;
+//        console.log("path_count: " + presult.point + ",\nindex_count: " + presult.index);
+        this.path.push.apply(this.path,   presult.point);
+        this.index.push.apply(this.index, presult.index);
+//        console.log("path: " + this.path + ",\nindex: " + this.index);
+
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_path],  0,  new Float32Array(this.path));
+        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path], 0,  new Uint16Array(this.index));
+//        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_path],        this.path_count * 4,          new Float32Array(presult.point));
+//        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path],  this.index_count * 2,    new Uint16Array(presult.index));
+
+        // when path index count is greater or equal to maxPathNum, then a new buffer should be realloced  and the counter should be reset
+        if( this.index_count >= 4 * maxPathNum) {
+            this.cur_path++;
+            this.path_count = 0;
+            this.index_count = 0;
+            this.buffers.path[this.cur_path]    = createArrayBuffer(gl.ARRAY_BUFFER,         4 * 6 * maxPathNum, gl.DYNAMIC_DRAW);
+            this.buffers.index[this.cur_path]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum,     gl.DYNAMIC_DRAW);
+//            this.buffers.index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
+            this.resetCurrentPath(this.last_point);
+        }
+    }
+    gl.uniform1f(uniforms.alpha, this.alpha);          //  set alpha value
+
+    mat4.identity(this.mMatrix);
+    mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
+    gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+
+
+    // 分批绘制路径
+    for(var i = 0; i < this.cur_path; i++) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
+        gl.drawElements(gl.TRIANGLE_STRIP,     4 * maxPathNum, gl.UNSIGNED_SHORT, 0);
+    }
+    if( this.index_count > 0 ) {
+//        console.log("draw path")
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);     // color buffer
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 6*4, 3*4);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);    // normal info
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 6*4, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path]);
+        gl.drawElements(gl.TRIANGLE_STRIP,     this.index.length, gl.UNSIGNED_SHORT, 0);
+    }
+
 }
 
 /**
  * 线性插值，得到一系列补充的 sensorPoint, 用于绘制路径
- * @param {Array} p     p[0] = u    p[1] = v    p[2] = radius
- * @param {Array} lp    lp[0] = lu  lp[1] = lv  lp[2] = lradius
- * @param {*} u         与 theta 角对应，l 前缀表示上一个点
- * @param {*} v         与 beta  角对应
- * @param {*} radius    与原点的距离
+ * @param {Array} p     p[0] = theta    p[1] = beta    p[2] = radius
+ * @param {Array} lp   lp[0] = theta   lp[1] = beta   lp[2] = lradius
+ * @return {Array}
  */
-SensorPoint.prototype.getLinearSensorPoint = function(p, lp) {
-    
-}
+SensorPath.prototype.getLinearPoint = function(p, lp) {
+    var dtheta = p[0] - lp[0];
+    var dbeta  = p[1] - lp[1];
 
-SensorPoint.prototype.getSensorPathPoint = function(angles, offset, pointSize, n) {
+    if(dtheta.toFixed(2) === "0.00") {
+        dtheta = 0.01 * Math.PI;
+    }
+    if(dbeta.toFixed(2) === "0.00") {
+        dbeta  = 0.01 * Math.PI;
+    }
 
+    var point  = [];
+    var rate   = 1;
+    var vertex;
+    vertex = calcVertex(p[0]-dtheta*rate, p[1],            p[2]);
+    console.log("vertex: "+ vertex);
+    point  = point.concat( vertex );
+    point  = point.concat( this.color );
+    vertex = calcVertex(p[0],             p[1]-dbeta*rate, p[2]);
+    console.log("vertex: "+ vertex);
+    point  = point.concat( vertex );
+    point  = point.concat( this.color );
+    vertex = calcVertex(p[0]+dtheta*rate, p[1],            p[2]);
+    console.log("vertex: "+ vertex);
+    point  = point.concat( vertex );
+    point  = point.concat( this.color );
+    vertex = calcVertex(p[0],             p[1]+dbeta*rate, p[2]);
+    console.log("vertex: "+ vertex);
+    point  = point.concat( vertex );
+    point  = point.concat( this.color );
+//    var color = [];
+//    for(var i=0; i<4; i++) {
+//        color = color.concat(this.color);
+//    }
+
+    var index  = [];
+    var index2 = [];
+    index.push(this.index_count + 0, this.index_count + 1, this.index_count + 3, this.index_count + 2);
+//    index.push(this.index_count + 0, this.index_count + 1, this.index_count + 2, this.index_count + 3);
+
+    return {
+        "point" : point,
+//        "color" : color
+        "index" : index,
+        "index2": index2
+    }
 }
 
 /**
  * 重置路径变量
  */
-SensorPoint.prototype.resetCurrentPath = function(u, v, length) {
-    this.lastPoint   = [u, v, length];
+SensorPath.prototype.resetCurrentPath = function(vec) {
+    this.lastPoint   = vec;
     this.sensorPath  = [];
-    this.path_index  = [];
-    this.path_index2 = [];
+    this.index  = [];
+    this.index2 = [];
 }
 
-SensorPoint.prototype.resetAllPath = function(u, v, length) {
+SensorPath.prototype.resetAllPath = function(u, v, length) {
     // 删掉无用的buffer，节省内存
-    for (var i = 0; i < currentPath; i++) {
-        gl.deleteBuffer(this.path_buffer[i]);
-        gl.deleteBuffer(this.path_index_buffer[i]);
+    for (var i = 0; i < this.cur_path; i++) {
+        gl.deleteBuffer(this.buffers.path[i]);
+        gl.deleteBuffer(this.buffers.index[i]);
     }
-    currentPath = 0;
-    this.path_buffer[currentPath]        = createArrayBuffer(gl.ARRAY_BUFFER,         4 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.path_index_buffer[currentPath]  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.path_index2_buffer[currentPath] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
+    this.cur_path = 0;
+    this.buffers.path[this.cur_path]    = createArrayBuffer(gl.ARRAY_BUFFER,         4 * maxPathNum, gl.DYNAMIC_DRAW);
+    this.buffers.index[this.cur_path]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum, gl.DYNAMIC_DRAW);
+//    this.buffers.index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
     this.resetCurrentPath(u, v, length);
 }
-// ================= SensorPoint Object ======================= //
+// ================= SensorPath Object ======================= //
 
 // ****************  Cube Object (Sensor simulator)  **************** //
 function Cube(radius) {
@@ -578,7 +726,7 @@ Ball.prototype.init = function(gl) {
 
 Ball.prototype.paint = function(gl, radius) {
     this.vscale     = vec3.fromValues(1.0, 1.0, 1.0);
-    vec3.scale(this.vscale, this.vscale, radius / this.dr);
+    vec3.scale(this.vscale, this.vscale, radius / this.dr * 0.5);
     mat4.identity(this.mMatrix);
     mat4.scale(this.mMatrix, this.mMatrix, this.vscale);
 
@@ -632,7 +780,7 @@ Ball.prototype.getVertex = function() {
     for (j = 0; j <= n; j++) {
         for (i = 0; i <= n; i++) {
             // (n+1)*n points are needed
-            k = calcVertex(i/n, j/n, r);
+            k = calcVertex(degToRad(i/n*180), degToRad(j/n*360), r);
             vertex.push.apply(vertex, k);
             color.push(0.3, 0.3, 0.3);
         }

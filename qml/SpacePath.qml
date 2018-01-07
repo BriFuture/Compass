@@ -87,6 +87,7 @@ Item {
                     text: "摄像机距原点："
                     maxValue: 30.0
                     minValue: 0.5
+                    onValueChanged: GLcode.rotateCamera();
                 }
             }
 
@@ -102,6 +103,7 @@ Item {
                         top: cameraItem1.top
                         topMargin: controller.topmargin
                     }
+                    enabled: false
                     width: controller.width
                     text: "摄像机X："
                     maxValue: 30.0
@@ -114,6 +116,7 @@ Item {
                         top: cameraXPos.bottom
                         topMargin: controller.topmargin
                     }
+                    enabled: false
                     width: controller.width
                     text: "摄像机Y："
                     maxValue: 30.0
@@ -126,6 +129,7 @@ Item {
                         top: cameraYPos.bottom
                         topMargin: controller.topmargin
                     }
+                    enabled: false
                     width: controller.width
                     text: "摄像机Z："
                     maxValue: 30.0
@@ -176,7 +180,7 @@ Item {
                     }
                     width: controller.width
                     text: "指示器大小："
-                    maxValue: 20
+                    maxValue: 10
                     minValue: 1
                     stepSize: 0.2
                 }
@@ -480,7 +484,6 @@ Item {
 //            if( argItem.cam_dis > dis.maxValue ) {
 //                argItem.cam_dis = dis.maxValue;
 //            }
-            GLcode.rotateCamera();
         }
 
         onDoubleClicked: {
