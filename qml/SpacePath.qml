@@ -360,15 +360,15 @@ Item {
 
                 Button {
                     id: resetCameraBtn
-                    width: 100
+                    width: 70
                     height: 20
-                    text: "重置摄像机位置"
+                    text: "重置摄像机"
                     anchors {
 //                        horizontalCenter: parent.horizontalCenter
     //                    horizontalCenterOffset: 20
                         top: parent.top
                         left: parent.left
-                        leftMargin: 30
+                        leftMargin: 20
                     }
                     onClicked: {
                         argItem.cam_theta = 45
@@ -376,6 +376,24 @@ Item {
 
                         GLcode.rotateCamera();
                         GLcode.reset();
+                    }
+                }
+
+                Button {
+                    id: resetPathBtn
+                    width: 70
+                    height: 20
+                    text: "重置路径"
+                    anchors {
+//                        horizontalCenter: parent.horizontalCenter
+    //                    horizontalCenterOffset: 20
+                        top: parent.top
+                        left: resetCameraBtn.right
+                        leftMargin: 5
+                    }
+                    onClicked: {
+                        console.log("click reset path")
+                        GLcode.sensorPath.resetAllPath();
                     }
                 }
 
@@ -404,7 +422,7 @@ Item {
                         topMargin: 5
                         top: resetCameraBtn.bottom
                         left: recordBtn.right
-                        leftMargin: 15
+                        leftMargin: 20
                     }
                     onClicked: {
                         GLcode.refCircle.reset();

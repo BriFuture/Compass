@@ -11,9 +11,6 @@ Qt.include("gl-matrix.js");
 
 // 绘制球面时的精度, 至少为 4 的倍数
 var accuracy = 48;
-
-// 传感器路径
-var maxPathNum  = 4800; // 每条路径上的最多点的个数,由于每个 sensorPoint 面有 8*3 个数据，该数值最好为 24 的整数倍
 var pointVertexSides = 48;
 
 // 相关绘图变量
@@ -33,6 +30,7 @@ function initUI() {
     argItem.point_size  = 3
     argItem.path_width  = 30
     argItem.ball_alpha  = 0.1
+    argItem.enable_path = true;
     canvasArgs = argItem
 
     axisBox.checked = false;
@@ -217,6 +215,7 @@ function initBuffers() {
     sensorPath.init(gl);
     cube        = new Cube(canvasArgs.ball_radius);
     cube.init(gl);
+    obj.refCircle = new RefCircle(pointVertexSides, canvasArgs.ball_radius);
 }
 
 /**
@@ -262,7 +261,7 @@ function startPaint(canvas) {
     var vangle = calcSensorNormal();  // vertical of angle
     var pos = calcVertex(degToRad(90-canvasArgs.pitch), degToRad(canvasArgs.heading), canvasArgs.vector_length);
     sensorPoint.paint(gl, {"pos": pos, "angle": vangle, "offset": 0});
-    sensorPath.paint(gl,  {"pos": pos, "angle": vangle});
+    sensorPath.paint(gl,  {"pos": pos, "angle": vangle, "enable": canvasArgs.enable_path});
     coord.paint(gl);
     ball.paint(gl, canvasArgs.ball_radius);
 }
@@ -324,13 +323,13 @@ function calcAngle(pitch, heading) {
 /**
 * @param {Number} pitch   range [-90, 90]
 * @param {Number} heading range [0, 360]
-* @returns {Array} the angle returned is in unit of rad
+* @returns {Vec3} the angle returned is in unit of rad
 */
 function calcSensorNormal() {
-    var pitch = canvasArgs.pitch;
+    var pitch   = canvasArgs.pitch;
     var heading = canvasArgs.heading;
     var u = (90-pitch)/180 * Math.PI;
-    var v = heading/180 * Math.PI;
+    var v = heading   /180 * Math.PI;
 //    return [u, v, canvasArgs.vector_length];
     return vec3.fromValues(u, v, canvasArgs.vector_length)
 }
@@ -493,29 +492,31 @@ SensorPoint.prototype.paint = function(gl, addon) {
 
 // ****************  SensorPath Object  **************** //
 function SensorPath() {
-    this.mMatrix      = mat4.create();
-    this.alpha        = 1.0;
-    this.path_count   = 0;
-    this.index_count  = 0;
-    this.cur_path     = 0; // 当前路径的序号
-    this.color        = [0.9, 0.5, 0.2];      // path color
+    this.mMatrix        = mat4.create();
+    this.alpha          = 1.0;
+    this.path_count     = 0;
+    this.index_count    = 0;
+    this.cur_pi         = 0;  // path index
+    this.color          = [0.9, 0.5, 0.2];  // path color
+    this.max_path_num   = 4 * 12;
+    this.buffer_path_bytes  = this.max_path_num * 4;  // 4 means the bytes float occupies, 3 means a point contains 3 coordinate
+    this.buffer_index_bytes = this.max_path_num * 2;  // 2 means the bytes uint  occupies
+    this.path_gap       = 5;
+    this.pg             = 0;        // path gap count
 }
 
 SensorPath.prototype.init = function(gl) {
     this.last_point = calcSensorNormal();
-    this.path         = [];  // path records point with the form xyz
-    this.index  = [];
-    this.index2 = [];
+    this.path       = [];
+    this.index      = [];
 
-    this.buffers = {};
-    // path Buffer initialization
-    this.buffers.path        = [];
-    this.buffers.index  = [];
-    this.buffers.index2 = [];
+    this.buffers    = {};
+    // path buffer initialization
+    this.buffers.path  = [];
+    this.buffers.index = [];
+    this.buffers.color = [];
 
-    this.buffers.path[this.cur_path]   = createArrayBuffer(gl.ARRAY_BUFFER,         4 * 6 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.buffers.index[this.cur_path]  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum,     gl.DYNAMIC_DRAW);
-//    this.buffers.path_index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
+    this.createBuffer();
 }
 
 /**
@@ -524,60 +525,72 @@ SensorPath.prototype.init = function(gl) {
  * 通过线性插值后，不用记录每个顶点，如果前后两点之间的距离过大，用线性插值加入路径中
  **/
 SensorPath.prototype.paint = function(gl, addon) {
+    if(!addon.enable) {
+        return;
+    }
+
     var lpos = vectorPos(this.last_point);
     var pos  = vectorPos(addon.angle);
-    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length/1000 ) {
+//    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length * 0.001 ) {
+//        this.pg ++;
+//    }
+//    if( this.pg >= this.path_gap ) {
+    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length * 0.001 ) {
+        this.pg          = 0;
         var presult      = this.getLinearPoint(addon.angle, this.last_point);
+        this.last_point  = addon.angle;
         this.last_point  = addon.angle;
         this.path_count  += presult.point.length;
         this.index_count += presult.index.length;
-//        console.log("path_count: " + presult.point + ",\nindex_count: " + presult.index);
         this.path.push.apply(this.path,   presult.point);
         this.index.push.apply(this.index, presult.index);
-//        console.log("path: " + this.path + ",\nindex: " + this.index);
+//        console.log("Point:  "+ presult.point)
+        console.log("path_count: " + this.path_count  + "  index_count: "  + this.index_count + "  max: "+this.max_path_num*(this.cur_pi + 1))
+        console.log("cur_pi: " + this.cur_pi + "  path_len: "   + this.path.length + "  index_length: " + this.index.length + "  color: " + presult.color.length + "\n")
 
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_path],  0,  new Float32Array(this.path));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path], 0,  new Uint16Array(this.index));
-//        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_path],        this.path_count * 4,          new Float32Array(presult.point));
-//        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path],  this.index_count * 2,    new Uint16Array(presult.index));
+        //  updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  0,  new Float32Array(this.path));
+        //  updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], 0,  new Uint16Array(this.index));
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color[this.cur_pi],  this.path.length  * 4,    new Float32Array(presult.color));
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],   this.path.length  * 4,    new Float32Array(presult.point));
+        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi],  this.index.length * 2,    new Uint16Array(presult.index));
 
-        // when path index count is greater or equal to maxPathNum, then a new buffer should be realloced  and the counter should be reset
-        if( this.index_count >= 4 * maxPathNum) {
-            this.cur_path++;
-            this.path_count = 0;
-            this.index_count = 0;
-            this.buffers.path[this.cur_path]    = createArrayBuffer(gl.ARRAY_BUFFER,         4 * 6 * maxPathNum, gl.DYNAMIC_DRAW);
-            this.buffers.index[this.cur_path]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum,     gl.DYNAMIC_DRAW);
-//            this.buffers.index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
+        // when path index count is greater or equal to this.max_path_num, then a new buffer should be realloced  and the counter should be reset
+        if( this.index_count >= this.max_path_num*(this.cur_pi + 1) ) {
+            this.cur_pi++;
+            console.log("Info: [Path] create a new buffer");
+            this.createBuffer();
             this.resetCurrentPath(this.last_point);
         }
+
     }
+
     gl.uniform1f(uniforms.alpha, this.alpha);          //  set alpha value
 
     mat4.identity(this.mMatrix);
     mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
     gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
 
-
-    // 分批绘制路径
-    for(var i = 0; i < this.cur_path; i++) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
-        gl.drawElements(gl.TRIANGLE_STRIP,     4 * maxPathNum, gl.UNSIGNED_SHORT, 0);
+//    // 分批绘制路径
+//    for(var i = 0; i < this.cur_pi; i++) {
+//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[i]);     // color buffer
+//        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);    // normal info
+//        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
+//        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
+//        gl.drawElements(gl.TRIANGLES,     this.max_path_num, gl.UNSIGNED_SHORT, 0);
+//    }
+    if( this.index.length > 0 ) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[this.cur_pi]);     // color buffer
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);    // normal info
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
+        gl.drawElements(gl.TRIANGLES,     this.index.length, gl.UNSIGNED_SHORT, 0);
     }
-    if( this.index_count > 0 ) {
-//        console.log("draw path")
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);     // color buffer
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 6*4, 3*4);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);    // normal info
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 6*4, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_path]);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_path]);
-        gl.drawElements(gl.TRIANGLE_STRIP,     this.index.length, gl.UNSIGNED_SHORT, 0);
-    }
-
 }
 
 /**
@@ -587,50 +600,59 @@ SensorPath.prototype.paint = function(gl, addon) {
  * @return {Array}
  */
 SensorPath.prototype.getLinearPoint = function(p, lp) {
-    var dtheta = p[0] - lp[0];
-    var dbeta  = p[1] - lp[1];
+    var s1 = vectorPos( p  );
+    var s2 = vectorPos( lp );
+    var s  = [ s1[0]-s2[0], s1[1]-s2[1], s1[2]-s2[2] ];
+//    console.log("s1: "+ s1 + "  s2: "+s2 + "  s: " + s +"\n");
+    var n0  = calcVertex( (p[0]+lp[0])*0.5, (p[1]+lp[1])*0.5, p[2] );
+    var l = vec3.create();
+    vec3.cross(l, s, n0);
+    vec3.normalize(l, l);
+    vec3.scale(l, l,canvasArgs.path_width * 0.001);
+//    console.log("vec l: " + vec3.str(l));
 
-    if(dtheta.toFixed(2) === "0.00") {
-        dtheta = 0.01 * Math.PI;
-    }
-    if(dbeta.toFixed(2) === "0.00") {
-        dbeta  = 0.01 * Math.PI;
-    }
-
-    var point  = [];
-    var rate   = 1;
+    var linearPoint = [];
+    var color = [];
     var vertex;
-    vertex = calcVertex(p[0]-dtheta*rate, p[1],            p[2]);
-    console.log("vertex: "+ vertex);
-    point  = point.concat( vertex );
-    point  = point.concat( this.color );
-    vertex = calcVertex(p[0],             p[1]-dbeta*rate, p[2]);
-    console.log("vertex: "+ vertex);
-    point  = point.concat( vertex );
-    point  = point.concat( this.color );
-    vertex = calcVertex(p[0]+dtheta*rate, p[1],            p[2]);
-    console.log("vertex: "+ vertex);
-    point  = point.concat( vertex );
-    point  = point.concat( this.color );
-    vertex = calcVertex(p[0],             p[1]+dbeta*rate, p[2]);
-    console.log("vertex: "+ vertex);
-    point  = point.concat( vertex );
-    point  = point.concat( this.color );
-//    var color = [];
-//    for(var i=0; i<4; i++) {
-//        color = color.concat(this.color);
-//    }
+    var that = this;
+
+    var pushVertex = function() {
+        color = color.concat(that.color);
+        linearPoint.push.apply(linearPoint, vertex);
+    }
+
+    vertex = [s1[0]-l[0], s1[1]-l[1], s1[2]-l[2]];   // 0
+    pushVertex();
+    vertex = [s1[0]+l[0], s1[1]+l[1], s1[2]+l[2]];   // 1
+    pushVertex();
+    vertex = [s2[0]-l[0], s2[1]-l[1], s2[2]-l[2]];   // 2
+    pushVertex();
+    vertex = [s2[0]+l[0], s2[1]+l[1], s2[2]+l[2]];   // 3
+    pushVertex();
+
+    var logPoint = function(li, info) {
+        for(var i = 0; i < li.length; i+=3) {
+            console.log(info + "  " + li[i]+", "+li[i+1]+", "+li[i+2]+", ");
+            if( vec3.len( [li[i], li[i+1], li[i+2]] ) < 0.01)  {
+                console.log("vec length 0");
+            }
+        }
+
+    }
+    logPoint(linearPoint, "point");
 
     var index  = [];
-    var index2 = [];
-    index.push(this.index_count + 0, this.index_count + 1, this.index_count + 3, this.index_count + 2);
-//    index.push(this.index_count + 0, this.index_count + 1, this.index_count + 2, this.index_count + 3);
+    var n = this.path.length/3;  // it is better than index.length
+    console.log("n: "+n)
+    index.push(n + 0, n + 2, n + 3, n + 0, n + 3, n + 1);
+    index.push(n + 0, n + 3, n + 2, n + 0, n + 1, n + 3);
+    logPoint(index, "index");
 
     return {
-        "point" : point,
-//        "color" : color
+        "point" : linearPoint,
+        "color" : color,
         "index" : index,
-        "index2": index2
+//        "index2": index2
     }
 }
 
@@ -639,23 +661,30 @@ SensorPath.prototype.getLinearPoint = function(p, lp) {
  */
 SensorPath.prototype.resetCurrentPath = function(vec) {
     this.lastPoint   = vec;
-    this.sensorPath  = [];
+    this.path   = [];
     this.index  = [];
-    this.index2 = [];
 }
 
-SensorPath.prototype.resetAllPath = function(u, v, length) {
+SensorPath.prototype.resetAllPath = function() {
+    this.cur_pi = 0;
     // 删掉无用的buffer，节省内存
-    for (var i = 0; i < this.cur_path; i++) {
-        gl.deleteBuffer(this.buffers.path[i]);
+    for (var i = 0; i <= this.cur_pi; i++) {
+        gl.deleteBuffer(this.buffers.path[i] );
         gl.deleteBuffer(this.buffers.index[i]);
+        gl.deleteBuffer(this.buffers.color[i]);
     }
-    this.cur_path = 0;
-    this.buffers.path[this.cur_path]    = createArrayBuffer(gl.ARRAY_BUFFER,         4 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.buffers.index[this.cur_path]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 4 * maxPathNum, gl.DYNAMIC_DRAW);
-//    this.buffers.index2[this.cur_path] = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 2 * maxPathNum, gl.DYNAMIC_DRAW);
-    this.resetCurrentPath(u, v, length);
+    this.path_count = 0;
+    this.index_count = 0;
+    this.createBuffer();
+    this.resetCurrentPath(calcSensorNormal());
 }
+
+SensorPath.prototype.createBuffer = function() {
+    this.buffers.color[this.cur_pi]   = createArrayBuffer(gl.ARRAY_BUFFER,         this.buffer_path_bytes,  gl.DYNAMIC_DRAW);
+    this.buffers.path[this.cur_pi]    = createArrayBuffer(gl.ARRAY_BUFFER,         this.buffer_path_bytes,  gl.DYNAMIC_DRAW);
+    this.buffers.index[this.cur_pi]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffer_index_bytes, gl.DYNAMIC_DRAW);
+}
+
 // ================= SensorPath Object ======================= //
 
 // ****************  Cube Object (Sensor simulator)  **************** //
@@ -918,3 +947,134 @@ Coord.prototype.paint = function(gl) {
     gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
 }
 // ================  Coord Object ================ //
+
+// **************** ReferenceCircle Object **************** //
+// 球面上的参考圆圈
+function RefCircle(sides, radius) {
+    this.sides    = sides;
+    this.greenNum = 6;
+    this.radius   = radius;
+}
+
+RefCircle.prototype.init = function() {
+    this.record_point_index = [];
+    this.record_point = [];
+
+    // 绘制参考圆圈
+    var refpoints = this.getPoints();
+    var coordIndex = [];
+    var i = 0, j = 0;
+    for (i = 0; i < 26; i++) {
+        for (j = 1; j < pointVertexSides; j++) {
+            coordIndex.push(i * (pointVertexSides + 1) + j);
+            coordIndex.push(i * (pointVertexSides + 1) + j + 1);
+        }
+        coordIndex.push(i * (pointVertexSides + 1) + pointVertexSides);
+        coordIndex.push(i * (pointVertexSides + 1) + 1);
+    }
+
+    this.refcircle_buffer       = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(refpoints), gl.DYNAMIC_DRAW);
+    this.refcircle_index_buffer = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex), gl.STATIC_DRAW);
+    // normal line
+    var normal = [];
+    for(i = 0; i < refpoints.length / 3; i++) {
+        normal.push.apply(normal, canvasArgs.light_direction);
+    }
+    this.normal_buffer       = createArrayBuffer(gl.ARRAY_BUFFER, new Float32Array(normal), gl.STATIC_DRAW);
+    this.record_buffer       = createArrayBuffer(gl.ARRAY_BUFFER,         4 * maxPathNum, gl.DYNAMIC_DRAW);
+    this.record_index_buffer = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, 8 * maxPathNum, gl.DYNAMIC_DRAW);
+}
+
+
+/**
+ *  绘制球面上的参考圆圈
+ *  首先设置线宽和颜色
+ **/
+RefCircle.prototype.paint = function(gl) {
+    gl.bindBuffer(gl.ARRAY_BUFFER,         this.normal_buffer);
+    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER,         this.refcircle_buffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.refcircle_index_buffer);
+    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+
+    // 画出球面上的圆圈，绿色的圆圈个数为6,先画出绿色圆圈，然后画出蓝色圆圈
+    gl.lineWidth(3.0);
+    gl.uniform4fv(uniforms.color_unit, [0.05, 1.0, 0.1, 1.0]);
+    gl.drawElements(gl.LINES, this.sides * 2 * this.greenNum, gl.UNSIGNED_SHORT, 0); // x2 是线段需要的索引数
+    gl.uniform4fv(uniforms.color_unit, [0.05, 0.1, 1.0, 1.0]);
+    gl.drawElements(gl.LINES, (26 - this.greenNum) * this.sides * 2, gl.UNSIGNED_SHORT, this.sides * 2 * this.greenNum * 2);
+    gl.lineWidth(canvasArgs.line_width);
+    // 进行采点操作
+    if(this.record_point.length > 0) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.record_buffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.record_index_buffer);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.uniform4fv(uniforms.color_unit, [0.1, 0.1, 0.95, 1.1]); // 传入颜色 uniform，就不再需要颜色顶点数据
+        gl.drawElements(gl.TRIANGLES, this.record_point_index.length, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.uniform4fv(uniforms.color_unit, [0.0, 0.0, 0.0, 0.0]);
+}
+
+RefCircle.prototype.repaint = function(radius) {
+    this.radius = radius;
+    var refcirclePoints = refCircle.getPoints();
+    updateSubBuffer(gl.ARRAY_BUFFER, this.refcircle_buffer, 0, new Float32Array(refcirclePoints));
+}
+
+// 获取参考圆圈的顶点
+RefCircle.prototype.getPoints = function() {
+    var i, j;
+    var points = [];
+    var sensorPoint;
+
+    points.push.apply(points, calcSensorPoint([0, 0, 0], this.radius, 0.15, this.sides)); // north polar
+    points.push.apply(points, calcSensorPoint([1, 0, 0], this.radius, 0.15, this.sides)); // south polar
+
+    // 赤道上 0, 90, 180, 270 位置上的四个圆圈
+    i = 2;
+    for (j = 0; j < 8; j = j + 2) {
+        sensorPoint = calcSensorPoint([i / 4, j / 8, 0], this.radius, 0.15, this.sides);
+        points.push.apply(points, sensorPoint);
+    }
+    for (j = 1; j < 8; j = j + 2) {
+        sensorPoint = calcSensorPoint([i / 4, j / 8, 0], this.radius, 0.15, this.sides);
+        points.push.apply(points, sensorPoint);
+    }
+
+    for (j = 0; j < 8; j++) {
+        for (i = 1; i < 4; i += 2) {
+            sensorPoint = calcSensorPoint([i / 4, j / 8, 0], this.radius, 0.15, this.sides);
+            points.push.apply(points, sensorPoint);
+        }
+    }
+    return points;
+}
+
+// 打点操作
+RefCircle.prototype.record = function() {
+    var n = this.record_point.length / 3;
+    var i = 0;
+    var sensorPoint = calcSensorPoint([u, v, 0], this.radius, canvasArgs.point_size, this.sides);
+    this.record_point.push.apply(this.record_point, sensorPoint);
+    var vertexIndex = [];
+    for (i = 1; i < this.sides; i++) {
+        vertexIndex.push(
+            n + 0, n + i, n + i + 1,
+            n + 0, n + i + 1, n + i);
+    }
+    vertexIndex.push(
+        n + 0, n + this.sides, n + 1,
+        n + 0, n + 1, n + this.sides);
+    this.record_point_index.push.apply(this.record_point_index, vertexIndex);
+    updateSubBuffer(gl.ARRAY_BUFFER,         this.record_buffer,       0, new Float32Array(this.record_point));
+    updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.record_index_buffer, 0, new Uint16Array(this.record_point_index));
+    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+}
+
+// 重置已经打的点s
+RefCircle.prototype.reset = function() {
+    this.recordPointsAngle  = [];
+    this.record_point       = [];
+    this.record_point_index = [];
+}
+// ================= ReferenceCircle Object =======================//
