@@ -160,22 +160,9 @@ Item {
                 }
 
                 MySlider {
-                    id: lineWidth
-                    anchors {
-                        top: ballRadius.bottom
-                        topMargin: controller.topmargin
-                    }
-                    width: controller.width
-                    text: "线宽："
-                    maxValue: 10
-                    minValue: 1
-                    stepSize: 0.5
-                }
-
-                MySlider {
                     id: pointSize
                     anchors {
-                        top: lineWidth.bottom
+                        top: ballRadius.bottom
                         topMargin: controller.topmargin
                     }
                     width: controller.width
@@ -199,9 +186,22 @@ Item {
                 }
 
                 MySlider {
-                    id: ballAlpha
+                    id: path_gap
                     anchors {
                         top: pathWidth.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: controller.width
+                    text: "路径间隔："
+                    maxValue: 10
+                    minValue: 1
+                    stepSize: 1.0
+                }
+
+                MySlider {
+                    id: ballAlpha
+                    anchors {
+                        top: path_gap.bottom
                         topMargin: controller.topmargin
                     }
                     width: controller.width
@@ -521,9 +521,9 @@ Item {
         property alias  cam_y:       cameraYPos.value
         property alias  cam_z:       cameraZPos.value
         property alias  ball_radius: ballRadius.value
-        property alias  line_width:  lineWidth.value
         property alias  point_size:  pointSize.value
         property alias  path_width:  pathWidth.value
+        property alias  path_gap:    path_gap.value
         property alias  ball_alpha:  ballAlpha.value
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value

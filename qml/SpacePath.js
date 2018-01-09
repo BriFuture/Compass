@@ -26,9 +26,9 @@ function initUI() {
     argItem.cam_dis     = 18.0
     argItem.cam_theta   = 70
     argItem.cam_beta    = 50
-    argItem.line_width  = 1.0
-    argItem.point_size  = 3
-    argItem.path_width  = 30
+    argItem.path_gap    = 1
+    argItem.point_size  = 2
+    argItem.path_width  = 3
     argItem.ball_alpha  = 0.1
     argItem.enable_path = true;
     canvasArgs = argItem
@@ -260,8 +260,16 @@ function startPaint(canvas) {
     var angle = calcAngle(canvasArgs.pitch, canvasArgs.heading);
     var vangle = calcSensorNormal();  // vertical of angle
     var pos = calcVertex(degToRad(90-canvasArgs.pitch), degToRad(canvasArgs.heading), canvasArgs.vector_length);
-    sensorPoint.paint(gl, {"pos": pos, "angle": vangle, "offset": 0});
-    sensorPath.paint(gl,  {"pos": pos, "angle": vangle, "enable": canvasArgs.enable_path});
+    sensorPoint.paint(gl, {"pos": pos,
+                          "angle": vangle,
+                          "point_size": canvasArgs.point_size});
+    sensorPath.paint(gl,  {"pos": pos,
+                         "angle": vangle,
+                         "enable": canvasArgs.enable_path,
+                         "vector_length": canvasArgs.vector_length,
+                         "path_gap": canvasArgs.path_gap,
+                         "path_width": canvasArgs.path_width
+                     });
     coord.paint(gl);
     ball.paint(gl, canvasArgs.ball_radius);
 }
@@ -410,7 +418,8 @@ function SensorPoint(sides) {
     this.d_size   = 1.0;
     this.alpha    = 1.0;
     this.color    = [0.1, 0.9, 0.1];      // default color
-    this.inv_color = [1.0, 0.0, 0.0];
+    this.inv_color  = [1.0, 0.0, 0.0];
+    this.point_size = 1.0;
 }
 
 SensorPoint.prototype.init = function(gl) {
@@ -448,7 +457,6 @@ SensorPoint.prototype.init = function(gl) {
     this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(vertex),  gl.STATIC_DRAW);
     this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),   gl.STATIC_DRAW);
     this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),    gl.STATIC_DRAW);
-
 }
 
 /**
@@ -460,8 +468,12 @@ SensorPoint.prototype.init = function(gl) {
  * @param {*} radial    是否绘制射线
  */
 SensorPoint.prototype.paint = function(gl, addon) {
+    if( this.point_size !== addon.point_size ) {
+        this.point_size   = addon.point_size || 1;
+    }
+
     this.vscale  = vec3.fromValues(1.0, 1.0, 1.0);
-    vec3.scale(this.vscale, this.vscale, canvasArgs.point_size / this.d_size / 10);
+    vec3.scale(this.vscale, this.vscale, this.point_size / this.d_size / 10);
 
     mat4.fromZRotation(this.rMatrix,         addon.angle[1]);
     mat4.rotateY(this.rMatrix, this.rMatrix, addon.angle[0]);
@@ -492,21 +504,25 @@ SensorPoint.prototype.paint = function(gl, addon) {
 
 // ****************  SensorPath Object  **************** //
 function SensorPath() {
-    this.mMatrix        = mat4.create();
-    this.alpha          = 1.0;
-    this.path_count     = 0;
-    this.index_count    = 0;
-    this.cur_pi         = 0;  // path index
-    this.color          = [0.9, 0.5, 0.2];  // path color
-    this.max_path_num   = 4 * 12;
+    this.mMatrix         = mat4.create();
+    this.alpha           = 1.0;
+    this.all_path_count  = 0;
+    this.all_index_count = 0;
+    this.cur_path_count  = 0;
+    this.cur_index_count = 0;
+    this.cur_pi          = 0;  // path index
+    this.color           = [0.9, 0.5, 0.2];  // path color
+    this.max_path_num    = 4800 * 12;
     this.buffer_path_bytes  = this.max_path_num * 4;  // 4 means the bytes float occupies, 3 means a point contains 3 coordinate
     this.buffer_index_bytes = this.max_path_num * 2;  // 2 means the bytes uint  occupies
-    this.path_gap       = 5;
-    this.pg             = 0;        // path gap count
+    this.path_gap        = 4;       // must equal or greater then 1
+    this.pg              = 1;       // path gap count
+    this.path_width      = 1.0;
 }
 
 SensorPath.prototype.init = function(gl) {
     this.last_point = calcSensorNormal();
+    this.angle      = this.last_point;
     this.path       = [];
     this.index      = [];
 
@@ -521,67 +537,61 @@ SensorPath.prototype.init = function(gl) {
 
 /**
  * 绘制路径
- * 全部改成用直线相连
- * 通过线性插值后，不用记录每个顶点，如果前后两点之间的距离过大，用线性插值加入路径中
- **/
+**/
 SensorPath.prototype.paint = function(gl, addon) {
     if(!addon.enable) {
         return;
     }
-
     var lpos = vectorPos(this.last_point);
-    var pos  = vectorPos(addon.angle);
-//    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length * 0.001 ) {
-//        this.pg ++;
-//    }
-//    if( this.pg >= this.path_gap ) {
-    if( vec3.dist(lpos, pos) > 2*Math.PI *canvasArgs.vector_length * 0.001 ) {
-        this.pg          = 0;
-        var presult      = this.getLinearPoint(addon.angle, this.last_point);
-        this.last_point  = addon.angle;
-        this.last_point  = addon.angle;
-        this.path_count  += presult.point.length;
-        this.index_count += presult.index.length;
-        this.path.push.apply(this.path,   presult.point);
-        this.index.push.apply(this.index, presult.index);
-//        console.log("Point:  "+ presult.point)
-        console.log("path_count: " + this.path_count  + "  index_count: "  + this.index_count + "  max: "+this.max_path_num*(this.cur_pi + 1))
-        console.log("cur_pi: " + this.cur_pi + "  path_len: "   + this.path.length + "  index_length: " + this.index.length + "  color: " + presult.color.length + "\n")
+    var  pos = vectorPos(addon.angle);
+    var dist = vec3.dist(lpos, pos);
 
-        //  updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  0,  new Float32Array(this.path));
-        //  updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], 0,  new Uint16Array(this.index));
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color[this.cur_pi],  this.path.length  * 4,    new Float32Array(presult.color));
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],   this.path.length  * 4,    new Float32Array(presult.point));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi],  this.index.length * 2,    new Uint16Array(presult.index));
-
-        // when path index count is greater or equal to this.max_path_num, then a new buffer should be realloced  and the counter should be reset
-        if( this.index_count >= this.max_path_num*(this.cur_pi + 1) ) {
-            this.cur_pi++;
-            console.log("Info: [Path] create a new buffer");
-            this.createBuffer();
-            this.resetCurrentPath(this.last_point);
-        }
-
+    if( this.path_width !== addon.path_width ) {
+        this.path_width   = addon.path_width || 1.0;
     }
 
-    gl.uniform1f(uniforms.alpha, this.alpha);          //  set alpha value
+    var path_gap = Math.floor(addon.path_gap) || this.path_gap;
 
+    if( dist > Math.PI * addon.vector_length * 0.01 ) {
+        this.updateBuffer(addon.angle, this.angle);
+        this.angle = addon.angle;
+        this.last_point = addon.angle;
+    } else {
+        if( dist > Math.PI * addon.vector_length * 0.001 ) {
+            this.pg ++;
+            this.last_point = addon.angle;
+        }
+        if( this.pg === path_gap ) {
+            this.angle = addon.angle;
+        }
+        if( this.pg === path_gap+1 ) {
+            this.pg = 1;
+            this.updateBuffer(addon.angle, this.angle);
+            this.angle = addon.angle;
+        }
+    }
+//    if( vec3.dist(lpos, pos) > Math.PI * addon.vector_length * 0.001 ) {
+//        this.updateBuffer(addon.angle, this.last_point);
+//        this.last_point = addon.angle;
+//    }
+
+    gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
     mat4.identity(this.mMatrix);
     mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
     gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
 
-//    // 分批绘制路径
-//    for(var i = 0; i < this.cur_pi; i++) {
-//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[i]);     // color buffer
-//        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);    // normal info
-//        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
-//        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-//        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
-//        gl.drawElements(gl.TRIANGLES,     this.max_path_num, gl.UNSIGNED_SHORT, 0);
-//    }
-    if( this.index.length > 0 ) {
+    // 分批绘制路径
+    for(var i = 0; i < this.cur_pi; i++) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[i]);     // color buffer
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);    // normal info
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
+        gl.drawElements(gl.TRIANGLES,     this.max_path_num, gl.UNSIGNED_SHORT, 0);
+    }
+    if( this.cur_index_count > 0 ) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[this.cur_pi]);     // color buffer
         gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);    // normal info
@@ -589,12 +599,39 @@ SensorPath.prototype.paint = function(gl, addon) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
-        gl.drawElements(gl.TRIANGLES,     this.index.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES,     this.cur_index_count, gl.UNSIGNED_SHORT, 0);
+    }
+}
+
+SensorPath.prototype.updateBuffer = function(nangle, langle) {
+    var presult = this.getLinearPoint(nangle, langle);
+    this.all_path_count  += presult.point.length;
+    this.all_index_count += presult.index.length;
+
+//        this.path.push.apply(this.path,   presult.point);
+//        this.index.push.apply(this.index, presult.index);
+    //  updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  0,  new Float32Array(this.path));
+    //  updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], 0,  new Uint16Array(this.index));
+    updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color[this.cur_pi], this.cur_path_count  * 4, new Float32Array(presult.color));
+    updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  this.cur_path_count  * 4, new Float32Array(presult.point));
+    updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], this.cur_index_count * 2, new Uint16Array(presult.index));
+    // Note! because the updateSubBuffer() should use the offset as the parameter,
+    // the addition of path or index count should be later, or the buffer will be out of its size
+    this.cur_path_count  += presult.point.length;
+    this.cur_index_count += presult.index.length;
+
+    // when path index count is greater or equal to this.max_path_num, then a new buffer should be realloced
+    // and the counter should be reset
+    if( this.cur_index_count >= this.max_path_num) {
+        this.cur_pi++;
+        console.log("Info: [Path] create a new buffer!\n");
+        this.createBuffer();
+        this.resetCurrentPath();
     }
 }
 
 /**
- * 线性插值，得到一系列补充的 sensorPoint, 用于绘制路径
+ * 用于绘制路径
  * @param {Array} p     p[0] = theta    p[1] = beta    p[2] = radius
  * @param {Array} lp   lp[0] = theta   lp[1] = beta   lp[2] = lradius
  * @return {Array}
@@ -608,7 +645,7 @@ SensorPath.prototype.getLinearPoint = function(p, lp) {
     var l = vec3.create();
     vec3.cross(l, s, n0);
     vec3.normalize(l, l);
-    vec3.scale(l, l,canvasArgs.path_width * 0.001);
+    vec3.scale(l, l, this.path_width * 0.002);
 //    console.log("vec l: " + vec3.str(l));
 
     var linearPoint = [];
@@ -630,29 +667,15 @@ SensorPath.prototype.getLinearPoint = function(p, lp) {
     vertex = [s2[0]+l[0], s2[1]+l[1], s2[2]+l[2]];   // 3
     pushVertex();
 
-    var logPoint = function(li, info) {
-        for(var i = 0; i < li.length; i+=3) {
-            console.log(info + "  " + li[i]+", "+li[i+1]+", "+li[i+2]+", ");
-            if( vec3.len( [li[i], li[i+1], li[i+2]] ) < 0.01)  {
-                console.log("vec length 0");
-            }
-        }
-
-    }
-    logPoint(linearPoint, "point");
-
     var index  = [];
-    var n = this.path.length/3;  // it is better than index.length
-    console.log("n: "+n)
+    var n = this.cur_path_count / 3;  // it is better than index.length
     index.push(n + 0, n + 2, n + 3, n + 0, n + 3, n + 1);
     index.push(n + 0, n + 3, n + 2, n + 0, n + 1, n + 3);
-    logPoint(index, "index");
 
     return {
         "point" : linearPoint,
         "color" : color,
         "index" : index,
-//        "index2": index2
     }
 }
 
@@ -660,9 +683,9 @@ SensorPath.prototype.getLinearPoint = function(p, lp) {
  * 重置路径变量
  */
 SensorPath.prototype.resetCurrentPath = function(vec) {
-    this.lastPoint   = vec;
-    this.path   = [];
-    this.index  = [];
+    this.cur_path_count  = 0;
+    this.cur_index_count = 0;
+    this.pg              = 0;
 }
 
 SensorPath.prototype.resetAllPath = function() {
@@ -673,10 +696,11 @@ SensorPath.prototype.resetAllPath = function() {
         gl.deleteBuffer(this.buffers.index[i]);
         gl.deleteBuffer(this.buffers.color[i]);
     }
-    this.path_count = 0;
-    this.index_count = 0;
+    this.all_path_count  = 0;
+    this.all_index_count = 0;
     this.createBuffer();
-    this.resetCurrentPath(calcSensorNormal());
+    this.last_point = calcSensorNormal();
+    this.resetCurrentPath();
 }
 
 SensorPath.prototype.createBuffer = function() {

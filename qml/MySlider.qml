@@ -82,7 +82,7 @@ Rectangle {
             right: container.right
         }
         onValueChanged: {
-            value.text = this.value.toFixed(container.precision)
+            value.text = (this.value * container.ratio).toFixed(container.precision)
         }
     }
 
