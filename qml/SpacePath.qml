@@ -140,7 +140,6 @@ Item {
             Item {
                 id: canvasSetting
                 width: parent.width
-    //            implicitHeight: ballRadius.height + lineWidth.height + pointSize.height + pathWidth.height + 4*controller.topmargin
                 height: calcHeight(this)
                 anchors {
                     top: cameraItem0.bottom
@@ -155,21 +154,35 @@ Item {
                     }
                     width: controller.width
                     text: "参考球半径："
-                    maxValue: 30
-                    minValue: 3
+                    maxValue: 15
+                    minValue: 0.5
+                    btnSize: 0.5
                 }
 
                 MySlider {
-                    id: pointSize
+                    id: ballAlpha
                     anchors {
                         top: ballRadius.bottom
                         topMargin: controller.topmargin
                     }
                     width: controller.width
+                    text:  "球面透明度"
+                    maxValue: 1.0
+                    minValue: 0.1
+                    btnSize: 0.1
+                }
+
+                MySlider {
+                    id: pointSize
+                    anchors {
+                        top: ballAlpha.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: controller.width
                     text: "指示器大小："
-                    maxValue: 10
-                    minValue: 1
-                    stepSize: 0.2
+                    maxValue: 1
+                    minValue: 0.1
+                    btnSize: 0.1
                 }
 
                 MySlider {
@@ -199,15 +212,17 @@ Item {
                 }
 
                 MySlider {
-                    id: ballAlpha
+                    id: circle_size
                     anchors {
                         top: path_gap.bottom
                         topMargin: controller.topmargin
                     }
                     width: controller.width
-                    text:  "球面透明度"
-                    maxValue: 1.0
+                    text: "参考圆圈大小："
+                    value: 0.3
+                    maxValue: 1
                     minValue: 0.1
+                    btnSize: 0.1
                 }
             }
 
@@ -259,25 +274,13 @@ Item {
                     onClicked: GLcode.selectDrawMode(this)
                 }
 
-                RadioButton {
-                    id: caliRB
-                    anchors {
-                        top: lineRB.bottom
-                        left: lessLineRB.right
-                        leftMargin: 50
-                    }
-                    width: 20
-                    height: 20
-                    text: "calibration"
-                    onClicked: GLcode.selectDrawMode(this)
-                }
             }
 
             Item {
                 id: checkBoxItem
                 width: parent.width
                 property int bheight: 15
-                height: 2 * bheight
+                height: calcHeight(this) * 0.5
                 anchors {
                     top: drawMode.bottom
                     topMargin: 5
@@ -300,27 +303,11 @@ Item {
                 }
 
                 CheckBox {
-                    id: pathModeBox
-                    height: parent.bheight
-                    text: "实线路径"
-                    anchors {
-                        left: pathEnableBox.right
-                        leftMargin: 30
-                    }
-                    checked: argItem.path_real_line
-                    onCheckedChanged: {
-                        argItem.path_real_line = checked;
-                    }
-                }
-
-                CheckBox {
                     id: cubeBox
                     height: parent.bheight
                     text: "绘制模拟器"
                     anchors {
-                        top: pathEnableBox.bottom
-                        topMargin: 5
-                        left: parent.left
+                        left: pathEnableBox.right
                         leftMargin: 15
                     }
                     checked: argItem.enable_cube
@@ -338,12 +325,29 @@ Item {
                     anchors {
                         top: pathEnableBox.bottom
                         topMargin: 5
-                        left: pathModeBox.left
-//                        leftMargin: 20
+                        left: parent.left
+                        leftMargin: 15
                     }
                     onCheckedChanged: {
                         cameraItem0.visible = checked;
                         cameraItem1.visible = !checked;
+                    }
+                }
+
+                CheckBox {
+                    id: calibrationBox
+                    height: parent.bheight
+                    text: "显示修正圆圈"
+                    checked: true
+
+                    anchors {
+                        top: pathEnableBox.bottom
+                        topMargin: 5
+                        left: axisBox.right
+                        leftMargin: 15
+                    }
+                    onCheckedChanged: {
+                        argItem.calibration = checked;
                     }
                 }
             }
@@ -425,7 +429,7 @@ Item {
                         leftMargin: 20
                     }
                     onClicked: {
-                        GLcode.refCircle.reset();
+                        GLcode.resetRecord();
                     }
                 }
             }
@@ -514,17 +518,21 @@ Item {
     **/
     Item {
         id: argItem
-        property alias  cam_dis:     camDis.value
+        property alias  cam_dis:      camDis.value
 //        property alias  cam_theta:   camTheta.value
 //        property alias  cam_beta:    camBeta.value
-        property alias  cam_x:       cameraXPos.value
-        property alias  cam_y:       cameraYPos.value
-        property alias  cam_z:       cameraZPos.value
-        property alias  ball_radius: ballRadius.value
-        property alias  point_size:  pointSize.value
-        property alias  path_width:  pathWidth.value
-        property alias  path_gap:    path_gap.value
-        property alias  ball_alpha:  ballAlpha.value
+        property alias  cam_x:        cameraXPos.value
+        property alias  cam_y:        cameraYPos.value
+        property alias  cam_z:        cameraZPos.value
+        property alias  ball_radius:  ballRadius.value
+        property alias  point_size:   pointSize.value
+        property alias  path_width:   pathWidth.value
+        property alias  path_gap:     path_gap.value
+        property alias  ball_alpha:   ballAlpha.value
+        property alias  circle_size:  circle_size.value
+        property alias  calibration:  calibrationBox.checked
+        property alias  enable_path:  pathEnableBox.checked
+        property bool   enable_cube:  cubeBox.checked
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value
         property alias  pitch:   pitch.value
@@ -533,11 +541,8 @@ Item {
         property double roll: 0
         property double heading_offset: 0
         property double vector_length:  4
-        property bool   enable_path:    false
-        property bool   path_real_line: true
-        property bool   enable_cube:    true
         property var    light_direction: [0.35, 0.35, 0.7]
-        property string drawMode: "line"
+        property string draw_mode: "line"
 
         onCam_thetaChanged: {
             camTheta.value = this.cam_theta
@@ -590,7 +595,7 @@ Item {
     }
 
     function recordAPoint() {
-        GLcode.refCircle.record();
+        GLcode.record();
     }
 
     /**

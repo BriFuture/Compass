@@ -19,6 +19,7 @@ Rectangle {
     property alias text :     name.text
     property alias value:     slider.value
     property alias stepSize:  slider.stepSize
+    property double btnSize:  1.0
 
     Label {
         id: name
@@ -88,7 +89,7 @@ Rectangle {
 
     function btnClick(op) {
         var v = parseFloat(value.text);
-        v += op;
+        v += op*container.btnSize;
         // in case of out of range
         if( v > container.maxValue || v < container.minValue ) {
             v -= op;
