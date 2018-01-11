@@ -542,6 +542,7 @@ Item {
         property double heading_offset: 0
         property double vector_length:  4
         property var    light_direction: [0.35, 0.35, 0.7]
+        property bool   sensor_radial: true
         property string draw_mode: "line"
 
         onCam_thetaChanged: {
