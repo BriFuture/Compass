@@ -26,6 +26,7 @@ signals:
     void headingChanged();
 
 public slots:
+    void show();
     double getRadius();
     double getHeading();
     double getPitch();

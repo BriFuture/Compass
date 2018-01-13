@@ -25,7 +25,7 @@ function initUI() {
     argItem.path_width  = 3;
     argItem.ball_alpha  = 0.65;
     argItem.enable_path = false;
-    argItem.calibration = true;
+    argItem.calibration = false;
     argItem.enable_cube = true;
     canvasArgs = argItem;
 

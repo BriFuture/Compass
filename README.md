@@ -16,3 +16,10 @@
 
 使用 QML + JavaScript 进行动画演示。最新修改的版本对自定义滑块和 3D 部分的 QML 文件全部重写，去掉冗余的部分。
 
+* 2D 
+    2D 部分动画使用的是简单的旋转。
+
+* 3D
+    3D 部分使用的是 QtCanvas3D 和 WebGL 进行绘制。矩阵相关的操作使用的是 [gl-matrix][1] 类库
+
+[1]: http://glmatrix.net/

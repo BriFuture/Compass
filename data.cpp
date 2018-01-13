@@ -3,17 +3,50 @@
 #include <QQmlApplicationEngine>
 #include <time.h>
 #include <QDebug>
+#include <QFile>
+#include <QTextStream>
 #include <QTimer>
 
 Data::Data() {
     heading = 0;
     pitch = 0;
     roll = 0;
+    qDebug() << "[Info] Start to Show!" << endl;
     srand((unsigned) time(NULL));
+    QTimer *timer = new QTimer(this);
+    timer->setSingleShot(true);
+    connect(timer, SIGNAL(timeout()), this, SLOT(show()));
+    timer->start(100);
 }
 
 Data::~Data() {
     delete compassview;
+}
+
+void Data::show() {
+    // using a cfg file to change mode dynamically
+    QFile *file = new QFile("compass.cfg");
+    int mode = 0;
+    if( !file->exists() ) {
+        file->open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream out(file);
+        out << mode << endl;
+//        file->write(modeArr.append(mode));
+    } else {
+        file->open(QIODevice::ReadOnly | QIODevice::Text);
+        QTextStream in(file);
+        mode = in.readLine().toInt();
+    }
+
+    switch (mode) {
+    case 1:
+        this->view();
+        break;
+    case 0:
+    default:
+        this->view3D();
+        break;
+    }
 }
 
 

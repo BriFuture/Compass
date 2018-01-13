@@ -25,76 +25,88 @@ Item {
         verticalAlignment: Text.AlignVCenter
     }
 
-    ScrollView {
-        id: controller
-        width: 200
-        height: parent.height
-        z: 100
-        visible : true
-        frameVisible: true
+
+//        flickableItem: contentRect
+    Rectangle {
+        id:    controller
+        z:     10
+        anchors.top: parent.top
         property int topmargin: 10
-        anchors {
-            top:  container.top
-        }
-        Rectangle {
-            width: parent.width
+        property bool show: true
+
+        width: 215
+        height: parent.height
+        color: Qt.rgba(0.6, 0.6, 0.6, 0.5)
+
+        Flickable {
+            id: view
+            width: 200
             height: parent.height
-            Item {
-                id: cameraItem0
-                width: parent.width
-                implicitHeight: calcHeight(this, 2*controller.topmargin)
-    //            on
-                MySlider {
-                    id: camTheta
-                    anchors {
-                        top: parent.top
-                        topMargin: controller.topmargin
-                    }
-
-                    width: controller.width
-                    text: "摄像机θ角："
-                    maxValue: 180.0
-                    minValue: 0.0
-                    onValueChanged: {
-                        argItem.cam_theta = this.value;
-                        GLcode.rotateCamera();
-                    }
-                }
-
-                MySlider {
-                    id: camBeta
-                    anchors {
-                        top: camTheta.bottom
-                        topMargin: controller.topmargin
-                    }
-                    width: controller.width
-                    text: "摄像机β角："
-                    maxValue: 180.0
-                    minValue: -180.0
-                    onValueChanged: {
-                        argItem.cam_beta = this.value;
-                        GLcode.rotateCamera();
-                    }
-                }
-
-                MySlider {
-                    id: camDis
-                    anchors {
-                        top: camBeta.bottom
-                        topMargin: controller.topmargin
-                    }
-                    width: controller.width
-                    text: "摄像机距原点："
-                    maxValue: 30.0
-                    minValue: 0.5
-                    onValueChanged: GLcode.rotateCamera();
-                }
-            }
+            contentWidth: 200
+//            contentHeight: calcHeight(this)
+            contentHeight: 1100
 
             Item {
+                id: cameraItem
+                width:  parent.width
+                height: calcHeight(this)
+                anchors.top: parent.top
+                Item {
+                    id: cameraItem0
+                    width: parent.width
+                    height: calcHeight(this)
+        //            on
+                    MySlider {
+                        id: camTheta
+                        anchors {
+                            top: parent.top
+                            topMargin: controller.topmargin
+                        }
+
+                        width: parent.width
+                        text: "摄像机θ角："
+                        maxValue: 180.0
+                        minValue: 0.0
+                        onValueChanged: {
+                            argItem.cam_theta = this.value;
+                            GLcode.rotateCamera();
+                        }
+                    }
+
+                    MySlider {
+                        id: camBeta
+                        anchors {
+                            top: camTheta.bottom
+                            topMargin: controller.topmargin
+                        }
+                        width: parent.width
+                        text: "摄像机β角："
+                        maxValue: 180.0
+                        minValue: -180.0
+                        onValueChanged: {
+                            argItem.cam_beta = this.value;
+                            GLcode.rotateCamera();
+                        }
+                    }
+
+                    MySlider {
+                        id: camDis
+                        anchors {
+                            top: camBeta.bottom
+                            topMargin: controller.topmargin
+                        }
+                        width: parent.width
+                        text: "摄像机距原点："
+                        maxValue: 30.0
+                        minValue: 0.5
+                        onValueChanged: GLcode.rotateCamera();
+                    }
+                }
+
+                Item {
                 id: cameraItem1
                 width: parent.width
-                height: calcHeight(this, 2*controller.topmargin)
+                height: calcHeight(this)
                 visible: false
 
                 MySlider {
@@ -104,7 +116,7 @@ Item {
                         topMargin: controller.topmargin
                     }
                     enabled: false
-                    width: controller.width
+                    width: parent.width
                     text: "摄像机X："
                     maxValue: 30.0
                     minValue: -30.0
@@ -117,7 +129,7 @@ Item {
                         topMargin: controller.topmargin
                     }
                     enabled: false
-                    width: controller.width
+                    width: parent.width
                     text: "摄像机Y："
                     maxValue: 30.0
                     minValue: -30.0
@@ -130,11 +142,12 @@ Item {
                         topMargin: controller.topmargin
                     }
                     enabled: false
-                    width: controller.width
+                    width: parent.width
                     text: "摄像机Z："
                     maxValue: 30.0
                     minValue: -30.0
                 }
+            }
             }
 
             Item {
@@ -142,7 +155,7 @@ Item {
                 width: parent.width
                 height: calcHeight(this)
                 anchors {
-                    top: cameraItem0.bottom
+                    top: cameraItem.bottom
                     topMargin: controller.topmargin
                 }
 
@@ -152,7 +165,7 @@ Item {
                         top: canvasSetting.top
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text: "参考球半径："
                     maxValue: 15
                     minValue: 0.5
@@ -165,7 +178,7 @@ Item {
                         top: ballRadius.bottom
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text:  "球面透明度"
                     maxValue: 1.0
                     minValue: 0.1
@@ -178,7 +191,7 @@ Item {
                         top: ballAlpha.bottom
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text: "指示器大小："
                     maxValue: 1
                     minValue: 0.1
@@ -191,7 +204,7 @@ Item {
                         top: pointSize.bottom
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text: "轨迹宽度："
                     maxValue: 50
                     minValue: 1
@@ -204,7 +217,7 @@ Item {
                         top: pathWidth.bottom
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text: "路径间隔："
                     maxValue: 10
                     minValue: 1
@@ -217,7 +230,7 @@ Item {
                         top: path_gap.bottom
                         topMargin: controller.topmargin
                     }
-                    width: controller.width
+                    width: parent.width
                     text: "参考圆圈大小："
                     value: 0.3
                     maxValue: 1
@@ -355,7 +368,7 @@ Item {
             Item {
                 id: operateItem
                 width: parent.width
-                height: 50
+                height: calcHeight(this) * 0.5
                 anchors {
                     top: checkBoxItem.bottom
                     topMargin: 10
@@ -368,7 +381,7 @@ Item {
                     height: 20
                     text: "重置摄像机"
                     anchors {
-//                        horizontalCenter: parent.horizontalCenter
+    //                        horizontalCenter: parent.horizontalCenter
     //                    horizontalCenterOffset: 20
                         top: parent.top
                         left: parent.left
@@ -389,7 +402,7 @@ Item {
                     height: 20
                     text: "重置路径"
                     anchors {
-//                        horizontalCenter: parent.horizontalCenter
+    //                        horizontalCenter: parent.horizontalCenter
     //                    horizontalCenterOffset: 20
                         top: parent.top
                         left: resetCameraBtn.right
@@ -435,45 +448,115 @@ Item {
             }
 
             Item {
-            id: posItem
+                id: posItem
+                width: parent.width
+                height: calcHeight(this)
+                anchors {
+                    top : operateItem.bottom
+                }
+
+                MySlider {
+                    id: pitch
+                    anchors {
+                        top: parent.top
+                        topMargin: controller.topmargin
+                    }
+                    width: parent.width
+                    text: "pitch："
+                    maxValue: 90
+                    minValue: -90
+        //                value   : 0
+                }
+
+                MySlider {
+                    id: heading
+                    anchors {
+                        top: pitch.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: parent.width
+                    text: "heading:"
+                    maxValue: 360
+                    minValue: 0
+                    value   : 0
+                }
+            }
+
+            // Only show the scrollbars when the view is moving.
+            states: State {
+                name: "ShowBars"
+                when: view.movingVertically
+                PropertyChanges { target: verticalScrollBar; opacity: 1 }
+            }
+
+            transitions: Transition {
+                NumberAnimation { properties: "opacity"; duration: 1000 }
+            }
+        }
+        ScrollBar {
+            id: verticalScrollBar
+            width: 10; height: view.height-3
+            anchors.right: controller.right
+            opacity: 0.1
+            orientation: Qt.Vertical
+            position: view.visibleArea.yPosition
+            pageSize: view.visibleArea.heightRatio
+        }
+        Button {
+            id: controlBtn
+            width: 18
+            height: 18
+            text: "<"
             anchors {
-                top : operateItem.bottom
+                verticalCenter: parent.verticalCenter
+                horizontalCenter: parent.right
             }
 
-            MySlider {
-                id: pitch
-                anchors {
-                    top: parent.top
-                    topMargin: controller.topmargin
+            onClicked: {
+                console.log(controller.x)
+//                controller.
+                if( controller.show ) {
+//                    controller.x -= controller.width;
+//                    controller_hide.running = true
+                    controller_hide.start();
+                    text = ">";
+                } else {
+                    controller_show.start();
+                    text = "<";
                 }
-                width: controller.width
-                text: "pitch："
-                maxValue: 90
-                minValue: -90
-//                value   : 0
-            }
-
-            MySlider {
-                id: heading
-                anchors {
-                    top: pitch.bottom
-                    topMargin: controller.topmargin
-                }
-                width: controller.width
-                text: "heading:"
-                maxValue: 360
-                minValue: 0
-                value   : 0
+                controller.show = !controller.show;
             }
         }
 
+        NumberAnimation {
+            id:      controller_show
+            running: false
+            target:  controller
+            properties: "x";
+            from: -controller.width+controlBtn.width*0.5
+            to: 0
+            duration: 2500
+            easing.type: Easing.OutQuad
+        }
+        NumberAnimation {
+            id:      controller_hide
+            running: false
+            target:  controller
+            properties: "x";
+            from: 0;
+            to: -controller.width+controlBtn.width*0.5
+            duration: 2500
+            easing.type: Easing.OutQuad
         }
     }
 
     MouseArea {
         id: mouseListener
         anchors {
-            fill: parent
+            top: parent.top
+            left:controller.right
+            right: parent.right
+            bottom: parent.bottom
         }
         property int lpx: 0
         property int lpy: 0
@@ -500,12 +583,7 @@ Item {
 
         onWheel: {
             argItem.cam_dis -= wheel.angleDelta.y / 120;
-//            if( argItem.cam_dis < dis.minValue ) {
-//                argItem.cam_dis = dis.minValue;
-//            }
-//            if( argItem.cam_dis > dis.maxValue ) {
-//                argItem.cam_dis = dis.maxValue;
-//            }
+//
         }
 
         onDoubleClicked: {
@@ -592,6 +670,7 @@ Item {
         target: windowContainer
         onVisibleChanged : {
             updateArgumentsTimer.running = windowContainer.visible;
+            console.log("[Info] visible changed: " + windowContainer.visible);
         }
     }
 
@@ -606,8 +685,11 @@ Item {
     **/
     function calcHeight(item) {
         var height = 0 ;
+//        console.log( all )
         for(var i = 0; i < item.children.length; i++) {
-            height += item.children[i].height;
+            if( item.children[i].visible ) {
+                height += item.children[i].height;
+            }
         }
 //        console.log(item + "  " + height)
         return height + (item.children.length-1)* controller.topmargin;
