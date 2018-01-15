@@ -14,7 +14,19 @@ QML_IMPORT_PATH =
 # Default rules for deployment.
 include(deployment.pri)
 
-DISTFILES +=
+DISTFILES += \
+    qml/Button.qml \
+    qml/Pitch.qml \
+    qml/MySlider.qml \
+    qml/DataSource.js \
+    qml/gl-matrix.js \
+    qml/SpacePath.js \
+    qml/Compass.qml \
+    qml/ScrollBar.qml \
+    qml/SpacePath.qml \
+    qml/three.js \
+    spvertexshader.fsh \
+    qml/OBJLoader.js
 
 HEADERS += \
     data.h

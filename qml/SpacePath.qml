@@ -43,8 +43,8 @@ Item {
             width: 200
             height: parent.height
             contentWidth: 200
-//            contentHeight: calcHeight(this)
-            contentHeight: 1100
+            contentHeight: calcHeight(this)
+//            contentHeight: 1100
 
             Item {
                 id: cameraItem
@@ -101,54 +101,54 @@ Item {
                         minValue: 0.5
                         onValueChanged: GLcode.rotateCamera();
                     }
-                }
+                }  // cameraItem 0
 
                 Item {
-                id: cameraItem1
-                width: parent.width
-                height: calcHeight(this)
-                visible: false
-
-                MySlider {
-                    id: cameraXPos
-                    anchors {
-                        top: cameraItem1.top
-                        topMargin: controller.topmargin
-                    }
-                    enabled: false
+                    id: cameraItem1
                     width: parent.width
-                    text: "摄像机X："
-                    maxValue: 30.0
-                    minValue: -30.0
-                }
+                    height: calcHeight(this)
+                    visible: false
 
-                MySlider {
-                    id: cameraYPos
-                    anchors {
-                        top: cameraXPos.bottom
-                        topMargin: controller.topmargin
+                    MySlider {
+                        id: cameraXPos
+                        anchors {
+                            top: cameraItem1.top
+                            topMargin: controller.topmargin
+                        }
+                        enabled: false
+                        width: parent.width
+                        text: "摄像机X："
+                        maxValue: 30.0
+                        minValue: -30.0
                     }
-                    enabled: false
-                    width: parent.width
-                    text: "摄像机Y："
-                    maxValue: 30.0
-                    minValue: -30.0
-                }
 
-                MySlider {
-                    id: cameraZPos
-                    anchors {
-                        top: cameraYPos.bottom
-                        topMargin: controller.topmargin
+                    MySlider {
+                        id: cameraYPos
+                        anchors {
+                            top: cameraXPos.bottom
+                            topMargin: controller.topmargin
+                        }
+                        enabled: false
+                        width: parent.width
+                        text: "摄像机Y："
+                        maxValue: 30.0
+                        minValue: -30.0
                     }
-                    enabled: false
-                    width: parent.width
-                    text: "摄像机Z："
-                    maxValue: 30.0
-                    minValue: -30.0
-                }
-            }
-            }
+
+                    MySlider {
+                        id: cameraZPos
+                        anchors {
+                            top: cameraYPos.bottom
+                            topMargin: controller.topmargin
+                        }
+                        enabled: false
+                        width: parent.width
+                        text: "摄像机Z："
+                        maxValue: 30.0
+                        minValue: -30.0
+                    }
+                }  // cameraItem 1
+            }   // cameraItem
 
             Item {
                 id: canvasSetting
@@ -237,7 +237,7 @@ Item {
                     minValue: 0.1
                     btnSize: 0.1
                 }
-            }
+            }  // canvasSetting
 
             Item {
                 id: drawMode
@@ -287,7 +287,7 @@ Item {
                     onClicked: GLcode.selectDrawMode(this)
                 }
 
-            }
+            }   // drawMode
 
             Item {
                 id: checkBoxItem
@@ -316,7 +316,7 @@ Item {
                 }
 
                 CheckBox {
-                    id: cubeBox
+                    id: simBox
                     height: parent.bheight
                     text: "绘制模拟器"
                     anchors {
@@ -363,7 +363,7 @@ Item {
                         argItem.calibration = checked;
                     }
                 }
-            }
+            }  // checkBoxItem
 
             Item {
                 id: operateItem
@@ -445,7 +445,7 @@ Item {
                         GLcode.resetRecord();
                     }
                 }
-            }
+            }  // operateItem
 
             Item {
                 id: posItem
@@ -480,6 +480,11 @@ Item {
                     minValue: 0
                     value   : 0
                 }
+            }  // posItem
+
+            Item {
+                id: colorPanel
+
             }
 
             // Only show the scrollbars when the view is moving.
@@ -507,22 +512,28 @@ Item {
             width: 18
             height: 18
             text: "<"
+            Image {
+                id: arrowBtnImg
+                source: "qrc:/img/arrow.png"
+                width:  parent.width
+                height: parent.height
+            }
             anchors {
                 verticalCenter: parent.verticalCenter
                 horizontalCenter: parent.right
             }
 
             onClicked: {
-                console.log(controller.x)
-//                controller.
                 if( controller.show ) {
 //                    controller.x -= controller.width;
 //                    controller_hide.running = true
                     controller_hide.start();
+                    arrowBtnImg.rotation = 180
                     text = ">";
                 } else {
                     controller_show.start();
                     text = "<";
+                    arrowBtnImg.rotation = 0
                 }
                 controller.show = !controller.show;
             }
@@ -610,7 +621,7 @@ Item {
         property alias  circle_size:  circle_size.value
         property alias  calibration:  calibrationBox.checked
         property alias  enable_path:  pathEnableBox.checked
-        property bool   enable_cube:  cubeBox.checked
+        property bool   enable_sim:   simBox.checked
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value
         property alias  pitch:   pitch.value

@@ -26,7 +26,7 @@ function initUI() {
     argItem.ball_alpha  = 0.65;
     argItem.enable_path = false;
     argItem.calibration = false;
-    argItem.enable_cube = true;
+    argItem.enable_sim  = false;
     canvasArgs = argItem;
 
     axisBox.checked = false;
@@ -203,7 +203,6 @@ function initBuffers() {
     obj.sensorPath  = new SensorPath();
     obj.refCircle   = new RefCircle();
     obj.ball        = new Ball();
-//    obj.cube        = new Cube(canvasArgs.ball_radius);
 
     for(var o in obj) {
         obj[o].init(gl);
@@ -288,7 +287,7 @@ function degToRad(deg) {
 
 /**
 * @param {Number} pitch   range [-90, 90]
-* @param {Number} heading range [0, 360]
+* @param {Number} heading range [-180, +180]
 */
 function calcAngle(pitch, heading) {
     var u, v;
@@ -1151,39 +1150,4 @@ RefCircle.prototype.reset = function() {
 // ================= ReferenceCircle Object =======================//
 
 
-// ****************  Cube Object (Sensor simulator)  **************** //
-function Cube(radius) {
-    this.downColor = [0.6, 0.1, 0.1];
-    this.leftColor = [0.1, 0.6, 0.1];
-    this.backColor = [0.1, 0.1, 0.6];
-    this.alpha     = 0.8;
-    this.radius    = radius;
-    this.direction = [0.5, 0];  // 0.5 == u,  0 == v
-    this.mvMatrix  = mat4.create();
-    this.mMatrix   = mat4.create();
-}
 
-Cube.prototype.setRadius = function(radius) {
-    this.radius = radius;
-}
-
-Cube.prototype.init = function(gl) {
-
-}
-
-Cube.prototype.paint = function(gl, u, v) {
-
-}
-
-/**
- * 根据 u，v 计算传感器模拟长方体当前的位置
- * @param {double} u
- * @param {double} v
- * @param {double} offset 与原点的距离
- * @param {*} rgb  三维数组
- * @returns 坐标和颜色的数组
- */
-Cube.prototype.getCubePoint = function(u, v, f, offset) {
-
-}
-// =================  Cube Object  =================== //
