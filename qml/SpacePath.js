@@ -202,6 +202,7 @@ function initBuffers() {
     obj.sensorPoint = new SensorPoint();
     obj.sensorPath  = new SensorPath();
     obj.refCircle   = new RefCircle();
+    obj.recordPoint = new RecordPoint();
     obj.ball        = new Ball();
 
     for(var o in obj) {
@@ -250,11 +251,11 @@ function paintGL(canvas, args) {
 }
 
 function record() {
-    obj.refCircle.record(canvasArgs);
+    obj.recordPoint.record(canvasArgs);
 }
 
 function resetRecord() {
-    obj.refCircle.reset();
+    obj.recordPoint.reset();
 }
 
 /*
@@ -979,10 +980,6 @@ function RefCircle() {
     this.vscale      = vec3.create();
     this.blue_color  = [0.0, 0.0, 1.0];
     this.green_color = [0.0, 1.0, 0.0];
-    this.max_record_bytes       = this.sides * 4 * 100;
-    this.max_record_index_bytes = this.sides * 2 * 100;
-    this.record_point_count = 0;
-    this.record_index_count = 0;
 }
 
 RefCircle.prototype.init = function(gl) {
@@ -1009,9 +1006,7 @@ RefCircle.prototype.init = function(gl) {
     this.buffers.ref_color        = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.color),     gl.STATIC_DRAW);
     this.buffers.normal           = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.normal),    gl.STATIC_DRAW);
     this.buffers.ref_circle_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(p.index),      gl.STATIC_DRAW);
-    this.buffers.record_point     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
-    this.buffers.record_color     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
-    this.buffers.record_index     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.max_record_index_bytes,   gl.DYNAMIC_DRAW);
+
 }
 
 
@@ -1040,10 +1035,12 @@ RefCircle.prototype.paint = function(gl, addon) {
             this.translation[i] = calcVertex(this.circles[i][0], this.circles[i][1], this.dis);
         }
     }
+
     if( this.circle_size !== addon.circle_size) {
         this.circle_size = addon.circle_size;
         this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
     }
+
     for(i = 0; i < this.circle_num; i++) {
         mat4.fromTranslation(this.mMatrix, this.translation[i]);
         mat4.scale(this.mMatrix, this.mMatrix, this.vscale);            // scale by pointSize
@@ -1052,7 +1049,6 @@ RefCircle.prototype.paint = function(gl, addon) {
         gl.drawElements(gl.LINES, this.sides, gl.UNSIGNED_SHORT, i*this.sides*2);
     }
 
-    this.paintRecord(gl);
 }
 
 // 获取参考圆圈的顶点
@@ -1089,7 +1085,22 @@ RefCircle.prototype.getPoints = function() {
     };
 }
 
-RefCircle.prototype.paintRecord = function(gl) {
+function RecordPoint() {
+    this.sides = 24;
+    this.buffers     = {};
+    this.max_record_bytes       = this.sides * 4 * 100;
+    this.max_record_index_bytes = this.sides * 2 * 100;
+    this.record_point_count = 0;
+    this.record_index_count = 0;
+}
+
+RecordPoint.prototype.init = function(gl) {
+    this.buffers.record_point     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
+    this.buffers.record_color     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
+    this.buffers.record_index     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.max_record_index_bytes,   gl.DYNAMIC_DRAW);
+}
+
+RecordPoint.prototype.paint = function(gl, addon) {
     // 进行采点操作
     if(this.record_point_count > 0) {
         gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_color);
@@ -1106,7 +1117,7 @@ RefCircle.prototype.paintRecord = function(gl) {
     }
 }
 
-RefCircle.prototype.record = function(addon) {
+RecordPoint.prototype.record = function(addon) {
     if( !addon.calibration) {
         return;
     }
@@ -1143,7 +1154,7 @@ RefCircle.prototype.record = function(addon) {
 }
 
 // 重置已经打的点s
-RefCircle.prototype.reset = function() {
+RecordPoint.prototype.reset = function() {
     this.record_point_count = 0;
     this.record_index_count = 0;
 }

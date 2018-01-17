@@ -323,9 +323,9 @@ Item {
                         left: pathEnableBox.right
                         leftMargin: 15
                     }
-                    checked: argItem.enable_cube
+                    checked: argItem.enable_sim
                     onCheckedChanged: {
-                        argItem.enable_cube = checked;
+                        argItem.enable_sim = checked;
                     }
                 }
 
