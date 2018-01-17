@@ -4,7 +4,8 @@ QT += qml quick core gui
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    data.cpp
+    data.cpp \
+    filecontent.cpp
 
 RESOURCES += qml.qrc
 
@@ -19,16 +20,13 @@ DISTFILES += \
     qml/Pitch.qml \
     qml/MySlider.qml \
     qml/DataSource.js \
-    qml/gl-matrix.js \
     qml/SpacePath.js \
     qml/Compass.qml \
     qml/ScrollBar.qml \
-    qml/SpacePath.qml \
-    qml/three.js \
-    spvertexshader.fsh \
-    qml/OBJLoader.js
+    qml/SpacePath.qml
 
 HEADERS += \
-    data.h
+    data.h \
+    filecontent.h
 
 RC_FILE = icon.rc

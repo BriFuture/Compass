@@ -3,8 +3,6 @@
 #include <QQmlApplicationEngine>
 #include <time.h>
 #include <QDebug>
-#include <QFile>
-#include <QTextStream>
 #include <QTimer>
 
 Data::Data() {

@@ -69,7 +69,7 @@ Item {
                         minValue: 0.0
                         onValueChanged: {
                             argItem.cam_theta = this.value;
-                            GLcode.rotateCamera();
+                            GLcode.rotateCamera(argItem);
                         }
                     }
 
@@ -85,7 +85,7 @@ Item {
                         minValue: -180.0
                         onValueChanged: {
                             argItem.cam_beta = this.value;
-                            GLcode.rotateCamera();
+                            GLcode.rotateCamera(argItem);
                         }
                     }
 
@@ -99,7 +99,7 @@ Item {
                         text: "摄像机距原点："
                         maxValue: 30.0
                         minValue: 0.5
-                        onValueChanged: GLcode.rotateCamera();
+                        onValueChanged: GLcode.rotateCamera(argItem);
                     }
                 }  // cameraItem 0
 
@@ -258,7 +258,7 @@ Item {
                     width: 20
                     height: 20
                     text: "line"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: selectDrawMode(this)
                 }
 
                 RadioButton {
@@ -271,7 +271,7 @@ Item {
                     width: 20
                     height: 20
                     text: "surface"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: selectDrawMode(this)
                 }
 
                 RadioButton {
@@ -284,7 +284,7 @@ Item {
                     width: 20
                     height: 20
                     text: "lessLine"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: selectDrawMode(this)
                 }
 
             }   // drawMode
@@ -323,9 +323,9 @@ Item {
                         left: pathEnableBox.right
                         leftMargin: 15
                     }
-                    checked: argItem.enable_cube
+                    checked: argItem.enable_sim
                     onCheckedChanged: {
-                        argItem.enable_cube = checked;
+                        argItem.enable_sim = checked;
                     }
                 }
 
@@ -381,8 +381,6 @@ Item {
                     height: 20
                     text: "重置摄像机"
                     anchors {
-    //                        horizontalCenter: parent.horizontalCenter
-    //                    horizontalCenterOffset: 20
                         top: parent.top
                         left: parent.left
                         leftMargin: 20
@@ -391,8 +389,8 @@ Item {
                         argItem.cam_theta = 45
                         argItem.cam_beta  = 90
 
-                        GLcode.rotateCamera();
-                        GLcode.reset();
+                        GLcode.rotateCamera(argItem);
+                        GLcode.reset(argItem);
                     }
                 }
 
@@ -409,8 +407,8 @@ Item {
                         leftMargin: 5
                     }
                     onClicked: {
-                        console.log("click reset path")
-                        GLcode.sensorPath.resetAllPath();
+                        console.log("[Info] reset all path")
+                        GLcode.resetAllPath();
                     }
                 }
 
@@ -426,7 +424,7 @@ Item {
                         leftMargin: 20
                     }
                     onClicked: {
-                        GLcode.refCircle.record();
+                        GLcode.recordPoint();
                     }
                 }
 
@@ -575,13 +573,13 @@ Item {
         property int mousey: 1
         onMouseXChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged();
+                GLcode.mouseDraged(argItem, this, container);
                 lpx = mouseListener.mouseX
             }
         }
         onMouseYChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged();
+                GLcode.mouseDraged(argItem, this, container);
                 lpy = mouseListener.mouseY;
             }
         }
@@ -650,17 +648,17 @@ Item {
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
-            GLcode.initUI();
-            GLcode.initializeGL(canvas3d);
+            GLcode.initUI(argItem);
+            GLcode.onInitializeGL(canvas3d, container);
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
         onPaintGL: {
-            GLcode.paintGL(canvas3d, argItem);
+            GLcode.onPaintGL(canvas3d, container);
         }
 
         onResizeGL: {
-            GLcode.resizeGL(canvas3d)
+            GLcode.onResizeGL(canvas3d)
         }
     }
 
@@ -681,12 +679,12 @@ Item {
         target: windowContainer
         onVisibleChanged : {
             updateArgumentsTimer.running = windowContainer.visible;
-            console.log("[Info] visible changed: " + windowContainer.visible);
+            console.log("[Info] SpacePath.qml visible changed: " + windowContainer.visible);
         }
     }
 
     function recordAPoint() {
-        GLcode.record();
+        GLcode.record(argItem);
     }
 
     /**
@@ -706,5 +704,15 @@ Item {
         return height + (item.children.length-1)* controller.topmargin;
     }
 
+    function selectDrawMode(mode) {
+        for(var cbi in drawMode.children) {
+            drawMode.children[cbi].checked = false;
+        }
+
+        mode.checked      = true;
+        ballAlpha.enabled = ( mode !== lineRB);
+        argItem.draw_mode  = mode.text;
+
+    }
 
 }
