@@ -474,8 +474,21 @@ Item {
                     }
                     width: parent.width
                     text: "heading:"
-                    maxValue: 360
-                    minValue: 0
+                    maxValue: 180
+                    minValue: -180
+                    value   : 0
+                }
+
+                MySlider {
+                    id: roll
+                    anchors {
+                        top: heading.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: parent.width
+                    text: "heading:"
+                    maxValue: 180
+                    minValue: -180
                     value   : 0
                 }
             }  // posItem
@@ -496,6 +509,7 @@ Item {
                 NumberAnimation { properties: "opacity"; duration: 1000 }
             }
         }
+
         ScrollBar {
             id: verticalScrollBar
             width: 10; height: view.height-3
@@ -621,16 +635,17 @@ Item {
         property alias  enable_path:  pathEnableBox.checked
         property bool   enable_sim:   simBox.checked
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
-        property alias  heading: heading.value
-        property alias  pitch:   pitch.value
-        property double cam_theta:   0.0
-        property double cam_beta:    0.0
-        property double roll: 0
-        property double heading_offset: 0
+        property alias  heading:      heading.value
+        property alias  pitch:        pitch.value
+        property alias  roll:         roll.value
+        property double cam_theta:    0.0
+        property double cam_beta:     0.0
+//        property double roll:         0.0
+        property double heading_offset: 0.0
         property double vector_length:  4
         property var    light_direction: [0.35, 0.35, 0.7]
-        property bool   sensor_radial: true
-        property string draw_mode: "line"
+        property bool   sensor_radial:  true
+        property string draw_mode:      "line"
 
         onCam_thetaChanged: {
             camTheta.value = this.cam_theta
@@ -649,12 +664,12 @@ Item {
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
             GLcode.initUI(argItem);
-            GLcode.onInitializeGL(canvas3d, container);
+            GLcode.onInitializeGL(canvas3d, argItem);
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
         onPaintGL: {
-            GLcode.onPaintGL(canvas3d, container);
+            GLcode.onPaintGL(canvas3d, argItem);
         }
 
         onResizeGL: {

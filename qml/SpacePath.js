@@ -11,8 +11,6 @@ Qt.include("gl-matrix.js");
 Qt.include("three.js");
 Qt.include("OBJLoader.js");
 
-var canvasArgs; // 相关绘图变量
-
 /**
   * UI initializing
 **/
@@ -28,7 +26,6 @@ function initUI(item) {
     item.enable_path = false;
     item.calibration = false;
     item.enable_sim  = false;
-    canvasArgs = item;
     selectDrawMode(surfaceRB);
 }
 
@@ -48,10 +45,10 @@ function mouseDraged(item, ml, container) {
     var beta = 540 + item.cam_beta - xoffset*360; // - indicates that drag direction is oppsite with movement
     item.cam_beta   = beta % 360 - 180;
     item.cam_theta -= yoffset*180;
-    if( item.cam_theta.toFixed(2) === 0.00 ) {
+    if( item.cam_theta.toFixed(2) === "0.00" ) {
         item.cam_theta = 0.01;
     }
-    if( item.cam_theta.toFixed(2) === 180.00 ) {
+    if( item.cam_theta.toFixed(2) === "180.00" ) {
         item.cam_theta = 179.99
     }
     rotateCamera(item);
@@ -86,12 +83,14 @@ var renderer;
 var camera;
 var loader;
 var craftObj;
+var sphere ;
 
 // use THREE.js to initialize
 function onInitializeGL(canvas, mainview) {
     camera = new THREE.PerspectiveCamera(45, 4/3, 1, 1000);
     camera.position.set(300, 300,  100);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
+    camera.up.set(0, 0, 1);
 
     scene = new THREE.Scene();
     scene.add(camera);
@@ -100,35 +99,56 @@ function onInitializeGL(canvas, mainview) {
     scene.add( ambient );
 
     var directionalLight = new THREE.DirectionalLight( 0xffeedd );
-    directionalLight.position.set( 20, 30, 15 );
+    directionalLight.position.set( 15, 15, 15 );
     scene.add( directionalLight );
 
     loader = new THREE.OBJLoader();
     loader.load("qrc:obj/craft.obj", function(obj) {
-//        craftObj = new THREE.Mesh(obj);
-        obj.traverse( function ( child ) {
+//        obj.traverse( function ( child ) {
 
-            if ( child instanceof THREE.Mesh ) {
+//            if ( child instanceof THREE.Mesh ) {
 
-                child.material.side = THREE.DoubleSide;
+//                child.material.side = THREE.DoubleSide;
 
-            }
+//            }
 
-        } );
+//        } );
         craftObj = obj;
-        craftObj.scale.set(0.1, 0.1, 0.1)
+        craftObj.scale.set(0.1, 0.1, 0.1);
+        // the default rotation order is "XYZ", if I change it to "YZX",
+        // the rotation will be some different from previous rotation
+        craftObj.rotation.order = "YZX";
+//        craftObj.rotateX(Math.PI*0.5);
+//        craftObj.rotateY(Math.PI*1.5);  // here local axis Y has moved to previous axis Z
+        // after rotation the coordinate of obj is rotated
+        //        y  ^
+        //           |  / z
+        //           | /
+        //   x <-----|/
+        // while the camera is at (15, 15, 15) look at (0, 0, 0), so Z coordinate of camera is pointed at up
+        // Note, rotation value can be set directly to meet our needs, so the rotateOnWorldAxis function is
+        // none of use now. But rotation
         scene.add(craftObj);
     });
 
     // a cube in the scene
-    var sphere = new THREE.Mesh(new THREE.SphereGeometry(4, 36, 36),
-            new THREE.MeshPhongMaterial( {
+    sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(4, 36, 36),
+        new THREE.MeshPhongMaterial( {
                 opacity: 0.65,
                 transparent: true,
                 color: 0xeeeeee
-            } )
+        } )
     );
     scene.add(sphere);
+
+    var origin = new THREE.Vector3(0, 0, 0);
+    var arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), origin, 10, 0xff0000);
+    scene.add(arrowX);
+    var arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), origin, 10, 0x00ff00);
+    scene.add(arrowY);
+    var arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), origin, 10, 0x0000ff);
+    scene.add(arrowZ);
 
     renderer = new THREE.Canvas3DRenderer( {
                     canvas: canvas,
@@ -155,11 +175,16 @@ function onResizeGL(canvas) {
 
 
 function onPaintGL(canvas, mainview) {
-    camera.position.set(canvasArgs.cam_x, canvasArgs.cam_y, canvasArgs.cam_z);
+    camera.position.set(mainview.cam_x, mainview.cam_y, mainview.cam_z);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+    var rad = calcRad(mainview.pitch, mainview.heading, mainview.roll);
+    if( craftObj !== undefined ) {
+        craftObj.rotation.set(rad[2], rad[0] - Math.PI * 0.5, rad[1]- Math.PI * 0.5);
+    }
+
     renderer.render(scene, camera);
 }
-
 
 function degToRad(deg) {
     return deg * Math.PI /180;
@@ -169,25 +194,34 @@ function degToRad(deg) {
 /**
 * @param {Number} pitch   range [-90, 90]
 * @param {Number} heading range [-180, +180]
+* @param {Number} roll    range [-180, +180]
 */
-function calcAngle(pitch, heading) {
-    var u, v;
-    if (Math.abs(pitch) <= 90) {
-        // 将俯仰角转换成绘图时的 theta 角
-        u = (90 - pitch) / 180;
-        // 绘图时的 beta 角
-        v = heading / 360;
-    } else {
-        // pitch 绝对值超过 90
-        if (pitch > 0) {
-            u = (pitch - 90) / 180;
-        } else {
-            u = (270 + pitch) / 180;
-        }
-        v = (heading + 180) % 360 / 360;
-    }
-    //    console.log("u: " + u);
-    return [u, -v];
+//function calcAngle(pitch, heading) {
+//    var u, v;
+//    if (Math.abs(pitch) <= 90) {
+//        // 将俯仰角转换成绘图时的 theta 角
+//        u = (90 - pitch) / 180;
+//        // 绘图时的 beta 角
+//        v = heading / 360;
+//    } else {
+//        // pitch 绝对值超过 90
+//        if (pitch > 0) {
+//            u = (pitch - 90) / 180;
+//        } else {
+//            u = (270 + pitch) / 180;
+//        }
+//        v = (heading + 180) % 360 / 360;
+//    }
+//    //    console.log("u: " + u);
+//    return [u, -v];
+//}
+
+function calcRad(pitch, heading, roll) {
+    var u, v, r;
+    u = degToRad(pitch);
+    v = degToRad(heading);
+    r = degToRad(roll);
+    return [-u, v, r];
 }
 
 
