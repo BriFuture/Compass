@@ -88,6 +88,8 @@ Rectangle {
     }
 
     function btnClick(op) {
+        // an bug occured when btnSize was less or equal than 0.05, because of
+        // parseFloat will return a value which containes only one decimal fraction
         var v = parseFloat(value.text);
         v += op*container.btnSize;
         // in case of out of range

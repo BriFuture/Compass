@@ -17,6 +17,12 @@ Data::Data() {
     timer->setSingleShot(true);
     connect(timer, SIGNAL(timeout()), this, SLOT(show()));
     timer->start(100);
+
+    // set data timer
+    QTimer *dataTimer = new QTimer(this);
+    connect(dataTimer, SIGNAL(timeout()), this, SLOT(getData()));
+    dataTimer->setInterval(500);
+//    dataTimer->start(1000);
 }
 
 Data::~Data() {
@@ -67,7 +73,7 @@ void Data::view() {
 void Data::view3D() {
     compassview = new QQuickView;
     compassview->rootContext()->setContextProperty("dataSource", this);
-    compassview->rootContext()->setContextProperty("windowContainer", compassview);
+    compassview->rootContext()->setContextProperty("window", compassview);
 //    compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePathHUD.qml")));
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePath.qml")));
     // 设置窗口图标
@@ -81,23 +87,12 @@ void Data::view3D() {
 }
 
 
-
-double Data::getRadius() {
-    emit headingChanged();
-    return 125.0;
-}
-
 double Data::getHeading() {
-    heading +=  0.5252;
-//    return heading;
-    return 0;
+    return heading;
 }
 
 double Data::getPitch() {
-    pitch += 0.2274;
-//    qDebug() << rand()*052;
-//    return pitch;
-    return 0;
+    return pitch;
 }
 
 double Data::getMagicVectorLength() {
@@ -105,12 +100,15 @@ double Data::getMagicVectorLength() {
 }
 
 double Data::getRoll() {
-    roll += 2.3417;
     return roll;
 }
 
 double* Data::getData() {
     double *d = new double[3];
+    pitch   += 0.2274;
+    heading += 0.5252;
+    roll    += 2.3417;
+    emit dataChanged();
     return  d;
 }
 

@@ -18,16 +18,17 @@ public:
     ~Data();
     void view();
     void view3D();
+
+private:
     double heading;
     double pitch;
     double roll;
 
 signals:
-    void headingChanged();
+    void dataChanged();
 
 public slots:
     void show();
-    double getRadius();
     double getHeading();
     double getPitch();
     double getRoll();

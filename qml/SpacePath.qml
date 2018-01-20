@@ -1,6 +1,7 @@
 ﻿import QtQuick 2.0
 import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
+import dis.filecontent 1.0
 
 import "SpacePath.js" as GLcode
 
@@ -36,15 +37,15 @@ Item {
 
         width: 215
         height: parent.height
-        color: Qt.rgba(0.6, 0.6, 0.6, 0.5)
+        color: Qt.rgba(0.68, 0.68, 0.68, 0.5)
 
         Flickable {
             id: view
             width: 200
             height: parent.height
             contentWidth: 200
-            contentHeight: calcHeight(this)
-//            contentHeight: 1100
+//            contentHeight: calcContentHeight(this)
+            contentHeight: container.height
 
             Item {
                 id: cameraItem
@@ -237,6 +238,20 @@ Item {
                     minValue: 0.1
                     btnSize: 0.1
                 }
+
+                MySlider {
+                    id: craft_size
+                    anchors {
+                        top: circle_size.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: parent.width
+                    text: "模拟器大小:"
+                    maxValue: 1
+                    minValue: 0.01
+                    value   : 0.3
+                    btnSize: 0.1
+                }
             }  // canvasSetting
 
             Item {
@@ -258,7 +273,9 @@ Item {
                     width: 20
                     height: 20
                     text: "line"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: {
+                        argItem.draw_mode = text;
+                    }
                 }
 
                 RadioButton {
@@ -271,7 +288,9 @@ Item {
                     width: 20
                     height: 20
                     text: "surface"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: {
+                        argItem.draw_mode = text;
+                    }
                 }
 
                 RadioButton {
@@ -284,7 +303,9 @@ Item {
                     width: 20
                     height: 20
                     text: "lessLine"
-                    onClicked: GLcode.selectDrawMode(this)
+                    onClicked: {
+                        argItem.draw_mode = text;
+                    }
                 }
 
             }   // drawMode
@@ -445,7 +466,7 @@ Item {
                         GLcode.resetRecord();
                     }
                 }
-            }  // operateItem
+            }  // end of operateItem
 
             Item {
                 id: posItem
@@ -476,15 +497,29 @@ Item {
                     }
                     width: parent.width
                     text: "heading:"
-                    maxValue: 360
-                    minValue: 0
+                    maxValue: 180
+                    minValue: -180
                     value   : 0
                 }
+
+                MySlider {
+                    id: roll
+                    anchors {
+                        top: heading.bottom
+                        topMargin: controller.topmargin
+                    }
+                    width: parent.width
+                    text: "heading:"
+                    maxValue: 180
+                    minValue: -180
+                    value   : 0
+                }
+
             }  // posItem
 
             Item {
                 id: colorPanel
-
+                visible: false
             }
 
             // Only show the scrollbars when the view is moving.
@@ -575,13 +610,13 @@ Item {
         property int mousey: 1
         onMouseXChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged();
+                GLcode.mouseDraged(argItem, mouseListener, container);
                 lpx = mouseListener.mouseX
             }
         }
         onMouseYChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged();
+                GLcode.mouseDraged(argItem, mouseListener, container);
                 lpy = mouseListener.mouseY;
             }
         }
@@ -602,11 +637,36 @@ Item {
         }
     }
 
+    FileContentItem {
+        id: content
+        filename: ":/obj/craft.obj"   // default is craft.obj
+        property bool ready: false
+        Component.onCompleted: {
+            ready = true;
+            GLcode.readFile = processContent;
+        }
+
+        function processContent(process, source) {
+            while( !ready ) {
+                ;
+            }
+
+            if( source !== undefined ) {
+                filename = source;
+            }
+            console.time('Read file: "' + source + '"');
+            process(getContent());
+            console.timeEnd('Read file: "' + source + '"');
+            clearContent();  // save memory
+        }
+    }
+
     /**
       * this item is just used for reserved variables
     **/
     Item {
         id: argItem
+        visible: false
         property alias  cam_dis:      camDis.value
 //        property alias  cam_theta:   camTheta.value
 //        property alias  cam_beta:    camBeta.value
@@ -621,24 +681,42 @@ Item {
         property alias  circle_size:  circle_size.value
         property alias  calibration:  calibrationBox.checked
         property alias  enable_path:  pathEnableBox.checked
-        property bool   enable_sim:   simBox.checked
+        property alias  content:      content
+        property alias  craft_size:   craft_size.value
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value
         property alias  pitch:   pitch.value
+        property double roll:    roll.value
         property double cam_theta:   0.0
         property double cam_beta:    0.0
-        property double roll: 0
         property double heading_offset: 0
         property double vector_length:  4
         property var    light_direction: [0.35, 0.35, 0.7]
+        property bool   enable_sim:   simBox.checked
         property bool   sensor_radial: true
         property string draw_mode: "line"
 
         onCam_thetaChanged: {
             camTheta.value = this.cam_theta
         }
+
         onCam_betaChanged: {
             camBeta.value  = this.cam_beta
+        }
+
+        onDraw_modeChanged: {
+            ballAlpha.enabled = ( draw_mode !== "line");
+            var checkItem = drawMode;
+            var child;
+
+            for(var i in drawMode.children) {
+                child = drawMode.children[i];
+                child.checked = false;
+                if( child.text === draw_mode ) {
+                    checkItem = child;
+                }
+            }
+            checkItem.checked = true;
         }
     }
 
@@ -646,16 +724,22 @@ Item {
         id: canvas3d
         anchors.fill: parent
         focus: true
+        property bool stop: true
+//        renderOnDemand: true
 
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
-            GLcode.initUI();
-            GLcode.initializeGL(canvas3d);
+            GLcode.initUI(argItem);
+            GLcode.initializeGL(canvas3d, argItem);
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
         onPaintGL: {
+            if( stop ) {
+                return;
+            }
+
             GLcode.paintGL(canvas3d, argItem);
         }
 
@@ -664,27 +748,29 @@ Item {
         }
     }
 
-    Timer {
-        id: updateArgumentsTimer
-        running: true
-        repeat: true
-        interval: 1000/60
-        onTriggered: {
-//            argItem.heading = dataSource.getHeading();
-//            argItem.pitch   = dataSource.getPitch();
-//            argItem.roll    = dataSource.getRoll();
-//            argItem.vector_length = dataSource.getMagicVectorLength() !== 0 ? dataSource.getMagicVectorLength()/10000 : 4;
+    Connections {
+        target: dataSource
+        onDataChanged: {
+            console.log("dataSource heading changed:  " + dataSource.getHeading());
         }
     }
 
     Connections {
-        target: windowContainer
-        onVisibleChanged : {
-            updateArgumentsTimer.running = windowContainer.visible;
-            console.log("[Info] visible changed: " + windowContainer.visible);
+        target: window
+
+        onWindowStateChanged: {
+            if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
+                // it can decrease resource consuming when not minimized or hidden
+                console.log("[Info] windos state changed:  now hidden or minimized");
+                canvas3d.stop = true;
+            } else {
+                console.log("[Info] windos state changed:  now visible");
+                canvas3d.stop = false;
+            }
         }
     }
 
+    // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
         GLcode.record();
     }
@@ -695,15 +781,30 @@ Item {
       * it should be called after everything being ok
     **/
     function calcHeight(item) {
-        var height = 0 ;
-//        console.log( all )
+        var height  = 0;
+        var clength = 0;
         for(var i = 0; i < item.children.length; i++) {
             if( item.children[i].visible ) {
                 height += item.children[i].height;
+                clength ++;
             }
         }
-//        console.log(item + "  " + height)
-        return height + (item.children.length-1)* controller.topmargin;
+
+        return height + clength * controller.topmargin;
+    }
+
+    function calcContentHeight(item) {
+        var height  = 0;
+        var clength = 0;
+        for(var i = 0; i < item.children.length; i++) {
+            if( item.children[i].visible ) {
+                height += item.children[i].height;
+                clength ++;
+                console.log("info" + clength)
+            }
+        }
+
+        return height + clength * controller.topmargin;
     }
 
 

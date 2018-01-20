@@ -15,10 +15,10 @@
         <file>img/y.png</file>
         <file>img/z.png</file>
         <file>img/arrow.png</file>
-        <file>qml/three.js</file>
         <file>obj/craft.obj</file>
         <file>qml/ScrollBar.qml</file>
-        <file>qml/OBJLoader.js</file>
         <file>qml/webgl-obj-loader.min.js</file>
+        <file>qml/SPFragCode.fsh</file>
+        <file>qml/SPVertexCode.vsh</file>
     </qresource>
 </RCC>

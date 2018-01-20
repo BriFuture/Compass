@@ -4,7 +4,8 @@ QT += qml quick core gui
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    data.cpp
+    data.cpp \
+    filecontent.cpp
 
 RESOURCES += qml.qrc
 
@@ -24,11 +25,12 @@ DISTFILES += \
     qml/Compass.qml \
     qml/ScrollBar.qml \
     qml/SpacePath.qml \
-    qml/three.js \
-    spvertexshader.fsh \
-    qml/OBJLoader.js
+    qml/OBJLoader.js \
+    qml/SPVertexCode.vsh \
+    qml/SPFragCode.fsh
 
 HEADERS += \
-    data.h
+    data.h \
+    filecontent.h
 
 RC_FILE = icon.rc
