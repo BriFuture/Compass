@@ -22,4 +22,4 @@ void main(void) {
 //   else if( uEnableTexture == 3 ) {
 //     gl_FragColor = vec4(vLight, 1.0) * ztextureColor;
 //   }
-};
+}

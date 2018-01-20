@@ -10,7 +10,7 @@ import QtQuick.Controls 1.4
 Rectangle {
     id: container
     color : "transparent"
-    height: 40
+    height: 45
 
     property int ratio : 1
     property int precision  : 1

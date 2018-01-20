@@ -13,4 +13,4 @@ void main(void) {
     highp vec3 directionalLightColor = vec3(0.51, 0.55, 0.52);
     highp float directional = max(dot(aVertexNormal, normalize(uLightDirection)), 0.0);        // 直接使用顶点的法线数据进行漫反射计算
     vLight = aColor * (ambientLight + (directionalLightColor * directional));
-};
+}
