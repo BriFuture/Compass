@@ -8,6 +8,7 @@
 *******************************/
 
 Qt.include("gl-matrix.js");
+Qt.include("webgl-obj-loader.min.js");
 
 var canvasArgs; // 相关绘图变量
 
@@ -38,14 +39,13 @@ function selectDrawMode(mode) {
         drawMode.children[cbi].checked = false;
     }
 
-
     mode.checked      = true;
     ballAlpha.enabled = ( mode !== lineRB);
     argItem.draw_mode  = mode.text;
 }
 
 // some problem occurred when cam_x or cam_y equals to zero
-function rotateCamera() {
+function rotateCamera(argItem) {
     var pos = calcVertex(degToRad(argItem.cam_theta), degToRad(argItem.cam_beta), argItem.cam_dis);
     argItem.cam_x = pos[0];
     argItem.cam_y = pos[1];
@@ -64,15 +64,28 @@ function mouseDraged() {
     if( argItem.cam_theta.toFixed(2) == 180.00 ) {
         argItem.cam_theta = 179.99
     }
-    rotateCamera();
+    rotateCamera(argItem);
 }
 
-function reset() {
+function reset(argItem) {
     argItem.heading_offset = argItem.heading;
     var angle = calcAngle(argItem.pitch, 0);
     var u = angle[0], v = angle[1];
+    resetAllPath();
+}
+
+function resetAllPath() {
     obj.sensorPath.resetAllPath();
 }
+
+function record() {
+    obj.recordPoint.record(canvasArgs);
+}
+
+function resetRecord() {
+    obj.recordPoint.reset();
+}
+
 /******************** end of UI init *****************************/
 
 
@@ -121,9 +134,9 @@ function resizeGL(canvas) {
 }
 
 function initShaders() {
-    var vertexCode = 
+    var vertexCode =
         'attribute vec3 aVertexPosition;\n'  +
-        'attribute vec3 aVertexNormal;\n'    + 
+        'attribute vec3 aVertexNormal;\n'    +
         'attribute vec2 aTexture;\n'         +
         'attribute vec3 aColor;\n'           +
         'uniform highp mat4 uPMVMatrix;\n'   +
@@ -182,7 +195,7 @@ function initShaders() {
 
     attributes.color = gl.getAttribLocation(shaderProgram, "aColor");
     gl.enableVertexAttribArray(attributes.color);
-    
+
     attributes.color           = gl.getAttribLocation(shaderProgram, "aColor");
 
     uniforms.pmv_matrix      = gl.getUniformLocation(shaderProgram, "uPMVMatrix"); // 透视模型视图矩阵
@@ -204,6 +217,7 @@ function initBuffers() {
     obj.refCircle   = new RefCircle();
     obj.recordPoint = new RecordPoint();
     obj.ball        = new Ball();
+    obj.craft       = new Craft();
 
     for(var o in obj) {
         obj[o].init(gl);
@@ -239,7 +253,7 @@ function paintGL(canvas, args) {
     /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
     canvasArgs.heading = canvasArgs.heading - canvasArgs.heading_offset;
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit 
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
     mat4.lookAt(vMatrix, [canvasArgs.cam_x, canvasArgs.cam_y, canvasArgs.cam_z], [0, 0, 0], [0, 0, 1]);
     mat4.multiply(pvMatrix, pMatrix, vMatrix);
 
@@ -250,13 +264,7 @@ function paintGL(canvas, args) {
     }
 }
 
-function record() {
-    obj.recordPoint.record(canvasArgs);
-}
 
-function resetRecord() {
-    obj.recordPoint.reset();
-}
 
 /*
  * 根据渲染类型返回渲染器
@@ -778,7 +786,7 @@ Ball.prototype.paint = function(gl, addon) {
     gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);    // vertex info
     gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-    
+
     mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
     gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
     switch (addon.draw_mode) {
@@ -811,7 +819,7 @@ Ball.prototype.paint = function(gl, addon) {
  */
 Ball.prototype.getVertex = function() {
     var n = this.n;
-    var vertex = []; 
+    var vertex = [];
     var color  = [];
     //    var vn = [];        // 顶点法向量数组，当球心在原点时，与顶点坐标相同
     var i, j, k;
@@ -822,8 +830,8 @@ Ball.prototype.getVertex = function() {
         color.push.apply(color, that.d_color);
     }
 
-    // i indicates vertical line while j indicates horizontal line, 
-    // vertical line is half a circle, so the number should be 1 more 
+    // i indicates vertical line while j indicates horizontal line,
+    // vertical line is half a circle, so the number should be 1 more
     for (j = 0; j <= n; j++) {
         for (i = 0; i <= n; i++) {
             // (n+1)*n points are needed
@@ -849,19 +857,19 @@ Ball.prototype.getIndex = function() {
     var vertexIndex   = []; // surfaceDrawMode  绘制时所用的索引
     var lineIndex     = []; // lineDrawMode     绘制时所用的索引
     var lessLineIndex = []; // lessLineDrawMode 绘制时所用的索引
-    var lessLSIndex   = []; 
+    var lessLSIndex   = [];
     var i = 0, j = 0;
 
     for (j = 0; j < n; j++) {  // the last half circle (j = 0) overlaps the first one (j = 0)
         for (i = 0; i < n+1; i++) {
             // for line mode index
-            lineIndex.push( 
+            lineIndex.push(
                 this.calcIndex(i, j),
-                this.calcIndex(i+1, j), 
-                this.calcIndex(i, j),   
+                this.calcIndex(i+1, j),
+                this.calcIndex(i, j),
                 this.calcIndex(i, j+1)
             );
-            
+
             // for surface mode index
             vertexIndex.push(
                 this.calcIndex(i, j),       // 0
@@ -882,7 +890,7 @@ Ball.prototype.getIndex = function() {
         lessLineIndex.push( this.calcIndex(i, 0.5 *n), this.calcIndex(i+1, 0.5 *n) );
         lessLineIndex.push( this.calcIndex(i, 0.75*n), this.calcIndex(i+1, 0.75*n) );
     }
-    for (j = 0; j < n; j++) {  
+    for (j = 0; j < n; j++) {
         i = n / 2 ;
         lessLineIndex.push(this.calcIndex(i, j), this.calcIndex(i, j+1)); // equator line
     }
@@ -905,69 +913,76 @@ Ball.prototype.getIndex = function() {
  * @param  j       第 j 个半圆
  */
 Ball.prototype.calcIndex = function(i, j) {
-    return i + j * (this.n+1); 
+    return i + j * (this.n+1);
 }
 // ===================== Ball Object ================ //
 
 
 // ****************  Coord Object **************** //
 function Coord() {
+    this.type         = "Coord";
     this.coord_length = 10.0;
     this.mMatrix = mat4.create();
     this.buffers = {};
 }
 
-Coord.prototype.init = function(gl) {
-    var coordVertex = [ // x coord
-        0.0, 0.0, 0.0,
-        this.coord_length, 0.0, 0.0,
-        // y coord
-        0.0, 0.0, 0.0,
-        0.0, this.coord_length, 0.0,
-        // z coord
-        0.0, 0.0, 0.0,
-        0.0, 0.0, this.coord_length
-    ];
-    var coordIndex = [0, 1, 2, 3, 4, 5];
-    // 坐标轴的颜色
-    var lineColorData = [
-        // x
-        0.9, 0.1, 0,
-        0.9, 0.1, 0,
-        // y
-        0, 0.9, 0,
-        0, 0.9, 0,
-        // z blue
-        0, 0, 0.9,
-        0, 0, 0.9,
-    ];
+Coord.prototype = {
+    constructor: Coord,
 
-    // 顶点信息，索引只需要用static draw
-    this.buffers.coord  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(coordVertex),   gl.STATIC_DRAW);
-    this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex),     gl.STATIC_DRAW);
-    this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(lineColorData), gl.STATIC_DRAW);
+    init : function(gl) {
+        var coordVertex = [ // x coord
+            0.0, 0.0, 0.0,
+            this.coord_length, 0.0, 0.0,
+            // y coord
+            0.0, 0.0, 0.0,
+            0.0, this.coord_length, 0.0,
+            // z coord
+            0.0, 0.0, 0.0,
+            0.0, 0.0, this.coord_length
+        ];
+        var coordIndex = [0, 1, 2, 3, 4, 5];
+        // 坐标轴的颜色
+        var lineColorData = [
+            // x
+            0.9, 0.1, 0,
+            0.9, 0.1, 0,
+            // y
+            0, 0.9, 0,
+            0, 0.9, 0,
+            // z blue
+            0, 0, 0.9,
+            0, 0, 0.9,
+        ];
+
+        // 顶点信息，索引只需要用static draw
+        this.buffers.coord  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(coordVertex),   gl.STATIC_DRAW);
+        this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex),     gl.STATIC_DRAW);
+        this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(lineColorData), gl.STATIC_DRAW);
+    },
+
+    paint : function(gl) {
+        mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
+        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+
+        gl.uniform1f(uniforms.alpha, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // normal
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // vertex
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        // 绘制坐标轴
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
+        gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
+    }
 }
 
-Coord.prototype.paint = function(gl) {
-    mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
-    gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
-
-    gl.uniform1f(uniforms.alpha, 1.0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
-    gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // normal
-    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // vertex
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-    // 绘制坐标轴
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
-    gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
-}
 // ================  Coord Object ================ //
 
 // **************** ReferenceCircle Object (球面上的参考圆圈) **************** //
 function RefCircle() {
+    this.type       = "RefCircle";
     this.sides      = 24;
     this.dis        = 2;
     this.circle_size= 1.0;
@@ -982,111 +997,111 @@ function RefCircle() {
     this.green_color = [0.0, 1.0, 0.0];
 }
 
-RefCircle.prototype.init = function(gl) {
-    // generate circles angle
-    var i, j;
-    this.circles.push([degToRad(0*45), degToRad(0*45), this.green_color]);
-    for(i = 1; i <= 3; i ++ ) {
-        for(j = 0; j < 8; j++) {
-            if( i === 2 && j%2 === 0 ) {
-                this.circles.push([degToRad(i*45), degToRad(j*45), this.green_color]);
-            } else {
-                this.circles.push([degToRad(i*45), degToRad(j*45), this.blue_color]);
+RefCircle.prototype = {
+    constructor: RefCircle,
+
+    init : function(gl) {
+        // generate circles angle
+        var i, j;
+        this.circles.push([degToRad(0*45), degToRad(0*45), this.green_color]);
+        for(i = 1; i <= 3; i ++ ) {
+            for(j = 0; j < 8; j++) {
+                if( i === 2 && j%2 === 0 ) {
+                    this.circles.push([degToRad(i*45), degToRad(j*45), this.green_color]);
+                } else {
+                    this.circles.push([degToRad(i*45), degToRad(j*45), this.blue_color]);
+                }
             }
         }
-    }
-    this.circles.push([degToRad(4*45), degToRad(0*45), this.green_color]);
+        this.circles.push([degToRad(4*45), degToRad(0*45), this.green_color]);
 
-    for(i = 0; i < this.circle_num; i++) {
-        this.translation[i] = calcVertex(this.circles[i][0], this.circles[i][1], this.dis);
-    }
-
-    var p = this.getPoints();
-    this.buffers.ref_circle       = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.vertex),    gl.STATIC_DRAW);
-    this.buffers.ref_color        = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.color),     gl.STATIC_DRAW);
-    this.buffers.normal           = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.normal),    gl.STATIC_DRAW);
-    this.buffers.ref_circle_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(p.index),      gl.STATIC_DRAW);
-
-}
-
-
-/**
- *  绘制球面上的参考圆圈
- *  首先设置线宽和颜色
- **/
-RefCircle.prototype.paint = function(gl, addon) {
-    if( !addon.calibration ) {
-        return;
-    }
-
-    gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.ref_color);
-    gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.normal);
-    gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.ref_circle);
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.ref_circle_index);
-    gl.uniform1f(uniforms.alpha, 1.0);
-    var i;
-
-    if( this.dis !== addon.ball_radius ) {
-        this.dis   = addon.ball_radius;
         for(i = 0; i < this.circle_num; i++) {
             this.translation[i] = calcVertex(this.circles[i][0], this.circles[i][1], this.dis);
         }
-    }
 
-    if( this.circle_size !== addon.circle_size) {
-        this.circle_size = addon.circle_size;
-        this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
-    }
+        var p = this.getPoints();
+        this.buffers.ref_circle       = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.vertex),    gl.STATIC_DRAW);
+        this.buffers.ref_color        = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.color),     gl.STATIC_DRAW);
+        this.buffers.normal           = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.normal),    gl.STATIC_DRAW);
+        this.buffers.ref_circle_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(p.index),      gl.STATIC_DRAW);
+    },
 
-    for(i = 0; i < this.circle_num; i++) {
-        mat4.fromTranslation(this.mMatrix, this.translation[i]);
-        mat4.scale(this.mMatrix, this.mMatrix, this.vscale);            // scale by pointSize
-        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
-        gl.drawElements(gl.LINES, this.sides, gl.UNSIGNED_SHORT, i*this.sides*2);
-    }
-
-}
-
-// 获取参考圆圈的顶点
-RefCircle.prototype.getPoints = function() {
-    var vertex  = [];
-    var normal  = [];
-    var color   = [];
-    var index   = [];
-    var i = 0, j = 0, n = 0;
-
-    var that = this;
-    this.circles.forEach(function(e) {
-        var tmpver  = [];
-        var k;
-        for (j = 0; j < that.sides; j++) {
-            // generate vertices on plane XOY
-            k = calcVertex(degToRad(90), degToRad(j*360/that.sides), that.circle_size);
-            tmpver.push.apply(tmpver, k);
-            color = color.concat(e[2]);
-            normal= normal.concat([0.75, 0.75, 0.75]);  // make sure that all circles are visible bright
+    paint : function(gl, addon) {
+        if( !addon.calibration ) {
+            return;
         }
-        rotateVertex(tmpver, e[0], e[1]);
-        vertex.push.apply(vertex, tmpver);
-    });
 
-    for(i = 0; i < this.circle_num * this.sides; i++) {
-        index.push(i);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.ref_color);
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.normal);
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.ref_circle);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.ref_circle_index);
+        gl.uniform1f(uniforms.alpha, 1.0);
+        var i;
+
+        if( this.dis !== addon.ball_radius ) {
+            this.dis   = addon.ball_radius;
+            for(i = 0; i < this.circle_num; i++) {
+                this.translation[i] = calcVertex(this.circles[i][0], this.circles[i][1], this.dis);
+            }
+        }
+
+        if( this.circle_size !== addon.circle_size) {
+            this.circle_size = addon.circle_size;
+            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
+        }
+
+        for(i = 0; i < this.circle_num; i++) {
+            mat4.fromTranslation(this.mMatrix, this.translation[i]);
+            mat4.scale(this.mMatrix, this.mMatrix, this.vscale);            // scale by pointSize
+            mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
+            gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+            gl.drawElements(gl.LINES, this.sides, gl.UNSIGNED_SHORT, i*this.sides*2);
+        }
+
+    },
+
+    // 获取参考圆圈的顶点
+    getPoints : function() {
+        var vertex  = [];
+        var normal  = [];
+        var color   = [];
+        var index   = [];
+        var i = 0, j = 0, n = 0;
+
+        var that = this;
+        this.circles.forEach(function(e) {
+            var tmpver  = [];
+            var k;
+            for (j = 0; j < that.sides; j++) {
+                // generate vertices on plane XOY
+                k = calcVertex(degToRad(90), degToRad(j*360/that.sides), that.circle_size);
+                tmpver.push.apply(tmpver, k);
+                color = color.concat(e[2]);
+                normal= normal.concat([0.75, 0.75, 0.75]);  // make sure that all circles are visible bright
+            }
+            rotateVertex(tmpver, e[0], e[1]);
+            vertex.push.apply(vertex, tmpver);
+        });
+
+        for(i = 0; i < this.circle_num * this.sides; i++) {
+            index.push(i);
+        }
+        return {
+            "vertex": vertex,
+            "index":  index,
+            "normal": normal,
+            "color":  color
+        };
     }
-    return {
-        "vertex": vertex,
-        "index":  index,
-        "normal": normal,
-        "color":  color
-    };
 }
+
 
 function RecordPoint() {
-    this.sides = 24;
+    this.type        = "RecordPoint";
+    this.sides       = 24;
     this.buffers     = {};
     this.max_record_bytes       = this.sides * 4 * 100;
     this.max_record_index_bytes = this.sides * 2 * 100;
@@ -1094,71 +1109,96 @@ function RecordPoint() {
     this.record_index_count = 0;
 }
 
-RecordPoint.prototype.init = function(gl) {
-    this.buffers.record_point     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
-    this.buffers.record_color     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
-    this.buffers.record_index     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.max_record_index_bytes,   gl.DYNAMIC_DRAW);
-}
+RecordPoint.prototype = {
+    constructor: RecordPoint,
 
-RecordPoint.prototype.paint = function(gl, addon) {
-    // 进行采点操作
-    if(this.record_point_count > 0) {
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_color);
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point);
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.record_index);
-//        gl.uniform4fv(uniforms.color_unit, [0.1, 0.1, 0.95, 1.1]); // 传入颜色 uniform，就不再需要颜色顶点数据
-        gl.uniform1f(uniforms.alpha, 1.0);
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, pvMatrix);
-        gl.drawElements(gl.TRIANGLES, this.record_index_count, gl.UNSIGNED_SHORT, 0);
-    }
-}
+    init : function(gl) {
+        this.buffers.record_point     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
+        this.buffers.record_color     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_record_bytes,         gl.DYNAMIC_DRAW);
+        this.buffers.record_index     = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.max_record_index_bytes,   gl.DYNAMIC_DRAW);
+    },
 
-RecordPoint.prototype.record = function(addon) {
-    if( !addon.calibration) {
-        return;
-    }
-    console.log("[Info]: record a point.");
+    paint : function(gl, addon) {
+        // 进行采点操作
+        if(this.record_point_count > 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_color);
+            gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point);
+            gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point);
+            gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.record_index);
+    //        gl.uniform4fv(uniforms.color_unit, [0.1, 0.1, 0.95, 1.1]); // 传入颜色 uniform，就不再需要颜色顶点数据
+            gl.uniform1f(uniforms.alpha, 1.0);
+            gl.uniformMatrix4fv(uniforms.pmv_matrix, false, pvMatrix);
+            gl.drawElements(gl.TRIANGLES, this.record_index_count, gl.UNSIGNED_SHORT, 0);
+        }
+    },
 
-    var i = 0, j =0;
-    var point = [];
-    var index = [];
-    var color = [];
+    record : function(addon) {
+        if( !addon.calibration) {
+            return;
+        }
+        console.log("[Info]: record a point.");
 
-    for(i = 0; i <= this.sides; i++) {
-        color = color.concat([0, 0.5, 0.5]);
-    }
-    point = calcCircle(this.sides, addon.point_size + 0.03 , addon.ball_radius + 0.01, true);
-    rotateVertex(point, degToRad(90-addon.pitch), degToRad(addon.heading));
+        var i = 0, j =0;
+        var point = [];
+        var index = [];
+        var color = [];
 
-    var n = this.record_point_count / 3;
-    for(i = 1; i < this.sides; i++) {
+        for(i = 0; i <= this.sides; i++) {
+            color = color.concat([0, 0.5, 0.5]);
+        }
+        point = calcCircle(this.sides, addon.point_size + 0.03 , addon.ball_radius + 0.01, true);
+        rotateVertex(point, degToRad(90-addon.pitch), degToRad(addon.heading));
+
+        var n = this.record_point_count / 3;
+        for(i = 1; i < this.sides; i++) {
+            index.push(
+                        n, n+i,   n+i+1,
+                        n, n+i+1, n+i
+                       );
+        }
         index.push(
-                    n, n+i,   n+i+1,
-                    n, n+i+1, n+i
+                    n, n+this.sides, n+1,
+                    n, n+1,          n+this.sides
                    );
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point, this.record_point_count * 4, new Float32Array(point));
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.record_color, this.record_point_count * 4, new Float32Array(color));
+        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.record_index, this.record_index_count * 2, new Uint16Array(index));
+
+        this.record_point_count += point.length;
+        this.record_index_count += index.length;
+    },
+
+    // 重置已经打的点
+    reset : function() {
+        this.record_point_count = 0;
+        this.record_index_count = 0;
     }
-    index.push(
-                n, n+this.sides, n+1,
-                n, n+1,          n+this.sides
-               );
-    updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.record_point, this.record_point_count * 4, new Float32Array(point));
-    updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.record_color, this.record_point_count * 4, new Float32Array(color));
-    updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.record_index, this.record_index_count * 2, new Uint16Array(index));
 
-    this.record_point_count += point.length;
-    this.record_index_count += index.length;
 }
 
-// 重置已经打的点s
-RecordPoint.prototype.reset = function() {
-    this.record_point_count = 0;
-    this.record_index_count = 0;
-}
+
 // ================= ReferenceCircle Object =======================//
 
+function Craft(props) {
+    this.type    = "Craft";
+    this.url     = "qrc:/obj/craft.obj";
+    this.mMatrix = mat4.create();
+    this.vscale  = vec3.create();
+}
 
+Craft.prototype = {
+    constructor: Craft,
+
+    init: function(gl) {
+        var objStr =
+//        var mesh = new OBJ.Mesh()
+    },
+
+    paint: function(gl, addon) {
+
+    }
+}
 

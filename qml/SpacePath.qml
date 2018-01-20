@@ -69,7 +69,7 @@ Item {
                         minValue: 0.0
                         onValueChanged: {
                             argItem.cam_theta = this.value;
-                            GLcode.rotateCamera();
+                            GLcode.rotateCamera(argItem);
                         }
                     }
 
@@ -85,7 +85,7 @@ Item {
                         minValue: -180.0
                         onValueChanged: {
                             argItem.cam_beta = this.value;
-                            GLcode.rotateCamera();
+                            GLcode.rotateCamera(argItem);
                         }
                     }
 
@@ -99,7 +99,7 @@ Item {
                         text: "摄像机距原点："
                         maxValue: 30.0
                         minValue: 0.5
-                        onValueChanged: GLcode.rotateCamera();
+                        onValueChanged: GLcode.rotateCamera(argItem);
                     }
                 }  // cameraItem 0
 
@@ -391,8 +391,8 @@ Item {
                         argItem.cam_theta = 45
                         argItem.cam_beta  = 90
 
-                        GLcode.rotateCamera();
-                        GLcode.reset();
+                        GLcode.rotateCamera(argItem);
+                        GLcode.reset(argItem);
                     }
                 }
 
@@ -410,7 +410,7 @@ Item {
                     }
                     onClicked: {
                         console.log("click reset path")
-                        GLcode.sensorPath.resetAllPath();
+                        GLcode.resetAllPath();
                     }
                 }
 
