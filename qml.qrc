@@ -5,9 +5,7 @@
         <file>img/compass.ico</file>
         <file>img/compass_pr_base.png</file>
         <file>img/heading.png</file>
-        <file>qml/DataSource.js</file>
         <file>qml/SpacePath.qml</file>
-        <file>qml/gl-matrix.js</file>
         <file>qml/MySlider.qml</file>
         <file>qml/Compass.qml</file>
         <file>qml/SpacePath.js</file>
@@ -20,5 +18,6 @@
         <file>qml/webgl-obj-loader.min.js</file>
         <file>qml/SPFragCode.fsh</file>
         <file>qml/SPVertexCode.vsh</file>
+        <file>qml/gl-matrix-min.js</file>
     </qresource>
 </RCC>

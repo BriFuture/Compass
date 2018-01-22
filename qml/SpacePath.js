@@ -9,7 +9,7 @@
 
 .pragma library
 
-Qt.include("gl-matrix.js");
+Qt.include("gl-matrix-min.js");
 Qt.include("webgl-obj-loader.min.js");
 
 var canvasArgs; // 相关绘图变量
