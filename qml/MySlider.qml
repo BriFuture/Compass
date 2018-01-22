@@ -10,7 +10,7 @@ import QtQuick.Controls 1.4
 Rectangle {
     id: container
     color : "transparent"
-    height: 45
+    height: 50
 
     property int ratio : 1
     property int precision  : 1
@@ -77,8 +77,7 @@ Rectangle {
     Slider {
         id: slider
         anchors {
-            top  : name.bottom
-            topMargin: 6
+            top  : decBtn.bottom
             left : container.left
             right: container.right
         }

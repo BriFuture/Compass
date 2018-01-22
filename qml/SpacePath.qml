@@ -32,7 +32,8 @@ Item {
         id:    controller
         z:     10
         anchors.top: parent.top
-        property int topmargin: 10
+        property int margintop: 10
+        property int marginleft: 30
         property bool show: true
 
         width: 215
@@ -44,15 +45,21 @@ Item {
             width: 200
             height: parent.height
             contentWidth: 200
-//            contentHeight: calcContentHeight(this)
             contentHeight: container.height
 
 
-            Item {
+            Rectangle {
                 id: cameraItem
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width:  parent.width
-                height: calcHeight(this)
-                anchors.top: parent.top
+                height: calcHeight(this, 1)
+                anchors {
+                    top: parent.top
+                    topMargin: controller.margintop * 0.5
+                    left: parent.left
+                }
                 Item {
                     id: cameraItem0
                     width: parent.width
@@ -60,9 +67,10 @@ Item {
 
                     MySlider {
                         id: camTheta
+                        objectName: "cam_theta"
                         anchors {
                             top: parent.top
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop * 0.5
                         }
 
                         width: parent.width
@@ -77,9 +85,10 @@ Item {
 
                     MySlider {
                         id: camBeta
+                        objectName: "cam_beta"
                         anchors {
                             top: camTheta.bottom
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop
                         }
                         width: parent.width
                         text: "摄像机β角："
@@ -93,13 +102,14 @@ Item {
 
                     MySlider {
                         id: camDis
+                        objectName: "cam_dis"
                         anchors {
                             top: camBeta.bottom
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop
                         }
                         width: parent.width
                         text: "摄像机距原点："
-                        maxValue: 30.0
+                        maxValue: 100.0
                         minValue: 0.5
                         onValueChanged: GLcode.rotateCamera(argItem);
                     }
@@ -115,57 +125,61 @@ Item {
                         id: cameraXPos
                         anchors {
                             top: cameraItem1.top
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop * 0.5
                         }
                         enabled: false
                         width: parent.width
                         text: "摄像机X："
-                        maxValue: 30.0
-                        minValue: -30.0
+                        maxValue: 150.0
+                        minValue: -150.0
                     }
 
                     MySlider {
                         id: cameraYPos
                         anchors {
                             top: cameraXPos.bottom
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop
                         }
                         enabled: false
                         width: parent.width
                         text: "摄像机Y："
-                        maxValue: 30.0
-                        minValue: -30.0
+                        maxValue: 150.0
+                        minValue: -150.0
                     }
 
                     MySlider {
                         id: cameraZPos
                         anchors {
                             top: cameraYPos.bottom
-                            topMargin: controller.topmargin
+                            topMargin: controller.margintop
                         }
                         enabled: false
                         width: parent.width
                         text: "摄像机Z："
-                        maxValue: 30.0
-                        minValue: -30.0
+                        maxValue: 150.0
+                        minValue: -150.0
                     }
                 }  // cameraItem 1
             }   // cameraItem
 
-            Item {
+            Rectangle {
                 id: canvasSetting
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width: parent.width
                 height: calcHeight(this)
                 anchors {
                     top: cameraItem.bottom
-                    topMargin: controller.topmargin
+                    topMargin: controller.margintop
+                    left: parent.left
                 }
 
                 MySlider {
                     id: ballRadius
                     anchors {
                         top: canvasSetting.top
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop * 0.5
                     }
                     width: parent.width
                     text: "参考球半径："
@@ -178,7 +192,7 @@ Item {
                     id: ballAlpha
                     anchors {
                         top: ballRadius.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text:  "球面透明度"
@@ -191,7 +205,7 @@ Item {
                     id: pointSize
                     anchors {
                         top: ballAlpha.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "指示器大小："
@@ -204,7 +218,7 @@ Item {
                     id: pathWidth
                     anchors {
                         top: pointSize.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "轨迹宽度："
@@ -214,10 +228,10 @@ Item {
                 }
 
                 MySlider {
-                    id: path_gap
+                    id: pathGap
                     anchors {
                         top: pathWidth.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "路径间隔："
@@ -227,10 +241,10 @@ Item {
                 }
 
                 MySlider {
-                    id: circle_size
+                    id: circleSize
                     anchors {
-                        top: path_gap.bottom
-                        topMargin: controller.topmargin
+                        top: pathGap.bottom
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "参考圆圈大小："
@@ -241,10 +255,10 @@ Item {
                 }
 
                 MySlider {
-                    id: craft_size
+                    id: craftSize
                     anchors {
-                        top: circle_size.bottom
-                        topMargin: controller.topmargin
+                        top: circleSize.bottom
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "模拟器大小:"
@@ -255,13 +269,17 @@ Item {
                 }
             }  // canvasSetting
 
-            Item {
+            Rectangle {
                 id: drawMode
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width: parent.width
-                height: 40
+                height: calcHeight(this, 2)
                 anchors {
                     top: canvasSetting.bottom
-                    topMargin: 15
+                    topMargin: controller.margintop
+                    left: parent.left
                 }
 
                 RadioButton {
@@ -269,7 +287,7 @@ Item {
                     anchors {
                         top: parent.top
                         left: parent.left
-                        leftMargin: 15
+                        leftMargin: controller.marginleft
                     }
                     width: 20
                     height: 20
@@ -282,9 +300,9 @@ Item {
                 RadioButton {
                     id: surfaceRB
                     anchors {
-                        top: parent.top
-                        left: lineRB.right
-                        leftMargin: 50
+                        top: lineRB.bottom
+                        left: parent.left
+                        leftMargin: controller.marginleft
                     }
                     width: 20
                     height: 20
@@ -297,9 +315,9 @@ Item {
                 RadioButton {
                     id: lessLineRB
                     anchors {
-                        top: lineRB.bottom
+                        top: surfaceRB.bottom
                         left: parent.left
-                        leftMargin: 15
+                        leftMargin: controller.marginleft
                     }
                     width: 20
                     height: 20
@@ -311,14 +329,17 @@ Item {
 
             }   // drawMode
 
-            Item {
+            Rectangle {
                 id: checkBoxItem
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width: parent.width
                 property int bheight: 15
-                height: calcHeight(this) * 0.5
+                height: calcHeight(this, 5)
                 anchors {
                     top: drawMode.bottom
-                    topMargin: 5
+                    topMargin: controller.margintop
                     left: parent.left
                 }
 
@@ -326,14 +347,17 @@ Item {
                     id: pathEnableBox
                     height: parent.bheight
                     text  : "绘制路径"
+
                     anchors {
+                        top: parent.top
                         left: parent.left
-                        leftMargin: 15
+                        leftMargin: controller.marginleft
                     }
-                    checked: argItem.enable_path
+                    checked: true
                     onCheckedChanged: {
-    //                    clickCheckBox(this, checked)
                         argItem.enable_path = checked;
+                        pathGap.enabled     = checked;
+                        pathWidth.enabled   = checked;
                     }
                 }
 
@@ -341,13 +365,17 @@ Item {
                     id: simBox
                     height: parent.bheight
                     text: "绘制模拟器"
+
                     anchors {
-                        left: pathEnableBox.right
-                        leftMargin: 15
+                        top: pathEnableBox.bottom
+                        left: parent.left
+                        topMargin: 5
+                        leftMargin: controller.marginleft
                     }
-                    checked: argItem.enable_sim
+                    checked: true
                     onCheckedChanged: {
                         argItem.enable_sim = checked;
+                        craftSize.enabled  = checked;
                     }
                 }
 
@@ -358,10 +386,10 @@ Item {
                     checked: true
 
                     anchors {
-                        top: pathEnableBox.bottom
+                        top: simBox.bottom
                         topMargin: 5
                         left: parent.left
-                        leftMargin: 15
+                        leftMargin: controller.marginleft
                     }
                     onCheckedChanged: {
                         cameraItem0.visible = checked;
@@ -376,24 +404,28 @@ Item {
                     checked: true
 
                     anchors {
-                        top: pathEnableBox.bottom
+                        top: axisBox.bottom
                         topMargin: 5
-                        left: axisBox.right
-                        leftMargin: 15
+                        left: parent.left
+                        leftMargin: controller.marginleft
                     }
                     onCheckedChanged: {
                         argItem.calibration = checked;
+                        circleSize.enabled  = checked;
                     }
                 }
             }  // checkBoxItem
 
-            Item {
+            Rectangle {
                 id: operateItem
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width: parent.width
-                height: calcHeight(this) * 0.5
+                height: calcHeight(this, 5)
                 anchors {
                     top: checkBoxItem.bottom
-                    topMargin: 10
+                    topMargin: controller.margintop
                     left: parent.left
                 }
 
@@ -403,11 +435,10 @@ Item {
                     height: 20
                     text: "重置摄像机"
                     anchors {
-    //                        horizontalCenter: parent.horizontalCenter
-    //                    horizontalCenterOffset: 20
                         top: parent.top
+                        topMargin: 3
                         left: parent.left
-                        leftMargin: 20
+                        leftMargin: controller.marginleft
                     }
                     onClicked: {
                         argItem.cam_theta = 45
@@ -424,14 +455,13 @@ Item {
                     height: 20
                     text: "重置路径"
                     anchors {
-    //                        horizontalCenter: parent.horizontalCenter
-    //                    horizontalCenterOffset: 20
-                        top: parent.top
-                        left: resetCameraBtn.right
-                        leftMargin: 5
+                        top: resetCameraBtn.bottom
+                        topMargin: 5
+                        left: parent.left
+                        leftMargin: controller.marginleft
                     }
                     onClicked: {
-                        console.log("click reset path")
+                        console.log("[Info] Reset all path.")
                         GLcode.resetAllPath();
                     }
                 }
@@ -442,13 +472,13 @@ Item {
                     height: 20
                     text: "打点"
                     anchors{
-                        top: resetCameraBtn.bottom
+                        top: resetPathBtn.bottom
                         topMargin: 5
                         left: parent.left
-                        leftMargin: 20
+                        leftMargin: controller.marginleft
                     }
                     onClicked: {
-                        GLcode.refCircle.record();
+                        recordAPoint();
                     }
                 }
 
@@ -458,10 +488,10 @@ Item {
                     height: 20
                     text: "重置打点"
                     anchors {
+                        top: recordBtn.bottom
                         topMargin: 5
-                        top: resetCameraBtn.bottom
-                        left: recordBtn.right
-                        leftMargin: 20
+                        left: parent.left
+                        leftMargin: controller.marginleft
                     }
                     onClicked: {
                         GLcode.resetRecord();
@@ -469,19 +499,24 @@ Item {
                 }
             }  // end of operateItem
 
-            Item {
+            Rectangle {
                 id: posItem
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
                 width: parent.width
                 height: calcHeight(this)
                 anchors {
                     top : operateItem.bottom
+                    topMargin: controller.margintop
+                    left: parent.left
                 }
 
                 MySlider {
                     id: pitch
                     anchors {
                         top: parent.top
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop * 0.5
                     }
                     width: parent.width
                     text: "pitch："
@@ -494,7 +529,7 @@ Item {
                     id: heading
                     anchors {
                         top: pitch.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
                     text: "heading:"
@@ -507,10 +542,10 @@ Item {
                     id: roll
                     anchors {
                         top: heading.bottom
-                        topMargin: controller.topmargin
+                        topMargin: controller.margintop
                     }
                     width: parent.width
-                    text: "heading:"
+                    text: "roll:"
                     maxValue: 180
                     minValue: -180
                     value   : 0
@@ -519,16 +554,10 @@ Item {
             }  // posItem
 
             Item {
-                id: colorPanel
-                visible: false
-
-            }
-
-            Item {
                 // this item is used for calculate the height of Flickable item
                 visible: false
                 Component.onCompleted: {
-                    view.contentHeight = calcHeight(view) + 30;
+                    view.contentHeight = calcHeight(view.contentItem);  // use contentItem to set contentHeight
                 }
             }
 
@@ -687,13 +716,15 @@ Item {
         property alias  ball_radius:  ballRadius.value
         property alias  point_size:   pointSize.value
         property alias  path_width:   pathWidth.value
-        property alias  path_gap:     path_gap.value
+        property alias  path_gap:     pathGap.value
         property alias  ball_alpha:   ballAlpha.value
-        property alias  circle_size:  circle_size.value
+        property alias  circle_size:  circleSize.value
         property alias  calibration:  calibrationBox.checked
         property alias  enable_path:  pathEnableBox.checked
         property alias  content:      content
-        property alias  craft_size:   craft_size.value
+        property alias  craft_size:   craftSize.value
+        property alias  enable_sim:   simBox.checked
+
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         property alias  heading: heading.value
         property alias  pitch:   pitch.value
@@ -703,8 +734,6 @@ Item {
         property double heading_offset: 0
         property double vector_length:  4
         property var    light_direction: [0.35, 0.35, 0.7]
-        property bool   enable_sim:   simBox.checked
-        property bool   sensor_radial: true
         property string draw_mode: "line"
 
         onCam_thetaChanged: {
@@ -791,7 +820,7 @@ Item {
       * while children items would be initialized after parent,
       * it should be called after everything being ok
     **/
-    function calcHeight(item) {
+    function calcHeight(item, margin) {
         var height  = 0;
         var clength = 0;
         for(var i = 0; i < item.children.length; i++) {
@@ -801,7 +830,11 @@ Item {
             }
         }
 
-        return height + clength * controller.topmargin;
+        if( margin === undefined ) {
+            margin = controller.margintop;
+        }
+
+        return height + clength * margin;
     }
 
 }

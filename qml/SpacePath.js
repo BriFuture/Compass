@@ -124,11 +124,17 @@ function initializeGL(canvas, args) {
 
     obj.coord       = new Coord();
     obj.craft       = new Craft();
-    obj.sensorPoint = new SensorPoint();
+    obj.sensorPoint = new SensorPoint({
+                                          color: [1.0, 0.0, 0.0]
+                                      });
     obj.sensorPath  = new SensorPath();
     obj.refCircle   = new RefCircle();
     obj.recordPoint = new RecordPoint();
-    obj.ball        = new Ball();
+    obj.ball        = new Ball({
+                                   color: [0.3, 0.3, 0.3],
+                                   vn: 48,
+                                   hn: 48
+                               });
 
     for(var o in obj) {
         obj[o].init(gl, args);   // initializing all objects
@@ -313,7 +319,8 @@ function calcVertex(theta, beta, r) {
     var x  = r * st * cb;
     var y  = r * st * sb;
     var z  = r * ct;
-    return [x, y, z];
+//    return [x, y, z];
+    return vec3.fromValues(x, y, z);
 }
 
 function vectorPos(vec) {
@@ -346,6 +353,7 @@ function rotateVertex(vertex, theta, beta) {
  * @param   {Number} dis
  * @param   {Number} z       the z coordinate
  * @param   {Number} ninv    non-inv plane
+ * @returns {Float32Array}
  */
 function calcCircle(sides, dis, z, ninv) {
     var vertex = [];
@@ -353,22 +361,21 @@ function calcCircle(sides, dis, z, ninv) {
     var x = 0.0;
     var y = 0.0;
     var i = 0;
-    vertex = vertex.concat([x, y, z]);
-    for(i = 0; i < sides; i++) {
-        x = Math.cos(i * angle) * dis;
-        y = Math.sin(i * angle) * dis;
+    var pushVertices = function() {
         vertex = vertex.concat([x, y, z]);
-    }
-    if( !ninv) {
-//    vertex = vertex.concat([x, y, z]);
         for(i = 0; i < sides; i++) {
             x = Math.cos(i * angle) * dis;
             y = Math.sin(i * angle) * dis;
             vertex = vertex.concat([x, y, z]);
         }
-        vertex = vertex.concat([0.0, 0.0, 0.0]);        // add origin points to form the ratio
     }
-    return vertex;
+
+    pushVertices();
+
+    if( !ninv) {
+        pushVertices();
+    }
+    return new Float32Array(vertex);
 }
 
 /**
@@ -379,22 +386,25 @@ function updateSubBuffer(type, buffer, offset, data) {
     gl.bufferSubData(type, offset, data);
 }
 
+var epsilon = 0.01;
+
 function PaintObj(props) {
     this.sides = props.sides || 24;
     this.alpha = props.alpha || 1.0;
     this.color = props.color || [0.8, 0.8, 0.8];
+    this.size  = props.size  || 1.0;
 
     this.buffers = {};
     this.mMatrix = mat4.create();
+    this.quat    = quat.create();
     this.vscale  = vec3.fromValues(1.0, 1.0, 1.0);   // vec3.create equals to fromValues(0.0, 0.0, 0.0)
+    this.translation = vec3.create();
 
 }
 
 // **************** SensorPoint Object **************** //
-function SensorPoint() {
-    PaintObj.call(this, {
-        color: [1.0, 0.0, 0.0],
-    } );
+function SensorPoint(props) {
+    PaintObj.call(this, props);
 
     this.type = "SensorPoint";
     // the reason why rotation and then translation is out of expections
@@ -402,7 +412,9 @@ function SensorPoint() {
     // now all vertices are calculated by function, no need for rMatrix
     // this.rMatrix  = mat4.create();
     this.inv_color  = [0.0, 1.0, 0.0];
-    this.point_size = 1.0;
+    this.theta = 0;
+    this.beta  = 0;
+    this.dis   = 4;
 }
 
 SensorPoint.prototype = {
@@ -410,7 +422,8 @@ SensorPoint.prototype = {
 
     init : function(gl) {
         var color   = [];
-        this.vertex = calcCircle(this.sides, this.point_size, 4);
+//        this.vertex = calcCircle(this.sides, this.size, this.dis);
+        this.vertex = calcCircle(this.sides, this.size, 0);
 
         var i = 0;
         for(i = 0; i <= this.sides; i++) {
@@ -427,7 +440,7 @@ SensorPoint.prototype = {
             index.push(i);
         }
         index.push(1);
-        // radiu
+        // negitive plane
         index.push(2*this.sides + 1);
         for (i = this.sides*2; i >= this.sides+1; i--) {
             index.push(i);
@@ -436,9 +449,9 @@ SensorPoint.prototype = {
 
         this.index_count = index.length;
 
-        this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(this.vertex), gl.DYNAMIC_DRAW);
-        this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),       gl.STATIC_DRAW);
-        this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),        gl.STATIC_DRAW);
+        this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         this.vertex,               gl.STATIC_DRAW);
+        this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),   gl.STATIC_DRAW);
+        this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),    gl.STATIC_DRAW);
     },
 
     /**
@@ -448,36 +461,6 @@ SensorPoint.prototype = {
      */
     paint : function(gl, addon) {
         var angle = calcSensorNormal();  // vertical of angle
-    //    var pos = calcVertex(degToRad(90-addon.pitch), degToRad(addon.heading), addon.vector_length);
-        if( this.point_size !== addon.point_size ) {
-            this.point_size   = addon.point_size || 1;
-            this.vertex = calcCircle(this.sides, this.point_size, angle[2]);
-            this.theta = 0;
-            this.beta  = 0;
-    //        this.vscale  = vec3.fromValues(this.point_size, this.point_size, this.point_size);
-        }
-        if( this.theta !== angle[0] || this.beta !== angle[1] || this.dis !== angle[2]) {
-            var vertex = new Float32Array(this.vertex);
-            if( this.theta !== angle[0] || this.beta !== angle[1] ) {
-                rotateVertex(vertex, angle[0], angle[1]);
-            }
-            if( this.dis !== angle[2] ) {
-                this.moveZ(vertex, angle[2]);
-            }
-
-            this.theta   = angle[0];
-            this.beta    = angle[1];
-            this.dis     = angle[2];
-            updateSubBuffer(gl.ARRAY_BUFFER, this.buffers.vertex, 0, vertex);
-    //        mat4.fromZRotation(this.rMatrix,         this.beta);
-    //        mat4.rotateY(this.rMatrix, this.rMatrix, this.theta);
-    //        mat4.fromRotationTranslation(this.mMatrix, this.rMatrix, pos);
-    //        mat4.rotateZ(this.mMatrix, this.mMatrix, this.beta);
-    //        mat4.rotateY(this.mMatrix, this.mMatrix, this.theta);
-        }
-
-    //    mat4.scale(mvpMatrix, this.mMatrix, this.vscale);            // scale by pointSize
-    //    mat4.mul(mvpMatrix, pvMatrix, mvpMatrix);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
         gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
@@ -487,14 +470,26 @@ SensorPoint.prototype = {
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
 
         gl.uniform1f(uniforms.alpha, this.alpha);          //  set alpha value
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, pvMatrix);
+
+        if( Math.abs( this.size - addon.point_size ) > epsilon ) {
+            this.size = addon.point_size;
+            vec3.set(this.vscale, this.size, this.size, this.size);
+        }
+
+        this.translation = vectorPos(angle);
+
+        quat.fromEuler(this.quat, 0, -addon.pitch+90, addon.heading);
+        mat4.fromRotationTranslationScale(this.mMatrix,
+                                          this.quat,
+                                          this.translation,
+                                          this.vscale);
+
+        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
+        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);  // no need of rotate matrix
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
-        gl.drawElements(gl.TRIANGLE_FAN, this.index_count*0.5, gl.UNSIGNED_SHORT, 0);
-        // radial
-        if( addon.sensor_radial ) {
-            gl.drawElements(gl.TRIANGLE_FAN, this.index_count*0.5, gl.UNSIGNED_SHORT, this.index_count * 0.5 * 2);
-        }
+        gl.drawElements(gl.TRIANGLE_FAN, this.index_count * 0.5, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLE_FAN, this.index_count * 0.5, gl.UNSIGNED_SHORT, this.index_count * 0.5 * 2);
     },
 
     moveZ : function(array, z) {
@@ -581,8 +576,8 @@ SensorPath.prototype = {
 
         gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
     //    mat4.identity(this.mMatrix);
-        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+//        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
+        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, pvMatrix);
 
         // 分批绘制路径
         for(var i = 0; i < this.cur_pi; i++) {
@@ -713,17 +708,12 @@ SensorPath.prototype = {
 }  // end of SensorPath prototype
 
 // **************** Ball Object **************** //
-/**
- * @param {Number} dradius  the default radius to set
- */
-function Ball(dradius) {
-    PaintObj.call(this, {
-        color: [0.3, 0.3, 0.3],
-    } );
+function Ball(props) {
+    PaintObj.call(this, props);
 
     this.type       = "Ball";
-    // 绘制球面时的精度, 至少为 4 的倍数
-    this.n          = 48;
+    this.vn         = props.vn || 48;
+    this.hn         = (props.hn || 48) * 0.5;
     this.ratio      = 0.25;  // default radius
     this.radius     = 4;
     this.line_alpha = 0.55;
@@ -750,10 +740,8 @@ Ball.prototype = {
     paint : function(gl, addon) {
         if( this.radius !== addon.ball_radius ) {
             this.radius   = addon.ball_radius * this.ratio || 1;
-            this.vscale   = vec3.fromValues(this.radius, this.radius, this.radius);
+            vec3.set(this.vscale, this.radius, this.radius, this.radius)
             mat4.fromScaling(this.mMatrix, this.vscale);
-    //        mat4.identity(this.mMatrix);
-    //        mat4.scale(this.mMatrix, this.mMatrix, this.vscale);
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);     // color buffer
         gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
@@ -793,7 +781,6 @@ Ball.prototype = {
      * @returns 返回所有类型的顶点个数
      */
     getVertex : function() {
-        var n = this.n;
         var vertex = [];
         var color  = [];
         //    var vn = [];        // 顶点法向量数组，当球心在原点时，与顶点坐标相同
@@ -807,17 +794,16 @@ Ball.prototype = {
 
         // i indicates vertical line while j indicates horizontal line,
         // vertical line is half a circle, so the number should be 1 more
-        for (j = 0; j <= n; j++) {
-            for (i = 0; i <= n; i++) {
+        for (j = 0; j <= this.vn; j++) {
+            for (i = 0; i <= this.hn; i++) {
                 // (n+1)*n points are needed
-                k = calcVertex(degToRad(i*180/n), degToRad(j*360/n), this.radius);
-                pushData(k);
+                k = calcVertex(degToRad(i*180/this.hn), degToRad(j*360/this.vn), this.radius);
+                pushData( [k[0], k[1], k[2]] );
             }
         }
         // add origin point into array
         pushData([0, 0, 0]);
-    //    this.vertex = vertex;
-    //    this.color  = color;
+
         return {
             "vertex": vertex,
             "color" : color
@@ -826,15 +812,14 @@ Ball.prototype = {
 
     // 获取绘制球面时需要的顶点索引
     getIndex : function() {
-        var n       = this.n;
         var vertexIndex   = []; // surfaceDrawMode  绘制时所用的索引
         var lineIndex     = []; // lineDrawMode     绘制时所用的索引
         var lessLineIndex = []; // lessLineDrawMode 绘制时所用的索引
         var lessLSIndex   = [];
         var i = 0, j = 0;
 
-        for (j = 0; j < n; j++) {  // the last half circle (j = 0) overlaps the first one (j = 0)
-            for (i = 0; i < n+1; i++) {
+        for (j = 0; j < this.vn; j++) {  // the last half circle (j = 0) overlaps the first one (j = 0)
+            for (i = 0; i < this.hn+1; i++) {
                 // for line mode index
                 lineIndex.push(
                     this.calcIndex(i, j),
@@ -856,23 +841,23 @@ Ball.prototype = {
                 );
             }
         }
-        for (i = 0; i < n+1; i++) {
+        for (i = 0; i < this.hn+1; i++) {
             // 绘出 4 条经线
             lessLineIndex.push( this.calcIndex(i, 0),      this.calcIndex(i+1, 0)      );
-            lessLineIndex.push( this.calcIndex(i, 0.25*n), this.calcIndex(i+1, 0.25*n) );
-            lessLineIndex.push( this.calcIndex(i, 0.5 *n), this.calcIndex(i+1, 0.5 *n) );
-            lessLineIndex.push( this.calcIndex(i, 0.75*n), this.calcIndex(i+1, 0.75*n) );
+            lessLineIndex.push( this.calcIndex(i, 0.25*this.vn), this.calcIndex(i+1, 0.25*this.vn) );
+            lessLineIndex.push( this.calcIndex(i, 0.5 *this.vn), this.calcIndex(i+1, 0.5 *this.vn) );
+            lessLineIndex.push( this.calcIndex(i, 0.75*this.vn), this.calcIndex(i+1, 0.75*this.vn) );
         }
-        for (j = 0; j < n; j++) {
-            i = n / 2 ;
+        for (j = 0; j < this.vn; j++) {
+            i = this.hn / 2 ;
             lessLineIndex.push(this.calcIndex(i, j), this.calcIndex(i, j+1)); // equator line
         }
         // 赤道所在平面
-        for (j = n*0.5; j < n*0.75+1; j++) {
+        for (j = this.vn*0.5; j < this.vn*0.75+1; j++) {
             // 原点 -- 赤道上的点 -- 赤道上的点
-            lessLSIndex.push(this.calcIndex(n*0.5, j));
+            lessLSIndex.push(this.calcIndex(this.hn*0.5, j));
         }
-        lessLSIndex.push((n+1)*(n+1));   // origin point
+        lessLSIndex.push((this.vn+1)*(this.hn+1));   // origin point
 
         this.vertex_index = vertexIndex;
         this.line_index   = lineIndex;
@@ -886,7 +871,7 @@ Ball.prototype = {
      * @param  j       第 j 个半圆
      */
     calcIndex : function(i, j) {
-        return i + j * (this.n+1);
+        return i + j * (this.hn+1);
     }
 }  // end of Ball prototype
 
@@ -951,9 +936,8 @@ Coord.prototype = {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
         gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
     }
-}
+}  // end of Coord prototype
 
-// ================  Coord Object ================ //
 
 // **************** ReferenceCircle Object (球面上的参考圆圈) **************** //
 function RefCircle() {
@@ -1021,14 +1005,17 @@ RefCircle.prototype = {
             }
         }
 
-        if( this.circle_size !== addon.circle_size) {
-            this.circle_size = addon.circle_size;
-            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
-        }
+//        if( this.circle_size !== addon.circle_size) {   // Maybe Math.abs will perform better
+//            this.circle_size = addon.circle_size;
+//            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
+//        }
+        vec3.set(this.vscale, addon.circle_size, addon.circle_size, addon.circle_size);
 
         for(i = 0; i < this.circle_num; i++) {
-            mat4.fromTranslation(this.mMatrix, this.translation[i]);
-            mat4.scale(this.mMatrix, this.mMatrix, this.vscale);            // scale by pointSize
+
+            mat4.fromRotationTranslationScale(this.mMatrix, this.quat, this.translation[i], this.vscale);
+//            mat4.fromTranslation(this.mMatrix, this.translation[i]);
+//            mat4.scale(this.mMatrix, this.mMatrix, this.vscale);           // scale by pointSize
             mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
             gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
             gl.drawElements(gl.LINES, this.sides, gl.UNSIGNED_SHORT, i*this.sides*2);
@@ -1069,7 +1056,7 @@ RefCircle.prototype = {
             "color":  color
         };
     }
-}
+}  // end of RefCircle prototype
 
 
 function RecordPoint() {
@@ -1139,7 +1126,7 @@ RecordPoint.prototype = {
                     n, n+this.sides, n+1,
                     n, n+1,          n+this.sides
                    );
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex, this.vertex_count * 4, new Float32Array(point));
+        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex, this.vertex_count * 4, point);
         updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color,  this.vertex_count * 4, new Float32Array(color));
         updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index,  this.index_count  * 2, new Uint16Array(index));
 
@@ -1153,17 +1140,15 @@ RecordPoint.prototype = {
         this.index_count = 0;
     }
 
-}
+}  // end of RecordPoint prototype
 
-
-// ================= ReferenceCircle Object =======================//
 
 function Craft(props) {
     PaintObj.call(this, {});
 
     this.type    = "Craft";
     this.url     = ":/obj/craft.obj";
-    this.scale   = 0.1;
+    this.scale   = 0.05;
 }
 
 Craft.prototype = {
@@ -1209,10 +1194,15 @@ Craft.prototype = {
         gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.uniform1f(uniforms.alpha, this.alpha);
-        this.vscale = vec3.fromValues(addon.craft_size * this.scale, addon.craft_size * this.scale, addon.craft_size * this.scale);
-        mat4.fromScaling(this.mMatrix, this.vscale);
-        mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(90-addon.pitch) );
-        mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(addon.heading)  );
+        vec3.set(this.vscale, addon.craft_size, addon.craft_size, addon.craft_size);
+//        mat4.fromScaling(this.mMatrix, this.vscale);
+//        mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(90-addon.pitch) );
+//        mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(addon.heading)  );
+        quat.fromEuler(this.quat, addon.pitch+90, addon.roll, addon.heading-90);
+        mat4.fromRotationTranslationScale(this.mMatrix,
+                                          this.quat,
+                                          this.translation,
+                                          this.vscale);
 
         mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
