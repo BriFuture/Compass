@@ -1,10 +1,13 @@
 ﻿/******************************
   filename: SpacePath.js
-  feature:  绘制 3D 动态图形
-  author:   brifuture
+  feature:  dynamic 3d animation
+  author:   BriFuture
   date:     2017.04.10
-  Last Update :  2018.01.03, seperate each object into different reign whose ratation
+  Last Update :  2018.01.20
+  Desc: seperate each object into different reigon whose ratation
         and transparation is controlled by itself.
+        By the use of gl-matrix and webgl-obj-loader, now the
+        program can draw many more complex things than before
 *******************************/
 
 .pragma library
@@ -12,11 +15,7 @@
 Qt.include("gl-matrix-min.js");
 Qt.include("webgl-obj-loader.min.js");
 
-var canvasArgs; // 相关绘图变量
 
-/**
-  * UI initializing
-**/
 function initUI(argItem) {
     argItem.ball_radius = 4.0;
     argItem.cam_dis     = 18.0;
@@ -29,8 +28,6 @@ function initUI(argItem) {
     argItem.enable_path = false;
     argItem.calibration = false;
     argItem.enable_sim  = true;
-    canvasArgs = argItem;
-
     argItem.draw_mode = "surface";
 }
 
@@ -103,6 +100,7 @@ var pvMatrix  = mat4.create();
 var mvpMatrix = mat4.create();
 var nMatrix   = mat4.create();
 
+var canvasArgs; // 相关绘图变量
 var obj = {};
 var readFile;
 
@@ -121,6 +119,7 @@ function initializeGL(canvas, args) {
     gl.enable(gl.BLEND);   // enable blend for alpha
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    canvasArgs = args;
     initShaders(args);
 
     obj.coord       = new Coord();
@@ -132,7 +131,7 @@ function initializeGL(canvas, args) {
     obj.ball        = new Ball();
 
     for(var o in obj) {
-        obj[o].init(gl, canvasArgs);   // initializing all objects
+        obj[o].init(gl, args);   // initializing all objects
     }
 }
 
@@ -217,16 +216,16 @@ function paintGL(canvas, args) {
 
     canvasArgs = args;
     /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
-    canvasArgs.heading = canvasArgs.heading - canvasArgs.heading_offset;
+    args.heading = args.heading - args.heading_offset;
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
-    mat4.lookAt(vMatrix, [canvasArgs.cam_x, canvasArgs.cam_y, canvasArgs.cam_z], [0, 0, 0], [0, 0, 1]);
+    mat4.lookAt(vMatrix, [args.cam_x, args.cam_y, args.cam_z], [0, 0, 0], [0, 0, 1]);
     mat4.multiply(pvMatrix, pMatrix, vMatrix);
 
-    gl.uniform3fv(uniforms.light_direction, canvasArgs.light_direction);  // where light origins
+    gl.uniform3fv(uniforms.light_direction, args.light_direction);  // where light origins
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
     for(var o in obj) {
-        obj[o].paint(gl, canvasArgs);
+        obj[o].paint(gl, args);
     }
 }
 
@@ -294,7 +293,6 @@ function calcSensorNormal() {
     var heading = canvasArgs.heading;
     var u = (90-pitch)/180 * Math.PI;
     var v = heading   /180 * Math.PI;
-//    return [u, v, canvasArgs.vector_length];
     return vec3.fromValues(u, v, canvasArgs.vector_length)
 }
 
@@ -1213,6 +1211,9 @@ Craft.prototype = {
         gl.uniform1f(uniforms.alpha, this.alpha);
         this.vscale = vec3.fromValues(addon.craft_size * this.scale, addon.craft_size * this.scale, addon.craft_size * this.scale);
         mat4.fromScaling(this.mMatrix, this.vscale);
+        mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(90-addon.pitch) );
+        mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(addon.heading)  );
+
         mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
 

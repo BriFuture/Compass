@@ -47,6 +47,7 @@ Item {
 //            contentHeight: calcContentHeight(this)
             contentHeight: container.height
 
+
             Item {
                 id: cameraItem
                 width:  parent.width
@@ -56,7 +57,7 @@ Item {
                     id: cameraItem0
                     width: parent.width
                     height: calcHeight(this)
-        //            on
+
                     MySlider {
                         id: camTheta
                         anchors {
@@ -520,6 +521,15 @@ Item {
             Item {
                 id: colorPanel
                 visible: false
+
+            }
+
+            Item {
+                // this item is used for calculate the height of Flickable item
+                visible: false
+                Component.onCompleted: {
+                    view.contentHeight = calcHeight(view) + 30;
+                }
             }
 
             // Only show the scrollbars when the view is moving.
@@ -532,6 +542,7 @@ Item {
             transitions: Transition {
                 NumberAnimation { properties: "opacity"; duration: 1000 }
             }
+
         }
         ScrollBar {
             id: verticalScrollBar
@@ -764,7 +775,7 @@ Item {
                 console.log("[Info] windos state changed:  now hidden or minimized");
                 canvas3d.stop = true;
             } else {
-                console.log("[Info] windos state changed:  now visible");
+//                console.log("[Info] windos state changed:  now visible");
                 canvas3d.stop = false;
             }
         }
@@ -792,20 +803,5 @@ Item {
 
         return height + clength * controller.topmargin;
     }
-
-    function calcContentHeight(item) {
-        var height  = 0;
-        var clength = 0;
-        for(var i = 0; i < item.children.length; i++) {
-            if( item.children[i].visible ) {
-                height += item.children[i].height;
-                clength ++;
-                console.log("info" + clength)
-            }
-        }
-
-        return height + clength * controller.topmargin;
-    }
-
 
 }
