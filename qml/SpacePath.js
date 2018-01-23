@@ -102,7 +102,40 @@ var nMatrix   = mat4.create();
 
 var canvasArgs; // 相关绘图变量
 var obj = {};
-var readFile;
+
+/**
+* this function is copied from planets demo of qt version of threejs
+* I modified some of it, now it works fine for me
+**/
+function xmlRequest(url, onLoad, onProgress, onError) {
+    var request = new XMLHttpRequest();
+
+    request.onreadystatechange = function() {
+        if (request.readyState === XMLHttpRequest.DONE) {
+        // TODO: Re-visit https://bugreports.qt.io/browse/QTBUG-45581 is solved in Qt
+            if (request.status == 200 || request.status == 0) {
+                var response;
+                // TODO: Remove once https://bugreports.qt.io/browse/QTBUG-45862 is fixed in Qt
+                response = request.responseText;
+
+                console.time('Read file: "' + url + '"');
+                onLoad( response );
+                console.timeEnd('Read file: "' + url + '"');
+
+            } else if ( onError !== undefined ) {
+                onError();
+            }
+        } else if (request.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
+            if ( onProgress !== undefined ) {
+                onProgress();
+            }
+        }
+    };
+
+    request.open( 'GET', url, false );
+    request.send( null );
+}
+var readFile = xmlRequest;
 
 function initializeGL(canvas, args) {
     gl  = canvas.getContext("canvas3d",
@@ -146,25 +179,20 @@ function resizeGL(canvas) {
     canvas.pixelSize = Qt.size(canvas.width * pixelRatio, canvas.height * pixelRatio);
 }
 
-function readFromFile(process, file) {
-//    fileQueue.push(file);
-    readFunc( function(text) {
-        process(text);
-    }, file);
-}
-
 function initShaders() {
     var vertexShader ;
 
-    readFile( function(vertexCode) {
+    readFile("qrc:/qml/SPVertexCode.vsh" , function(vertexCode) {
+//        readFile(":/qml/SPVertexCode.vsh" , function(vertexCode) {
         vertexShader = getShader(gl, vertexCode, gl.VERTEX_SHADER);
-    }, ":/qml/SPVertexCode.vsh" );
+    });
 
     var fragShader;
 
-    readFile( function(fragCode) {
+    readFile("qrc:/qml/SPFragCode.fsh", function(fragCode) {
+//        readFile(":/qml/SPFragCode.fsh", function(fragCode) {
         fragShader = getShader(gl, fragCode, gl.FRAGMENT_SHADER);
-    }, ":/qml/SPFragCode.fsh" );
+    } );
 
     while(vertexShader === undefined || fragShader === undefined) {
         ;
@@ -1147,7 +1175,8 @@ function Craft(props) {
     PaintObj.call(this, {});
 
     this.type    = "Craft";
-    this.url     = ":/obj/craft.obj";
+    this.url     = "qrc:/obj/craft.obj";
+//    this.url     = ":/obj/craft.obj";
     this.scale   = 0.05;
 }
 
@@ -1155,16 +1184,13 @@ Craft.prototype = {
     constructor: Craft,
 
     init : function(gl, addon) {
-        while( readFile === undefined ) {
-            ;
-        }
         var mesh;
 
-        readFile( function(text) {
+        readFile(this.url, function(text) {
             mesh = new OBJ.Mesh(text);
             OBJ.initMeshBuffers(gl, mesh);
 
-        }, this.url );
+        } );
 
         this.mesh = mesh;
         return this;

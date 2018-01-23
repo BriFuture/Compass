@@ -1,7 +1,6 @@
 ﻿import QtQuick 2.0
 import QtCanvas3D 1.1
 import QtQuick.Controls 1.4
-import dis.filecontent 1.0
 
 import "SpacePath.js" as GLcode
 
@@ -677,29 +676,29 @@ Item {
         }
     }
 
-    FileContentItem {
-        id: content
-        filename: ":/obj/craft.obj"   // default is craft.obj
-        property bool ready: false
-        Component.onCompleted: {
-            ready = true;
-            GLcode.readFile = processContent;
-        }
+//    FileContentItem {
+//        id: content
+//        filename: ":/obj/craft.obj"   // default is craft.obj
+//        property bool ready: false
+//        Component.onCompleted: {
+//            ready = true;
+//            GLcode.readFile = processContent;
+//        }
 
-        function processContent(process, source) {
-            while( !ready ) {
-                ;
-            }
+//        function processContent(source, process) {
+//            while( !ready ) {
+//                ;
+//            }
 
-            if( source !== undefined ) {
-                filename = source;
-            }
-            console.time('Read file: "' + source + '"');
-            process(getContent());
-            console.timeEnd('Read file: "' + source + '"');
-            clearContent();  // save memory
-        }
-    }
+//            if( source !== undefined ) {
+//                filename = source;
+//            }
+//            console.time('Read file: "' + source + '"');
+//            process(getContent());
+//            console.timeEnd('Read file: "' + source + '"');
+//            clearContent();  // save memory
+//        }
+//    }
 
     /**
       * this item is just used for reserved variables
@@ -721,7 +720,6 @@ Item {
         property alias  circle_size:  circleSize.value
         property alias  calibration:  calibrationBox.checked
         property alias  enable_path:  pathEnableBox.checked
-        property alias  content:      content
         property alias  craft_size:   craftSize.value
         property alias  enable_sim:   simBox.checked
 

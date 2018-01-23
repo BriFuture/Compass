@@ -4,8 +4,7 @@ QT += qml quick core gui
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    data.cpp \
-    filecontent.cpp
+    data.cpp
 
 RESOURCES += qml.qrc
 
@@ -30,7 +29,6 @@ DISTFILES += \
     qml/SPFragCode.fsh
 
 HEADERS += \
-    data.h \
-    filecontent.h
+    data.h
 
 RC_FILE = icon.rc
