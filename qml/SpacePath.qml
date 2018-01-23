@@ -461,7 +461,7 @@ Item {
                     }
                     onClicked: {
                         console.log("[Info] Reset all path.")
-                        GLcode.resetAllPath();
+                        GLcode.resetAllPath(argItem);
                     }
                 }
 
@@ -676,30 +676,6 @@ Item {
         }
     }
 
-//    FileContentItem {
-//        id: content
-//        filename: ":/obj/craft.obj"   // default is craft.obj
-//        property bool ready: false
-//        Component.onCompleted: {
-//            ready = true;
-//            GLcode.readFile = processContent;
-//        }
-
-//        function processContent(source, process) {
-//            while( !ready ) {
-//                ;
-//            }
-
-//            if( source !== undefined ) {
-//                filename = source;
-//            }
-//            console.time('Read file: "' + source + '"');
-//            process(getContent());
-//            console.timeEnd('Read file: "' + source + '"');
-//            clearContent();  // save memory
-//        }
-//    }
-
     /**
       * this item is just used for reserved variables
     **/
@@ -810,7 +786,7 @@ Item {
 
     // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
-        GLcode.record();
+        GLcode.record(argItem);
     }
 
     /**

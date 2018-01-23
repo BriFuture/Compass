@@ -16,57 +16,57 @@ Qt.include("gl-matrix-min.js");
 Qt.include("webgl-obj-loader.min.js");
 
 
-function initUI(argItem) {
-    argItem.ball_radius = 4.0;
-    argItem.cam_dis     = 18.0;
-    argItem.cam_theta   = 70;
-    argItem.cam_beta    = 50;
-    argItem.path_gap    = 1;
-    argItem.point_size  = 0.3;
-    argItem.path_width  = 3;
-    argItem.ball_alpha  = 0.65;
-    argItem.enable_path = false;
-    argItem.calibration = false;
-    argItem.enable_sim  = true;
-    argItem.draw_mode = "surface";
+function initUI(args) {
+    args.ball_radius = 4.0;
+    args.cam_dis     = 18.0;
+    args.cam_theta   = 70;
+    args.cam_beta    = 50;
+    args.path_gap    = 1;
+    args.point_size  = 0.3;
+    args.path_width  = 3;
+    args.ball_alpha  = 0.65;
+    args.enable_path = false;
+    args.calibration = false;
+    args.enable_sim  = true;
+    args.draw_mode = "surface";
 }
 
 // some problem occurred when cam_x or cam_y equals to zero
-function rotateCamera(argItem) {
-    var pos = calcVertex(degToRad(argItem.cam_theta), degToRad(argItem.cam_beta), argItem.cam_dis);
-    argItem.cam_x = pos[0];
-    argItem.cam_y = pos[1];
-    argItem.cam_z = pos[2];
+function rotateCamera(args) {
+    var pos = calcVertex(degToRad(args.cam_theta), degToRad(args.cam_beta), args.cam_dis);
+    args.cam_x = pos[0];
+    args.cam_y = pos[1];
+    args.cam_z = pos[2];
 }
 
-function mouseDraged(argItem, ml, container) {
+function mouseDraged(args, ml, container) {
     var xoffset = (ml.mouseX - ml.lpx)*2 / container.width;
     var yoffset = (ml.mouseY - ml.lpy)*2 / container.height;
-    var beta = 540 + argItem.cam_beta - xoffset*360; // - indicates that drag direction is oppsite with movement
-    argItem.cam_beta   = beta % 360 - 180;
-    argItem.cam_theta -= yoffset*180;
-    if( argItem.cam_theta.toFixed(2) === "0.00" ) {
-        argItem.cam_theta = 0.01;
+    var beta = 540 + args.cam_beta - xoffset*360; // - indicates that drag direction is oppsite with movement
+    args.cam_beta   = beta % 360 - 180;
+    args.cam_theta -= yoffset*180;
+    if( args.cam_theta.toFixed(2) === "0.00" ) {
+        args.cam_theta = 0.01;
     }
-    if( argItem.cam_theta.toFixed(2) === "180.00" ) {
-        argItem.cam_theta = 179.99
+    if( args.cam_theta.toFixed(2) === "180.00" ) {
+        args.cam_theta = 179.99
     }
-    rotateCamera(argItem);
+    rotateCamera(args);
 }
 
-function reset(argItem) {
-    argItem.heading_offset = argItem.heading;
-    var angle = calcAngle(argItem.pitch, 0);
+function reset(args) {
+    args.heading_offset = args.heading;
+    var angle = calcAngle(args.pitch, 0);
     var u = angle[0], v = angle[1];
-    resetAllPath();
+    resetAllPath(args);
 }
 
-function resetAllPath() {
-    obj.sensorPath.resetAllPath();
+function resetAllPath(args) {
+    obj.sensorPath.resetAllPath(args);
 }
 
-function record() {
-    obj.recordPoint.record(canvasArgs);
+function record(args) {
+    obj.recordPoint.record(args);
 }
 
 function resetRecord() {
@@ -107,35 +107,36 @@ var obj = {};
 * this function is copied from planets demo of qt version of threejs
 * I modified some of it, now it works fine for me
 **/
-function xmlRequest(url, onLoad, onProgress, onError) {
+function readFile(url, onLoad, onProgress, onError) {
     var request = new XMLHttpRequest();
 
     request.onreadystatechange = function() {
         if (request.readyState === XMLHttpRequest.DONE) {
         // TODO: Re-visit https://bugreports.qt.io/browse/QTBUG-45581 is solved in Qt
             if (request.status == 200 || request.status == 0) {
-                var response;
-                // TODO: Remove once https://bugreports.qt.io/browse/QTBUG-45862 is fixed in Qt
-                response = request.responseText;
+//                var response;
+// TODO: Remove once https://bugreports.qt.io/browse/QTBUG-45862 is fixed in Qt
+//                response = request.responseText;
 
-                console.time('Read file: "' + url + '"');
-                onLoad( response );
-                console.timeEnd('Read file: "' + url + '"');
+                console.time('Process file: "' + url + '"');
+                onLoad( request.responseText );
+                console.timeEnd('Process file: "' + url + '"');
 
-            } else if ( onError !== undefined ) {
-                onError();
             }
-        } else if (request.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
-            if ( onProgress !== undefined ) {
-                onProgress();
-            }
+//              else if ( onError !== undefined ) {
+//                onError();
+//            }
         }
+//        else if (request.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
+//            if ( onProgress !== undefined ) {
+//                onProgress();
+//            }
+//        }
     };
 
-    request.open( 'GET', url, false );
+    request.open( 'GET', url, true );
     request.send( null );
 }
-var readFile = xmlRequest;
 
 function initializeGL(canvas, args) {
     gl  = canvas.getContext("canvas3d",
@@ -152,7 +153,6 @@ function initializeGL(canvas, args) {
     gl.enable(gl.BLEND);   // enable blend for alpha
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    canvasArgs = args;
     initShaders(args);
 
     obj.coord       = new Coord();
@@ -179,28 +179,36 @@ function resizeGL(canvas) {
     canvas.pixelSize = Qt.size(canvas.width * pixelRatio, canvas.height * pixelRatio);
 }
 
+var ready = false;
 function initShaders() {
-    var vertexShader ;
+    var shaderProgram = gl.createProgram();
+    var vertexShader;
 
-    readFile("qrc:/qml/SPVertexCode.vsh" , function(vertexCode) {
-//        readFile(":/qml/SPVertexCode.vsh" , function(vertexCode) {
+    readFile( "qrc:/qml/SPVertexCode.vsh", function(vertexCode) {
         vertexShader = getShader(gl, vertexCode, gl.VERTEX_SHADER);
-    });
+        gl.attachShader(shaderProgram, vertexShader);
+        ready = ( fragShader !== undefined );
+        if( ready ) {
+            console.log("1")
+            onShaderReady(shaderProgram);
+        }
+    } );
 
     var fragShader;
 
-    readFile("qrc:/qml/SPFragCode.fsh", function(fragCode) {
-//        readFile(":/qml/SPFragCode.fsh", function(fragCode) {
+    readFile( "qrc:/qml/SPFragCode.fsh", function(fragCode) {
         fragShader = getShader(gl, fragCode, gl.FRAGMENT_SHADER);
+        gl.attachShader(shaderProgram, fragShader);
+        ready = ( vertexShader !== undefined );
+        if( ready ) {
+            console.log("2")
+            onShaderReady(shaderProgram);
+        }
     } );
 
-    while(vertexShader === undefined || fragShader === undefined) {
-        ;
-    }
+}
 
-    var shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragShader);
+function onShaderReady(shaderProgram) {
     gl.linkProgram(shaderProgram);
     gl.useProgram(shaderProgram);
 
@@ -217,7 +225,7 @@ function initShaders() {
 
     uniforms.pmv_matrix      = gl.getUniformLocation(shaderProgram, "uPMVMatrix"); // 透视模型视图矩阵
     uniforms.m_matrix        = gl.getUniformLocation(shaderProgram, "uMMatrix")
-//    uniforms.normal_matrix = gl.getUniformLocation(shaderProgram, "uNormalMatrix"); // 法线
+//    uniforms.normal_matrix   = gl.getUniformLocation(shaderProgram, "uNormalMatrix"); // 法线
     uniforms.light_direction = gl.getUniformLocation(shaderProgram, "uLightDirection"); // 光照
     uniforms.alpha           = gl.getUniformLocation(shaderProgram, "uAlpha");
     uniforms.frag_color      = gl.getUniformLocation(shaderProgram, "uFragColor");
@@ -247,14 +255,13 @@ function paintGL(canvas, args) {
         gl.viewport(0, 0, width, height);
         mat4.perspective(pMatrix, 45 / 180 * Math.PI, width / height, 0.5, 500.0);
     }
+    mat4.lookAt(vMatrix, [args.cam_x, args.cam_y, args.cam_z], [0, 0, 0], [0, 0, 1]);
+    mat4.multiply(pvMatrix, pMatrix, vMatrix);
 
-    canvasArgs = args;
     /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
     args.heading = args.heading - args.heading_offset;
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
-    mat4.lookAt(vMatrix, [args.cam_x, args.cam_y, args.cam_z], [0, 0, 0], [0, 0, 1]);
-    mat4.multiply(pvMatrix, pMatrix, vMatrix);
 
     gl.uniform3fv(uniforms.light_direction, args.light_direction);  // where light origins
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
@@ -322,12 +329,12 @@ function calcAngle(pitch, heading) {
 * @param {Number} heading range [0, 360]
 * @returns {Vec3} the angle returned is in unit of rad  vec[0] and vec[1] is in unit of RAD
 */
-function calcSensorNormal() {
-    var pitch   = canvasArgs.pitch;
-    var heading = canvasArgs.heading;
+function calcSensorNormal(args) {
+    var pitch   = args.pitch;
+    var heading = args.heading;
     var u = (90-pitch)/180 * Math.PI;
     var v = heading   /180 * Math.PI;
-    return vec3.fromValues(u, v, canvasArgs.vector_length)
+    return vec3.fromValues(u, v, args.vector_length)
 }
 
 
@@ -488,7 +495,7 @@ SensorPoint.prototype = {
      * @param {Object}  addon
      */
     paint : function(gl, addon) {
-        var angle = calcSensorNormal();  // vertical of angle
+        var angle = calcSensorNormal(addon);  // vertical of angle
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
         gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
@@ -550,8 +557,8 @@ function SensorPath() {
 SensorPath.prototype = {
     constructor: SensorPath,
 
-    init : function(gl) {
-        this.last_point = calcSensorNormal();
+    init : function(gl, addon) {
+        this.last_point = calcSensorNormal(addon);
         this.angle      = this.last_point;
         this.path       = [];
         this.index      = [];
@@ -569,7 +576,7 @@ SensorPath.prototype = {
             return;
         }
         var lpos  = vectorPos(this.last_point);
-        var angle = calcSensorNormal();  // vertical of angle
+        var angle = calcSensorNormal(addon);  // vertical of angle
         var  pos  = vectorPos(angle);
         var dist  = vec3.dist(lpos, pos);
 
@@ -635,10 +642,6 @@ SensorPath.prototype = {
         this.all_path_count  += presult.point.length;
         this.all_index_count += presult.index.length;
 
-    //        this.path.push.apply(this.path,   presult.point);
-    //        this.index.push.apply(this.index, presult.index);
-        //  updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  0,  new Float32Array(this.path));
-        //  updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], 0,  new Uint16Array(this.index));
         updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color[this.cur_pi], this.cur_path_count  * 4, new Float32Array(presult.color));
         updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  this.cur_path_count  * 4, new Float32Array(presult.point));
         updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], this.cur_index_count * 2, new Uint16Array(presult.index));
@@ -713,7 +716,7 @@ SensorPath.prototype = {
         this.pg              = 0;
     },
 
-    resetAllPath : function() {
+    resetAllPath : function(args) {
         this.cur_pi = 0;
         // 删掉无用的buffer，节省内存
         for (var i = 0; i <= this.cur_pi; i++) {
@@ -724,7 +727,7 @@ SensorPath.prototype = {
         this.all_path_count  = 0;
         this.all_index_count = 0;
         this.createBuffer();
-        this.last_point = calcSensorNormal();
+        this.last_point = calcSensorNormal(args);
         this.resetCurrentPath();
     },
 
@@ -1176,7 +1179,6 @@ function Craft(props) {
 
     this.type    = "Craft";
     this.url     = "qrc:/obj/craft.obj";
-//    this.url     = ":/obj/craft.obj";
     this.scale   = 0.05;
 }
 
@@ -1184,15 +1186,12 @@ Craft.prototype = {
     constructor: Craft,
 
     init : function(gl, addon) {
-        var mesh;
-
-        readFile(this.url, function(text) {
-            mesh = new OBJ.Mesh(text);
-            OBJ.initMeshBuffers(gl, mesh);
-
+        var that = this;
+        readFile( this.url, function(text) {
+            that.mesh = new OBJ.Mesh(text);
+            OBJ.initMeshBuffers(gl, that.mesh);
         } );
 
-        this.mesh = mesh;
         return this;
     },
 
