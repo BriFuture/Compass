@@ -1,7 +1,6 @@
 ﻿#include "data.h"
 #include <QPixmap>
 #include <QQmlApplicationEngine>
-#include <time.h>
 #include <QDebug>
 #include <QFile>
 #include <QTextStream>
@@ -11,22 +10,16 @@ Data::Data() {
     heading = 0;
     pitch = 0;
     roll = 0;
-    qDebug() << "[Info] Start to Show!" << endl;
-    srand((unsigned) time(NULL));
+    qDebug() << "[Info] Start to Show!";
     QTimer *timer = new QTimer(this);
     timer->setSingleShot(true);
     connect(timer, SIGNAL(timeout()), this, SLOT(show()));
     timer->start(100);
 
-    // set data timer
-    QTimer *dataTimer = new QTimer(this);
-    connect(dataTimer, SIGNAL(timeout()), this, SLOT(getData()));
-    dataTimer->setInterval(500);
-//    dataTimer->start(1000);
 }
 
 Data::~Data() {
-    delete compassview;
+    compassview->deleteLater();
 }
 
 void Data::show() {
@@ -59,7 +52,7 @@ void Data::show() {
 void Data::view() {
     compassview = new QQuickView;
     compassview->rootContext()->setContextProperty("dataSource", this);
-    compassview->rootContext()->setContextProperty("windowContainer", compassview);
+    compassview->rootContext()->setContextProperty("window", compassview);
     compassview->setSource(QUrl(QStringLiteral("qrc:/qml/Compass.qml")));
     // 设置窗口图标
     QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));

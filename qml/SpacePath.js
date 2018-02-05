@@ -155,6 +155,7 @@ function initializeGL(canvas, args) {
 
     initShaders(args);
 
+
     obj.coord       = new Coord();
     obj.craft       = new Craft();
     obj.sensorPoint = new SensorPoint({
@@ -189,7 +190,6 @@ function initShaders() {
         gl.attachShader(shaderProgram, vertexShader);
         ready = ( fragShader !== undefined );
         if( ready ) {
-            console.log("1")
             onShaderReady(shaderProgram);
         }
     } );
@@ -201,7 +201,6 @@ function initShaders() {
         gl.attachShader(shaderProgram, fragShader);
         ready = ( vertexShader !== undefined );
         if( ready ) {
-            console.log("2")
             onShaderReady(shaderProgram);
         }
     } );
@@ -221,6 +220,8 @@ function onShaderReady(shaderProgram) {
     attributes.color = gl.getAttribLocation(shaderProgram, "aColor");
     gl.enableVertexAttribArray(attributes.color);
 
+    attributes.texture = gl.getAttribLocation( shaderProgram, "aTexture" );
+
     attributes.color           = gl.getAttribLocation(shaderProgram, "aColor");
 
     uniforms.pmv_matrix      = gl.getUniformLocation(shaderProgram, "uPMVMatrix"); // 透视模型视图矩阵
@@ -229,6 +230,7 @@ function onShaderReady(shaderProgram) {
     uniforms.light_direction = gl.getUniformLocation(shaderProgram, "uLightDirection"); // 光照
     uniforms.alpha           = gl.getUniformLocation(shaderProgram, "uAlpha");
     uniforms.frag_color      = gl.getUniformLocation(shaderProgram, "uFragColor");
+    uniforms.has_texture     = gl.getUniformLocation( shaderProgram, "uHasTexture" );
 }
 
 /**
@@ -457,8 +459,7 @@ SensorPoint.prototype = {
 
     init : function(gl) {
         var color   = [];
-//        this.vertex = calcCircle(this.sides, this.size, this.dis);
-        this.vertex = calcCircle(this.sides, this.size, 0);
+        var vertex = calcCircle(this.sides, this.size, 0);
 
         var i = 0;
         for(i = 0; i <= this.sides; i++) {
@@ -484,9 +485,10 @@ SensorPoint.prototype = {
 
         this.index_count = index.length;
 
-        this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         this.vertex,               gl.STATIC_DRAW);
+        this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         vertex,                    gl.STATIC_DRAW);
         this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),   gl.STATIC_DRAW);
         this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),    gl.STATIC_DRAW);
+
     },
 
     /**
@@ -1019,17 +1021,10 @@ RefCircle.prototype = {
             return;
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.color);
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.normal);
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
-        gl.uniform1f(uniforms.alpha, this.alpha);
-        var i;
 
-        if( this.dis !== addon.ball_radius ) {
+
+        var i;
+        if( Math.abs( this.dis - addon.ball_radius ) > epsilon ) {
             this.dis   = addon.ball_radius;
             for(i = 0; i < this.circle_num; i++) {
                 this.translation[i] = calcVertex(this.circles[i][0], this.circles[i][1], this.dis);
@@ -1040,6 +1035,16 @@ RefCircle.prototype = {
 //            this.circle_size = addon.circle_size;
 //            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
 //        }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.color);
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.normal);
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
+        gl.uniform1f(uniforms.alpha, this.alpha);
+
         vec3.set(this.vscale, addon.circle_size, addon.circle_size, addon.circle_size);
 
         for(i = 0; i < this.circle_num; i++) {
@@ -1069,7 +1074,7 @@ RefCircle.prototype = {
             for (j = 0; j < that.sides; j++) {
                 // generate vertices on plane XOY
                 k = calcVertex(degToRad(90), degToRad(j*360/that.sides), that.circle_size);
-                tmpver.push.apply(tmpver, k);
+                tmpver.push( k[0], k[1], k[2] );
                 color = color.concat(e[2]);
                 normal= normal.concat([0.75, 0.75, 0.75]);  // make sure that all circles are visible bright
             }
@@ -1201,24 +1206,28 @@ Craft.prototype = {
             return;
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.vertexBuffer);
+        gl.uniform1f(  uniforms.alpha, this.alpha );
+        gl.uniform3fv( uniforms.frag_color, [0.8, 0.3, 0.6] );
+        gl.uniform1i(  uniforms.has_texture, true );
+
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.mesh.vertexBuffer );
         gl.vertexAttribPointer(attributes.vertex_position, this.mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
 //        if(!this.mesh.textures.length){
-//          gl.disableVertexAttribArray(attributes.textureCoordAttribute);
+//            gl.disableVertexAttribArray(attributes.textureCoordAttribute);
 //        }
 //        else{
-//          // if the texture vertexAttribArray has been previously
-//          // disabled, then it needs to be re-enabled
-//          gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
-//          gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
-//          gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+//            // if the texture vertexAttribArray has been previously
+//            // disabled, then it needs to be re-enabled
+//            gl.enableVertexAttribArray( attributes.texture );
+//            gl.bindBuffer( gl.ARRAY_BUFFER, this.mesh.textureBuffer );
+//            console.log( "texture: " + this.mesh.textureBuffer.itemSize)
+//            gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
 //        }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
         gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.uniform1f(uniforms.alpha, this.alpha);
         vec3.set(this.vscale, addon.craft_size, addon.craft_size, addon.craft_size);
 //        mat4.fromScaling(this.mMatrix, this.vscale);
 //        mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(90-addon.pitch) );
@@ -1234,6 +1243,8 @@ Craft.prototype = {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.mesh.indexBuffer);
         gl.drawElements(gl.TRIANGLES, this.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+        gl.uniform1i( uniforms.has_texture, false );
     }
 }
 

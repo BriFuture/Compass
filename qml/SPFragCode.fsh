@@ -1,13 +1,20 @@
 varying vec3  vLight;
 varying vec2  vTexture;
 uniform float uAlpha;
-// uniform sampler2D uXSampler;
+uniform vec3 uFragColor;
+uniform bool uHasTexture;
+uniform sampler2D uSampler;
 // uniform sampler2D uYSampler;
 // uniform sampler2D uZSampler;
 // uniform int uEnableTexture;
-uniform vec4 uFragColor;
 void main(void) {
-  gl_FragColor = vec4(vLight, uAlpha);
+    if( uHasTexture ) {
+//        vec4 color = mix( uFragColor, texture2D( uSampler, vec2( vTexture.s, vTexture.t ) ), 0.5 );
+        gl_FragColor = vec4( uFragColor, uAlpha );
+    }
+    else {
+        gl_FragColor = vec4(vLight, uAlpha);
+    }
 //   mediump vec4 xtextureColor = texture2D(uXSampler, vec2(vXTexture.s, vXTexture.t));
 //   mediump vec4 ytextureColor = texture2D(uYSampler, vec2(vXTexture.s, vXTexture.t));
 //   mediump vec4 ztextureColor = texture2D(uZSampler, vec2(vXTexture.s, vXTexture.t));

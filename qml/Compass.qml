@@ -204,18 +204,10 @@ Item {
         }
     }
 
-    /*
-     * 设置一个定时器，每隔 100ms 就从数据源中读取数据，修正图像
-    */
-    Timer {
-        id: updateTimer
-        interval: 100
-        running: false
-        repeat: true
-
-        onTriggered: {
-//            console.log("Timer is triggered! ")
-//            var data = DataSource.getData();
+    Connections {
+        target: dataSource
+        onDataChanged: {
+            console.log("dataSource heading changed:  " + dataSource.getHeading());
             var data = [0, 0, 0];
             data[0] = dataSource.getHeading();
             data[1] = dataSource.getPitch();
@@ -226,11 +218,15 @@ Item {
             refresh(data[0], data[1], data[2]);
         }
     }
+
     Connections {
-        target: windowContainer
-        onVisibleChanged : {
-//            console.log(windowContainer.visible);
-            updateTimer.running = windowContainer.visible;
+        target: window
+        onWindowStateChanged: {
+            if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
+                // it can decrease resource consuming when not minimized or hidden
+                console.log("[Info] windos state changed:  now hidden or minimized");
+            } else {
+            }
         }
     }
 
