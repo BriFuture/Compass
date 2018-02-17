@@ -1,84 +1,51 @@
 ﻿#include "data.h"
-#include <QPixmap>
 #include <QQmlApplicationEngine>
 #include <QDebug>
-#include <QFile>
-#include <QTextStream>
-#include <QTimer>
+#include <QSettings>
 
-Data::Data() {
+Data::Data(QWindow *parent) : QQuickView( parent ) {
     heading = 0;
     pitch = 0;
     roll = 0;
-    qDebug() << "[Info] Start to Show!";
-    QTimer *timer = new QTimer(this);
-    timer->setSingleShot(true);
-    connect(timer, SIGNAL(timeout()), this, SLOT(show()));
-    timer->start(100);
+    qDebug() << "[Info] Start to Show!" ;
 
-}
+    this->rootContext()->setContextProperty("dataSource", this);
+    this->rootContext()->setContextProperty("window", this);
+    QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
+    this->setIcon(icon);
+    // 设置窗口缩放时，根对象也会随之缩放
+    this->setResizeMode(QQuickView::SizeRootObjectToView);
+    this->setTitle("Compass heading pitch & roll");
 
-Data::~Data() {
-    compassview->deleteLater();
-}
-
-void Data::show() {
     // using a cfg file to change mode dynamically
-    QFile *file = new QFile("compass.cfg");
-    int mode = 0;
-    if( !file->exists() ) {
-        file->open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream out(file);
-        out << mode << endl;
-//        file->write(modeArr.append(mode));
-    } else {
-        file->open(QIODevice::ReadOnly | QIODevice::Text);
-        QTextStream in(file);
-        mode = in.readLine().toInt();
-    }
+    QSettings setting( "compass.ini", QSettings::IniFormat, this );
+    int mode = setting.value( "mode", 0 ).toInt();
 
+    QUrl source;
     switch (mode) {
     case 1:
-        this->view();
+        source = QUrl( "qrc:/qml/Compass.qml" );
         break;
     case 0:
     default:
-        this->view3D();
+        source = QUrl( "qrc:/qml/SpacePath.qml" );
         break;
     }
+    this->setSource( source );
 }
 
-
-void Data::view() {
-    compassview = new QQuickView;
-    compassview->rootContext()->setContextProperty("dataSource", this);
-    compassview->rootContext()->setContextProperty("window", compassview);
-    compassview->setSource(QUrl(QStringLiteral("qrc:/qml/Compass.qml")));
-    // 设置窗口图标
-    QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
-    compassview->setIcon(icon);
-    // 设置窗口缩放时，根对象也会随之缩放
-    compassview->setResizeMode(QQuickView::SizeRootObjectToView);
-    compassview->setTitle("Compass heading pitch & roll");
-    compassview->show();
+Data::~Data() {
 }
 
-void Data::view3D() {
-    compassview = new QQuickView;
-    compassview->rootContext()->setContextProperty("dataSource", this);
-    compassview->rootContext()->setContextProperty("window", compassview);
-//    compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePathHUD.qml")));
-    compassview->setSource(QUrl(QStringLiteral("qrc:/qml/SpacePath.qml")));
-    // 设置窗口图标
-    QIcon icon = QIcon(QStringLiteral(":/img/compass.ico"));
-    compassview->setIcon(icon);
-//    compassview->set
-    // 设置窗口缩放时，根对象也会随之缩放
-    compassview->setResizeMode(QQuickView::SizeRootObjectToView);
-    compassview->setTitle("Space State");
-    compassview->show();
+bool Data::event(QEvent *event) {
+    if( event->type() == QEvent::Close ) {
+        // on my deepin system, the program always quit with segment fault
+        // so it is used to tell Qt to delete itself without error
+        this->deleteLater();
+        return false;
+    }
+    return QQuickView::event( event );
 }
-
 
 double Data::getHeading() {
     return heading;

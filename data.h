@@ -3,21 +3,15 @@
 
 #include <QObject>
 #include <QQuickView>
-#include <QQuickItem>
 #include <QQmlContext>
-#include <QDebug>
-#include <QIcon>
 
-class Data : public QObject{
+class Data : public QQuickView{
     Q_OBJECT
 
-private:
-    QQuickView *compassview;
 public:
-    Data();
+    Data(QWindow *parent = Q_NULLPTR);
     ~Data();
-    void view();
-    void view3D();
+    bool event(QEvent *event);
 
 private:
     double heading;
@@ -28,7 +22,6 @@ signals:
     void dataChanged();
 
 public slots:
-    void show();
     double getHeading();
     double getPitch();
     double getRoll();

@@ -25,8 +25,8 @@ function initUI(args) {
     args.point_size  = 0.3;
     args.path_width  = 3;
     args.ball_alpha  = 0.65;
-    args.enable_path = false;
-    args.calibration = false;
+    args.enable_path = true;
+    args.calibration = true;
     args.enable_sim  = true;
     args.draw_mode = "surface";
 }
@@ -170,9 +170,6 @@ function initializeGL(canvas, args) {
                                    hn: 48
                                });
 
-    for(var o in obj) {
-        obj[o].init(gl, args);   // initializing all objects
-    }
 }
 
 function resizeGL(canvas) {
@@ -238,10 +235,20 @@ function onShaderReady(shaderProgram) {
  * @param {*} data  数组或 long 型整数
  * @param {*} drawtype  STATIC or DYNAMIC
  */
-function createArrayBuffer(type, data, drawtype) {
+function createArrayBuffer(data, drawtype, type) {
     var buffer = gl.createBuffer();
-    gl.bindBuffer(type, buffer);
-    gl.bufferData(type, data, drawtype);
+
+    if( type === undefined ) {
+        type = gl.ELEMENT_ARRAY_BUFFER;
+
+        if( data instanceof Float32Array ) {
+            type = gl.ARRAY_BUFFER;
+        }
+    }
+
+    gl.bindBuffer( type, buffer );
+    gl.bufferData( type, data, drawtype );
+    gl.bindBuffer( type, null );
     return buffer;
 }
 
@@ -268,7 +275,7 @@ function paintGL(canvas, args) {
     gl.uniform3fv(uniforms.light_direction, args.light_direction);  // where light origins
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
     for(var o in obj) {
-        obj[o].paint(gl, args);
+        obj[o].paint( args );
     }
 }
 
@@ -331,7 +338,7 @@ function calcAngle(pitch, heading) {
 * @param {Number} heading range [0, 360]
 * @returns {Vec3} the angle returned is in unit of rad  vec[0] and vec[1] is in unit of RAD
 */
-function calcSensorNormal(args) {
+function calcSensorNormal( args ) {
     var pitch   = args.pitch;
     var heading = args.heading;
     var u = (90-pitch)/180 * Math.PI;
@@ -415,12 +422,15 @@ function calcCircle(sides, dis, z, ninv) {
     return new Float32Array(vertex);
 }
 
-/**
-*  @param offset {Number}  the bytes of the offset
-*/
-function updateSubBuffer(type, buffer, offset, data) {
-    gl.bindBuffer(type, buffer);
-    gl.bufferSubData(type, offset, data);
+
+function subBuffer(buffer, offset, data) {
+    var type = gl.ELEMENT_ARRAY_BUFFER;
+    if( data instanceof Float32Array ) {
+        type = gl.ARRAY_BUFFER;
+    }
+
+    gl.bindBuffer( type, buffer );
+    gl.bufferSubData( type, offset, data );
 }
 
 var epsilon = 0.01;
@@ -437,6 +447,13 @@ function PaintObj(props) {
     this.vscale  = vec3.fromValues(1.0, 1.0, 1.0);   // vec3.create equals to fromValues(0.0, 0.0, 0.0)
     this.translation = vec3.create();
 
+    this.x = 0;
+    this.y = 0;
+    this.z = 0;
+    this.rotateX = 0;
+    this.rotateY = 0;
+    this.rotateZ = 0;
+
 }
 
 // **************** SensorPoint Object **************** //
@@ -452,12 +469,13 @@ function SensorPoint(props) {
     this.theta = 0;
     this.beta  = 0;
     this.dis   = 4;
+    this.init();
 }
 
 SensorPoint.prototype = {
     constructor: SensorPoint,
 
-    init : function(gl) {
+    init : function() {
         var color   = [];
         var vertex = calcCircle(this.sides, this.size, 0);
 
@@ -485,9 +503,9 @@ SensorPoint.prototype = {
 
         this.index_count = index.length;
 
-        this.buffers.vertex = createArrayBuffer(gl.ARRAY_BUFFER,         vertex,                    gl.STATIC_DRAW);
-        this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(color),   gl.STATIC_DRAW);
-        this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(index),    gl.STATIC_DRAW);
+        this.buffers.vertex = createArrayBuffer( vertex, gl.STATIC_DRAW );
+        this.buffers.color  = createArrayBuffer( new Float32Array(color), gl.STATIC_DRAW );
+        this.buffers.index  = createArrayBuffer( new Uint16Array(index),  gl.STATIC_DRAW);
 
     },
 
@@ -496,7 +514,7 @@ SensorPoint.prototype = {
      * @param {*}       gl
      * @param {Object}  addon
      */
-    paint : function(gl, addon) {
+    paint : function( addon ) {
         var angle = calcSensorNormal(addon);  // vertical of angle
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
@@ -514,6 +532,9 @@ SensorPoint.prototype = {
         }
 
         this.translation = vectorPos(angle);
+        this.x = this.translation[0];
+        this.y = this.translation[1];
+        this.z = this.translation[2];
 
         quat.fromEuler(this.quat, 0, -addon.pitch+90, addon.heading);
         mat4.fromRotationTranslationScale(this.mMatrix,
@@ -551,16 +572,18 @@ function SensorPath() {
     this.max_path_num    = 4800 * 12;
     this.buffer_path_bytes  = this.max_path_num * 4;  // 4 means the bytes float occupies, 3 means a point contains 3 coordinate
     this.buffer_index_bytes = this.max_path_num * 2;  // 2 means the bytes uint  occupies
-    this.path_gap        = 4;       // must equal or greater then 1
-    this.pg              = 1;       // path gap count
-    this.path_width      = 1.0;
+    this.gap        = 1;       // must equal or greater then 1
+    this.pg         = 1;       // path gap count
+    this.width      = 1.0;
+
+    this.init();
 }
 
 SensorPath.prototype = {
     constructor: SensorPath,
 
-    init : function(gl, addon) {
-        this.last_point = calcSensorNormal(addon);
+    init : function() {
+        this.last_point = calcSensorNormal( {pitch: 0, roll: 0, heading: 0, vector_length: 4} );
         this.angle      = this.last_point;
         this.path       = [];
         this.index      = [];
@@ -573,17 +596,21 @@ SensorPath.prototype = {
         this.createBuffer();
     },
 
-    paint : function(gl, addon) {
+    paint : function( addon ) {
         if(!addon.enable_path) {
             return;
         }
         var lpos  = vectorPos(this.last_point);
         var angle = calcSensorNormal(addon);  // vertical of angle
         var  pos  = vectorPos(angle);
-        var dist  = vec3.dist(lpos, pos);
+        var dist  = vec3.dist( lpos, pos );
 
-        if( this.path_width !== addon.path_width ) {
-            this.path_width   = addon.path_width || 1.0;
+        if( Math.abs( this.width - addon.path_width ) > epsilon ) {
+            this.width = addon.path_width;
+        }
+
+        if( Math.abs( this.gap - addon.path_gap ) > 0.2 ) {
+            this.gap = Math.floor( addon.path_gap );
         }
 
         // angle[2] is vector length
@@ -591,25 +618,20 @@ SensorPath.prototype = {
             this.updateBuffer(angle, this.angle);
             this.angle      = angle;
             this.last_point = angle;
-        } else {
-            var path_gap = Math.floor(addon.path_gap) || this.path_gap;
-            if( dist > Math.PI * angle[2] * 0.001 ) {
-                this.pg ++;
-                this.last_point = angle;
-            }
-            if( this.pg === path_gap ) {
+        } else if( dist > Math.PI * angle[2] * 0.001 ) {
+//            var path_gap = Math.floor(addon.path_gap) || this.path_gap;
+            this.pg ++;
+            this.last_point = angle;
+
+            if( this.pg === this.gap ) {
                 this.angle = angle;
             }
-            if( this.pg === path_gap+1 ) {
+            if( this.pg === this.gap+1 ) {
                 this.pg = 1;
                 this.updateBuffer(angle, this.angle);
                 this.angle = angle;
             }
         }
-    //    if( vec3.dist(lpos, pos) > Math.PI * addon.angle[2] * 0.001 ) {
-    //        this.updateBuffer(addon.angle, this.last_point);
-    //        this.last_point = addon.angle;
-    //    }
 
         gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
     //    mat4.identity(this.mMatrix);
@@ -622,7 +644,6 @@ SensorPath.prototype = {
             gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);    // normal info
             gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[i]);
             gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
             gl.drawElements(gl.TRIANGLES,     this.max_path_num, gl.UNSIGNED_SHORT, 0);
@@ -632,7 +653,6 @@ SensorPath.prototype = {
             gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);    // normal info
             gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);
             gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
             gl.drawElements(gl.TRIANGLES,     this.cur_index_count, gl.UNSIGNED_SHORT, 0);
@@ -644,9 +664,9 @@ SensorPath.prototype = {
         this.all_path_count  += presult.point.length;
         this.all_index_count += presult.index.length;
 
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color[this.cur_pi], this.cur_path_count  * 4, new Float32Array(presult.color));
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.path[this.cur_pi],  this.cur_path_count  * 4, new Float32Array(presult.point));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi], this.cur_index_count * 2, new Uint16Array(presult.index));
+        subBuffer( this.buffers.color[this.cur_pi], this.cur_path_count  * 4, new Float32Array(presult.color) );
+        subBuffer( this.buffers.path[this.cur_pi],  this.cur_path_count  * 4, new Float32Array(presult.point) );
+        subBuffer( this.buffers.index[this.cur_pi], this.cur_index_count * 2, new Uint16Array(presult.index) );
         // Note! because the updateSubBuffer() should use the offset as the parameter,
         // the addition of path or index count should be later, or the buffer will be out of its size
         this.cur_path_count  += presult.point.length;
@@ -677,7 +697,7 @@ SensorPath.prototype = {
         var l = vec3.create();
         vec3.cross(l, s, n0);
         vec3.normalize(l, l);
-        vec3.scale(l, l, this.path_width * 0.002);
+        vec3.scale(l, l, this.width * 0.002);
     //    console.log("vec l: " + vec3.str(l));
 
         var linearPoint = [];
@@ -734,9 +754,9 @@ SensorPath.prototype = {
     },
 
     createBuffer : function() {
-        this.buffers.color[this.cur_pi]   = createArrayBuffer(gl.ARRAY_BUFFER,         this.buffer_path_bytes,  gl.DYNAMIC_DRAW);
-        this.buffers.path[this.cur_pi]    = createArrayBuffer(gl.ARRAY_BUFFER,         this.buffer_path_bytes,  gl.DYNAMIC_DRAW);
-        this.buffers.index[this.cur_pi]   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffer_index_bytes, gl.DYNAMIC_DRAW);
+        this.buffers.color[this.cur_pi]   = createArrayBuffer( this.buffer_path_bytes,  gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
+        this.buffers.path[this.cur_pi]    = createArrayBuffer( this.buffer_path_bytes,  gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
+        this.buffers.index[this.cur_pi]   = createArrayBuffer( this.buffer_index_bytes, gl.DYNAMIC_DRAW, gl.ELEMENT_ARRAY_BUFFER );
     }
 }  // end of SensorPath prototype
 
@@ -747,41 +767,40 @@ function Ball(props) {
     this.type       = "Ball";
     this.vn         = props.vn || 48;
     this.hn         = (props.hn || 48) * 0.5;
-    this.ratio      = 0.25;  // default radius
-    this.radius     = 4;
+    this.ratio      = 0.25;
+    this.radius     = 4;    // default radius
     this.line_alpha = 0.55;
+    this.init();
 }
 
 Ball.prototype = {
     constructor: Ball,
-    init : function(gl) {
+    init : function() {
         var res = this.getVertex();
         this.getIndex();
 
         // vertex info，static_draw is enough for both vertex and index now
-        this.buffers.vertex          = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(res.vertex),          gl.STATIC_DRAW);
-        this.buffers.color           = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(res.color),           gl.STATIC_DRAW);        // color info for each vertex
-        this.buffers.vertex_index    = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.vertex_index),    gl.STATIC_DRAW);
-        this.buffers.line_index      = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.line_index),      gl.STATIC_DRAW);
-        this.buffers.less_line_index = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.less_line_index), gl.STATIC_DRAW);
-        this.buffers.less_ls_index   = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.less_ls_index),   gl.STATIC_DRAW);
+        this.buffers.vertex          = createArrayBuffer( new Float32Array( res.vertices ),  gl.STATIC_DRAW );
+        this.buffers.vertex_index    = createArrayBuffer( new Uint16Array( this.vertex_index ),    gl.STATIC_DRAW );
+        this.buffers.line_index      = createArrayBuffer( new Uint16Array( this.line_index ),      gl.STATIC_DRAW );
+        this.buffers.less_line_index = createArrayBuffer( new Uint16Array( this.less_line_index ), gl.STATIC_DRAW );
+        this.buffers.less_ls_index   = createArrayBuffer( new Uint16Array( this.less_ls_index ),   gl.STATIC_DRAW );
         // no need for normal vertex buffer anymore
         // this.vertex_normal_buffer   = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(this.vertex),    gl.STATIC_DRAW);
     },
 
 
-    paint : function(gl, addon) {
-        if( this.radius !== addon.ball_radius ) {
-            this.radius   = addon.ball_radius * this.ratio || 1;
+    paint : function( addon ) {
+        if( Math.abs( this.radius - addon.ball_radius ) > epsilon ) {
+            this.radius   = addon.ball_radius * this.ratio ;
             vec3.set(this.vscale, this.radius, this.radius, this.radius)
             mat4.fromScaling(this.mMatrix, this.vscale);
         }
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);     // color buffer
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);    // normal info
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);    // vertex info
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);     // color buffer
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.buffers.vertex );
+        gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 6 * 4, 0 );
+        gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 6 * 4, 0 );
+        gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 6 * 4, 3 * 4 );
 
         mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
@@ -814,15 +833,18 @@ Ball.prototype = {
      * @returns 返回所有类型的顶点个数
      */
     getVertex : function() {
-        var vertex = [];
-        var color  = [];
+//        var vertex = [];
+//        var color  = [];
+        var vertices = [];
         //    var vn = [];        // 顶点法向量数组，当球心在原点时，与顶点坐标相同
         var i, j, k;
 
         var that = this;
         var pushData = function(p) {
-            vertex.push.apply(vertex, p);
-            color.push.apply(color, that.color);
+//            vertex.push.apply(vertex, p);
+//            color.push.apply(color, that.color);
+            vertices.push.apply( vertices, p );
+            vertices.push.apply( vertices, that.color );
         }
 
         // i indicates vertical line while j indicates horizontal line,
@@ -835,11 +857,12 @@ Ball.prototype = {
             }
         }
         // add origin point into array
-        pushData([0, 0, 0]);
+        pushData( [0, 0, 0] );
 
         return {
-            "vertex": vertex,
-            "color" : color
+//            "vertex": vertex,
+//            "color" : color,
+            "vertices": vertices
         }
     },
 
@@ -915,56 +938,47 @@ function Coord() {
 
     this.type         = "Coord";
     this.coord_length = 10.0;
-    this.mMatrix = mat4.create();
-    this.buffers = {};
+    this.init();
 }
 
 Coord.prototype = {
     constructor: Coord,
 
-    init : function(gl) {
+    init : function() {
         var coordVertex = [ // x coord
             0.0, 0.0, 0.0,
+            0.9, 0.1, 0,
             this.coord_length, 0.0, 0.0,
+            0.9, 0.1, 0,
             // y coord
             0.0, 0.0, 0.0,
+            0, 0.9, 0,
             0.0, this.coord_length, 0.0,
+            0, 0.9, 0,
             // z coord
             0.0, 0.0, 0.0,
-            0.0, 0.0, this.coord_length
+            0, 0, 0.9,
+            0.0, 0.0, this.coord_length,
+            0, 0, 0.9
         ];
         var coordIndex = [0, 1, 2, 3, 4, 5];
-        // 坐标轴的颜色
-        var lineColorData = [
-            // x
-            0.9, 0.1, 0,
-            0.9, 0.1, 0,
-            // y
-            0, 0.9, 0,
-            0, 0.9, 0,
-            // z blue
-            0, 0, 0.9,
-            0, 0, 0.9,
-        ];
 
         // 顶点信息，索引只需要用static draw
-        this.buffers.coord  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(coordVertex),   gl.STATIC_DRAW);
-        this.buffers.index  = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coordIndex),     gl.STATIC_DRAW);
-        this.buffers.color  = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(lineColorData), gl.STATIC_DRAW);
+        this.buffers.vertex = createArrayBuffer( new Float32Array(coordVertex),   gl.STATIC_DRAW );
+//        this.buffers.color  = createArrayBuffer( new Float32Array(lineColorData), gl.STATIC_DRAW);
+        this.buffers.index  = createArrayBuffer( new Uint16Array(coordIndex),     gl.STATIC_DRAW);
     },
 
-    paint : function(gl) {
+    paint : function() {
         mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
 
         gl.uniform1f(uniforms.alpha, this.alpha);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // normal
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.coord);      // vertex
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);
+        gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 6 * 4, 0 );
+        gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 6 * 4, 0 );
+        gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 6 * 4, 3 * 4 );
         // 绘制坐标轴
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
         gl.drawElements(gl.LINES, 6, gl.UNSIGNED_SHORT, 0);
@@ -985,12 +999,13 @@ function RefCircle() {
 
     this.blue_color  = [0.0, 0.0, 1.0];
     this.green_color = [0.0, 1.0, 0.0];
+    this.init();
 }
 
 RefCircle.prototype = {
     constructor: RefCircle,
 
-    init : function(gl) {
+    init : function() {
         // generate circles angle
         var i, j;
         this.circles.push([degToRad(0*45), degToRad(0*45), this.green_color]);
@@ -1010,18 +1025,14 @@ RefCircle.prototype = {
         }
 
         var p = this.getPoints();
-        this.buffers.vertex     = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.vertex),    gl.STATIC_DRAW);
-        this.buffers.color      = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.color),     gl.STATIC_DRAW);
-        this.buffers.normal     = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(p.normal),    gl.STATIC_DRAW);
-        this.buffers.index      = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(p.index),      gl.STATIC_DRAW);
+        this.buffers.vertex = createArrayBuffer( new Float32Array( p.vertices ), gl.STATIC_DRAW );
+        this.buffers.index  = createArrayBuffer( new Uint16Array(p.index), gl.STATIC_DRAW );
     },
 
-    paint : function(gl, addon) {
+    paint : function( addon ) {
         if( !addon.calibration ) {
             return;
         }
-
-
 
         var i;
         if( Math.abs( this.dis - addon.ball_radius ) > epsilon ) {
@@ -1031,17 +1042,15 @@ RefCircle.prototype = {
             }
         }
 
-//        if( this.circle_size !== addon.circle_size) {   // Maybe Math.abs will perform better
-//            this.circle_size = addon.circle_size;
-//            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
-//        }
+        if( Math.abs( this.circle_size - addon.circle_size ) > epsilon ) {
+            this.circle_size = addon.circle_size;
+            this.vscale  = vec3.fromValues(addon.circle_size, addon.circle_size, addon.circle_size);
+        }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.color);
-        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.normal);
-        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex);
-        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);
+        gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 9 * 4, 0 );
+        gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 9 * 4, 3 * 4 );
+        gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 9 * 4, 6 * 4 );
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
         gl.uniform1f(uniforms.alpha, this.alpha);
 
@@ -1062,7 +1071,6 @@ RefCircle.prototype = {
     // 获取参考圆圈的顶点
     getPoints : function() {
         var vertex  = [];
-        var normal  = [];
         var color   = [];
         var index   = [];
         var i = 0, j = 0, n = 0;
@@ -1076,7 +1084,6 @@ RefCircle.prototype = {
                 k = calcVertex(degToRad(90), degToRad(j*360/that.sides), that.circle_size);
                 tmpver.push( k[0], k[1], k[2] );
                 color = color.concat(e[2]);
-                normal= normal.concat([0.75, 0.75, 0.75]);  // make sure that all circles are visible bright
             }
             rotateVertex(tmpver, e[0], e[1]);
             vertex.push.apply(vertex, tmpver);
@@ -1085,10 +1092,17 @@ RefCircle.prototype = {
         for(i = 0; i < this.circle_num * this.sides; i++) {
             index.push(i);
         }
+        var vertices = [];
+        for( i = 0; i < vertex.length; i += 3 ) {
+            vertices.push( vertex[i], vertex[i+1], vertex[i+2] );
+            vertices.push.apply( vertices, [0.75, 0.75, 0.75] );
+            vertices.push( color[i], color[i+1], color[i+2] );
+        }
+
         return {
             "vertex": vertex,
             "index":  index,
-            "normal": normal,
+            "vertices": vertices,
             "color":  color
         };
     }
@@ -1103,18 +1117,19 @@ function RecordPoint() {
     this.max_index_bytes    = this.sides * 2 * 100;
     this.vertex_count = 0;
     this.index_count  = 0;
+    this.init();
 }
 
 RecordPoint.prototype = {
     constructor: RecordPoint,
 
-    init : function(gl) {
-        this.buffers.vertex     = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_vertex_bytes, gl.DYNAMIC_DRAW);
-        this.buffers.color      = createArrayBuffer(gl.ARRAY_BUFFER,         this.max_vertex_bytes, gl.DYNAMIC_DRAW);
-        this.buffers.index      = createArrayBuffer(gl.ELEMENT_ARRAY_BUFFER, this.max_index_bytes,  gl.DYNAMIC_DRAW);
+    init : function() {
+        this.buffers.vertex = createArrayBuffer( this.max_vertex_bytes, gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
+        this.buffers.color  = createArrayBuffer( this.max_vertex_bytes, gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
+        this.buffers.index  = createArrayBuffer( this.max_index_bytes,  gl.DYNAMIC_DRAW, gl.ELEMENT_ARRAY_BUFFER );
     },
 
-    paint : function(gl, addon) {
+    paint : function( addon ) {
         // 进行采点操作
         if( this.vertex_count === 0 || !addon.calibration ) {
             return;
@@ -1162,9 +1177,9 @@ RecordPoint.prototype = {
                     n, n+this.sides, n+1,
                     n, n+1,          n+this.sides
                    );
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex, this.vertex_count * 4, point);
-        updateSubBuffer(gl.ARRAY_BUFFER,         this.buffers.color,  this.vertex_count * 4, new Float32Array(color));
-        updateSubBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index,  this.index_count  * 2, new Uint16Array(index));
+        subBuffer( this.buffers.vertex, this.vertex_count * 4, point);
+        subBuffer( this.buffers.color,  this.vertex_count * 4, new Float32Array(color));
+        subBuffer( this.buffers.index,  this.index_count  * 2, new Uint16Array(index));
 
         this.vertex_count += point.length;
         this.index_count += index.length;
@@ -1185,12 +1200,13 @@ function Craft(props) {
     this.type    = "Craft";
     this.url     = "qrc:/obj/craft.obj";
     this.scale   = 0.05;
+    this.init();
 }
 
 Craft.prototype = {
     constructor: Craft,
 
-    init : function(gl, addon) {
+    init : function() {
         var that = this;
         readFile( this.url, function(text) {
             that.mesh = new OBJ.Mesh(text);
@@ -1200,7 +1216,7 @@ Craft.prototype = {
         return this;
     },
 
-    paint : function(gl, addon) {
+    paint : function( addon ) {
 
         if( this.mesh === undefined || !addon.enable_sim) {
             return;
