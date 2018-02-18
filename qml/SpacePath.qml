@@ -97,6 +97,7 @@ Item {
                             argItem.cam_beta = this.value;
                             GLcode.rotateCamera(argItem);
                         }
+
                     }
 
                     MySlider {
@@ -373,7 +374,7 @@ Item {
                     }
                     checked: true
                     onCheckedChanged: {
-                        argItem.enable_sim = checked;
+                        GLcode.craft.visible = checked;
                         craftSize.enabled  = checked;
                     }
                 }
@@ -409,7 +410,9 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     onCheckedChanged: {
-                        argItem.calibration = checked;
+//                        argItem.calibration = checked;
+                        GLcode.refCircle.visible = checked;
+                        GLcode.recordPoint.visible = checked;
                         circleSize.enabled  = checked;
                     }
                 }

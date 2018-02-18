@@ -20,6 +20,7 @@ Rectangle {
     property alias value:     slider.value
     property alias stepSize:  slider.stepSize
     property double btnSize:  1.0
+    property var   toWatch
 
     Label {
         id: name
@@ -33,7 +34,7 @@ Rectangle {
 
     Text {
         // for value showing
-        id: value
+        id: valueText
         anchors {
             top : container.top
             topMargin: 5
@@ -82,7 +83,7 @@ Rectangle {
             right: container.right
         }
         onValueChanged: {
-            value.text = (this.value * container.ratio).toFixed(container.precision)
+            valueText.text = (this.value * container.ratio).toFixed(container.precision)
         }
     }
 
