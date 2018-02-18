@@ -76,9 +76,9 @@ Item {
                         text: "摄像机θ角："
                         maxValue: 180.0
                         minValue: 0.0
+                        value: 70
                         onValueChanged: {
-                            argItem.cam_theta = this.value;
-                            GLcode.rotateCamera(argItem);
+                            onCameraRotate()
                         }
                     }
 
@@ -93,9 +93,9 @@ Item {
                         text: "摄像机β角："
                         maxValue: 180.0
                         minValue: -180.0
+                        value: 50
                         onValueChanged: {
-                            argItem.cam_beta = this.value;
-                            GLcode.rotateCamera(argItem);
+                            onCameraRotate()
                         }
 
                     }
@@ -111,7 +111,10 @@ Item {
                         text: "摄像机距原点："
                         maxValue: 100.0
                         minValue: 0.5
-                        onValueChanged: GLcode.rotateCamera(argItem);
+                        value: 18.0
+                        onValueChanged: {
+                            onCameraRotate()
+                        }
                     }
                 }  // cameraItem 0
 
@@ -186,6 +189,7 @@ Item {
                     maxValue: 15
                     minValue: 0.5
                     btnSize: 0.5
+                    value: 4.0
                 }
 
                 MySlider {
@@ -199,6 +203,7 @@ Item {
                     maxValue: 1.0
                     minValue: 0.1
                     btnSize: 0.1
+                    value: 0.65
                 }
 
                 MySlider {
@@ -212,6 +217,7 @@ Item {
                     maxValue: 1
                     minValue: 0.1
                     btnSize: 0.1
+                    value: 0.3
                 }
 
                 MySlider {
@@ -225,6 +231,7 @@ Item {
                     maxValue: 50
                     minValue: 1
                     stepSize: 1.0
+                    value: 8
                 }
 
                 MySlider {
@@ -238,6 +245,7 @@ Item {
                     maxValue: 10
                     minValue: 1
                     stepSize: 1.0
+                    value: 1
                 }
 
                 MySlider {
@@ -281,6 +289,9 @@ Item {
                     topMargin: controller.margintop
                     left: parent.left
                 }
+                ExclusiveGroup {
+                    id: drawModeGroup
+                }
 
                 RadioButton {
                     id: lineRB
@@ -292,8 +303,9 @@ Item {
                     width: 20
                     height: 20
                     text: "line"
+                    exclusiveGroup: drawModeGroup
                     onClicked: {
-                        argItem.draw_mode = text;
+                        GLcode.sphere.drawMode = GLcode.Ball.MODE_LINE;
                     }
                 }
 
@@ -307,8 +319,10 @@ Item {
                     width: 20
                     height: 20
                     text: "surface"
+                    checked:  true
+                    exclusiveGroup: drawModeGroup
                     onClicked: {
-                        argItem.draw_mode = text;
+                        GLcode.sphere.drawMode = GLcode.Ball.MODE_SURFACE;
                     }
                 }
 
@@ -322,8 +336,10 @@ Item {
                     width: 20
                     height: 20
                     text: "lessLine"
+
+                    exclusiveGroup: drawModeGroup
                     onClicked: {
-                        argItem.draw_mode = text;
+                        GLcode.sphere.drawMode = GLcode.Ball.MODE_LESSLINE;
                     }
                 }
 
@@ -355,7 +371,7 @@ Item {
                     }
                     checked: true
                     onCheckedChanged: {
-                        argItem.enable_path = checked;
+                        GLcode.sensorPath.visible = checked;
                         pathGap.enabled     = checked;
                         pathWidth.enabled   = checked;
                     }
@@ -443,10 +459,10 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     onClicked: {
-                        argItem.cam_theta = 45
-                        argItem.cam_beta  = 90
+                        camTheta.value = 45
+                        camBeta.value  = 90
 
-                        GLcode.rotateCamera(argItem);
+                        onCameraRotate()
                         GLcode.reset(argItem);
                     }
                 }
@@ -464,7 +480,7 @@ Item {
                     }
                     onClicked: {
                         console.log("[Info] Reset all path.")
-                        GLcode.resetAllPath(argItem);
+                        GLcode.sensorPath.resetAllPath(argItem);
                     }
                 }
 
@@ -496,7 +512,7 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     onClicked: {
-                        GLcode.resetRecord();
+                        GLcode.recordPoint.reset();
                     }
                 }
             }  // end of operateItem
@@ -652,13 +668,13 @@ Item {
         property int mousey: 1
         onMouseXChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged(argItem, mouseListener, container);
+                onMouseDraged( this );
                 lpx = mouseListener.mouseX
             }
         }
         onMouseYChanged: {
             if(mouseListener.pressed) {
-                GLcode.mouseDraged(argItem, mouseListener, container);
+                onMouseDraged( this );
                 lpy = mouseListener.mouseY;
             }
         }
@@ -670,7 +686,7 @@ Item {
         }
 
         onWheel: {
-            argItem.cam_dis -= wheel.angleDelta.y / 120;
+            camDis.value -= wheel.angleDelta.y / 120;
 //
         }
 
@@ -685,56 +701,13 @@ Item {
     Item {
         id: argItem
         visible: false
-        property alias  cam_dis:      camDis.value
-//        property alias  cam_theta:   camTheta.value
-//        property alias  cam_beta:    camBeta.value
-        property alias  cam_x:        cameraXPos.value
-        property alias  cam_y:        cameraYPos.value
-        property alias  cam_z:        cameraZPos.value
-        property alias  ball_radius:  ballRadius.value
-        property alias  point_size:   pointSize.value
-        property alias  path_width:   pathWidth.value
-        property alias  path_gap:     pathGap.value
-        property alias  ball_alpha:   ballAlpha.value
-        property alias  circle_size:  circleSize.value
-        property alias  calibration:  calibrationBox.checked
-        property alias  enable_path:  pathEnableBox.checked
-        property alias  craft_size:   craftSize.value
-        property alias  enable_sim:   simBox.checked
 
         /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
-        property alias  heading: heading.value
-        property alias  pitch:   pitch.value
-        property double roll:    roll.value
-        property double cam_theta:   0.0
-        property double cam_beta:    0.0
+        property alias  heading:    heading.value
+        property alias  pitch:      pitch.value
+        property double roll:       roll.value
         property double heading_offset: 0
         property double vector_length:  4
-        property var    light_direction: [0.35, 0.35, 0.7]
-        property string draw_mode: "line"
-
-        onCam_thetaChanged: {
-            camTheta.value = this.cam_theta
-        }
-
-        onCam_betaChanged: {
-            camBeta.value  = this.cam_beta
-        }
-
-        onDraw_modeChanged: {
-            ballAlpha.enabled = ( draw_mode !== "line");
-            var checkItem = drawMode;
-            var child;
-
-            for(var i in drawMode.children) {
-                child = drawMode.children[i];
-                child.checked = false;
-                if( child.text === draw_mode ) {
-                    checkItem = child;
-                }
-            }
-            checkItem.checked = true;
-        }
     }
 
     Canvas3D {
@@ -744,11 +717,10 @@ Item {
         property bool stop: true
 //        renderOnDemand: true
 
-        /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
-            GLcode.initUI(argItem);
             GLcode.initializeGL(canvas3d, argItem);
+            onCameraRotate();
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
@@ -769,6 +741,7 @@ Item {
         target: dataSource
         onDataChanged: {
             console.log("dataSource heading changed:  " + dataSource.getHeading());
+//            GLcode.
         }
     }
 
@@ -789,7 +762,7 @@ Item {
 
     // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
-        GLcode.record(argItem);
+        GLcode.recordPoint.record(args);
     }
 
     /**
@@ -812,6 +785,24 @@ Item {
         }
 
         return height + clength * margin;
+    }
+
+    function onCameraRotate() {
+        if( GLcode.camera === undefined ) {
+            return;
+        }
+
+        GLcode.camera.rotate( camTheta.value, camBeta.value, camDis.value );
+    }
+
+    function onMouseDraged(ml) {
+        var xoffset = (ml.mouseX - ml.lpx)*2 / ml.width;
+        var yoffset = (ml.mouseY - ml.lpy)*2 / ml.height;
+
+        var dbeta       = 540 + camBeta.value - xoffset*360; // - indicates that drag direction is oppsite with movement
+        camBeta.value   = dbeta % 360 - 180;
+        camTheta.value -= yoffset*180;
+        onCameraRotate();
     }
 
 }

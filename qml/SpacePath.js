@@ -15,91 +15,28 @@
 Qt.include("gl-matrix-min.js");
 Qt.include("webgl-obj-loader.min.js");
 
-
-function initUI(args) {
-    args.ball_radius = 4.0;
-    args.cam_dis     = 18.0;
-    args.cam_theta   = 70;
-    args.cam_beta    = 50;
-    args.path_gap    = 1;
-    args.point_size  = 0.3;
-    args.path_width  = 3;
-    args.ball_alpha  = 0.65;
-    args.enable_path = true;
-    args.draw_mode = "surface";
-}
-
-// some problem occurred when cam_x or cam_y equals to zero
-function rotateCamera(args) {
-    var pos = coordCarte(degToRad(args.cam_theta), degToRad(args.cam_beta), args.cam_dis);
-    args.cam_x = pos[0];
-    args.cam_y = pos[1];
-    args.cam_z = pos[2];
-}
-
-function mouseDraged(args, ml, container) {
-    var xoffset = (ml.mouseX - ml.lpx)*2 / container.width;
-    var yoffset = (ml.mouseY - ml.lpy)*2 / container.height;
-    var beta = 540 + args.cam_beta - xoffset*360; // - indicates that drag direction is oppsite with movement
-    args.cam_beta   = beta % 360 - 180;
-    args.cam_theta -= yoffset*180;
-    if( args.cam_theta.toFixed(2) === "0.00" ) {
-        args.cam_theta = 0.01;
-    }
-    if( args.cam_theta.toFixed(2) === "180.00" ) {
-        args.cam_theta = 179.99
-    }
-    rotateCamera(args);
-}
-
-function reset(args) {
-    args.heading_offset = args.heading;
-    var angle = calcAngle(args.pitch, 0);
-    var u = angle[0], v = angle[1];
-    resetAllPath(args);
-}
-
-function resetAllPath(args) {
-    obj.sensorPath.resetAllPath(args);
-}
-
-function record(args) {
-    obj.recordPoint.record(args);
-}
-
-function resetRecord() {
-    obj.recordPoint.reset();
-}
-
-/******************** end of UI init *****************************/
-
-
 if( String.prototype.startsWith === undefined ) {
     String.prototype.startsWith = function(pattern) {
         return this.slice(0, pattern.length) === pattern;
     }
 }
 
-/******************** start of GL ********************************/
 /* 保存画布上下文 */
 var gl;
 var gl2d;  // this is used for HUD drawing
 
-var width = 0;
-var height = 0;
 
 var attributes = {};  // attribute variables from shader
 var uniforms = {};    // uniform variables from shader
 
 // matrixs
-var pMatrix   = mat4.create();
-var vMatrix   = mat4.create();
 var pvMatrix  = mat4.create();
 var mvpMatrix = mat4.create();
 var nMatrix   = mat4.create();
 
 var canvasArgs; // 相关绘图变量
 var scene;
+var camera;
 var coordinate;
 var craft;
 var sensorPoint;
@@ -107,6 +44,13 @@ var sensorPath;
 var refCircle;
 var recordPoint;
 var sphere;
+
+function reset(args) {
+    args.heading_offset = args.heading;
+    var angle = calcAngle(args.pitch, 0);
+    var u = angle[0], v = angle[1];
+    sensorPath.resetAllPath(args);
+}
 
 /**
 * this function is copied from planets demo of qt version of threejs
@@ -150,6 +94,7 @@ function initializeGL(canvas, args) {
     gl2d = canvas.getContext("2d");
 
     scene       = new Scene();
+    camera      = new Camera();
     coordinate  = new Coord();
     craft       = new Craft();
     sensorPoint = new SensorPoint({ color: [1.0, 0.0, 0.0] });
@@ -169,6 +114,7 @@ function initializeGL(canvas, args) {
     scene.add( refCircle );
     scene.add( recordPoint );
     scene.add( sphere );
+    scene.add( camera );
 
 }
 
@@ -178,21 +124,12 @@ function paintGL(canvas, args) {
     var currentWidth = canvas.width * pixelRatio;
     var currentHeight = canvas.height * pixelRatio;
 
-    if (currentWidth !== width || currentHeight !== height) {
-        width = canvas.width;
-        height = canvas.height;
-        gl.viewport(0, 0, width, height);
-        mat4.perspective(pMatrix, 45 / 180 * Math.PI, width / height, 0.5, 500.0);
+    if (currentWidth !== camera.width || currentHeight !== camera.height) {
+        camera.setSize( currentWidth, currentHeight );
     }
-    mat4.lookAt(vMatrix, [args.cam_x, args.cam_y, args.cam_z], [0, 0, 0], [0, 0, 1]);
-    mat4.multiply(pvMatrix, pMatrix, vMatrix);
 
     /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
     args.heading = args.heading - args.heading_offset;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
-
-    gl.uniform3fv(uniforms.light_direction, args.light_direction);  // where light origins
 
     scene.render();
 }
@@ -225,9 +162,57 @@ function createArrayBuffer(data, drawtype, type) {
     return buffer;
 }
 
-function Scene() {
-    this.s = [];
+function subBuffer(buffer, offset, data) {
+    var type = gl.ELEMENT_ARRAY_BUFFER;
+    if( data instanceof Float32Array ) {
+        type = gl.ARRAY_BUFFER;
+    }
 
+    gl.bindBuffer( type, buffer );
+    gl.bufferSubData( type, offset, data );
+}
+
+
+// some problem occurred when x or y equals to zero
+// because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
+function Camera() {
+    this.type = "Camera";
+    this.width = 800;
+    this.height = 600;
+    this.pos = [1, 1, 1];
+    this.up  = [0, 0, 1];
+    this.lookat = [0, 0, 0];
+    this.pMatrix = mat4.create();
+    this.vMatrix = mat4.create();
+}
+
+Camera.prototype = {
+    constructor: Camera,
+
+    paint : function() {
+        mat4.lookAt( this.vMatrix, this.pos, this.lookat, this.up );
+        mat4.multiply( pvMatrix, this.pMatrix, this.vMatrix );
+    },
+
+    rotate : function(a_theta, a_phi, r) {
+        if( a_theta < 0.01 ) {
+            a_theta = 0.01;
+        } else if( a_theta > 179.99 ) {
+            a_theta = 179.99
+        }
+
+        this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
+    },
+
+    setSize : function(width, height) {
+        this.width  = width;
+        this.height = height;
+        gl.viewport( 0, 0, width, height );
+        mat4.perspective( this.pMatrix, 45 / 180 * Math.PI, width / height, 0.5, 500.0 );
+    }
+}
+
+function Scene() {
     gl.enable(gl.DEPTH_TEST);  // depth test
     gl.depthFunc(gl.LESS);
     gl.enable(gl.CULL_FACE); // 设置遮挡剔除有效
@@ -238,6 +223,9 @@ function Scene() {
     gl.enable(gl.BLEND);   // enable blend for alpha
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    this.type = "Scene";
+    this.objs = [];
+    this.light_direct = [0.35, 0.35, 0.7];
     this.initShaders();
 }
 
@@ -245,11 +233,18 @@ Scene.prototype = {
     constructor : Scene,
 
     add : function(obj) {
-        this.s.push( obj );
+        if( obj.type === "Camera" ) {
+            this.objs.unshift( obj );
+        }
+
+        this.objs.push( obj );
     },
 
     render : function() {
-        this.s.forEach( function(obj) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
+        gl.uniform3fv(uniforms.light_direction, this.light_direct);  // where light origins
+
+        this.objs.forEach( function(obj) {
             obj.paint();
         })
     },
@@ -365,7 +360,6 @@ function calcAngle(pitch, heading) {
 }
 
 
-
 /**
  * 假设球心即为原点，将球极坐标系转换成平面直角坐标系
  * @param   theta {Rad}     球心到顶点的连线与 Z 轴正方向的夹角为 theta
@@ -425,16 +419,6 @@ function circleShape(radius, segment, thetaStart, thetaEnd) {
     return vertex;
 }
 
-
-function subBuffer(buffer, offset, data) {
-    var type = gl.ELEMENT_ARRAY_BUFFER;
-    if( data instanceof Float32Array ) {
-        type = gl.ARRAY_BUFFER;
-    }
-
-    gl.bindBuffer( type, buffer );
-    gl.bufferSubData( type, offset, data );
-}
 
 var epsilon = 0.01;
 

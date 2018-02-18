@@ -1,5 +1,5 @@
 ﻿import QtQuick 2.0
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.0
 
 /**
  * author: BriFuture
@@ -14,8 +14,10 @@ Rectangle {
 
     property int ratio : 1
     property int precision  : 1
-    property alias maxValue : slider.maximumValue
-    property alias minValue : slider.minimumValue
+//    property alias maxValue : slider.maximumValue
+//    property alias minValue : slider.minimumValue
+    property alias maxValue : slider.to
+    property alias minValue : slider.from
     property alias text :     name.text
     property alias value:     slider.value
     property alias stepSize:  slider.stepSize
@@ -77,6 +79,8 @@ Rectangle {
 
     Slider {
         id: slider
+        wheelEnabled: false
+
         anchors {
             top  : decBtn.bottom
             left : container.left
@@ -85,6 +89,7 @@ Rectangle {
         onValueChanged: {
             valueText.text = (this.value * container.ratio).toFixed(container.precision)
         }
+
     }
 
     function btnClick(op) {
