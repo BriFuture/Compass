@@ -12,69 +12,58 @@ Rectangle {
     color : "transparent"
     height: 50
 
-    property int ratio : 1
-    property int precision  : 1
-//    property alias maxValue : slider.maximumValue
-//    property alias minValue : slider.minimumValue
-    property alias maxValue : slider.to
-    property alias minValue : slider.from
-    property alias text :     name.text
-    property alias value:     slider.value
-    property alias stepSize:  slider.stepSize
-    property double btnSize:  1.0
-    property var   toWatch
+    property real maxValue :  100
+    property real minValue :  1
+    property int  stepSize:   1
+    property int  decimal:   0
+    property int  ratio:      Math.pow( 10, decimal )
+//    property string suffix
+    property alias value:     spinBox.value
+    property alias text :     desc.text
+    property var   getValue: function() {
+        return value / ratio
+    }
 
     Label {
-        id: name
+        id: desc
         text: "MySlider"
         font.pixelSize: 18
         anchors {
-            top: container.top
+            top: parent.top
             topMargin: 5
         }
     }
 
-    Text {
-        // for value showing
-        id: valueText
+    SpinBox {
+        id: spinBox
+
         anchors {
-            top : container.top
+            top: parent.top
             topMargin: 5
-            right: incBtn.left
-            rightMargin: 15
-        }
-        text: "0"
-        font.pixelSize: 18
-    }
-
-    Button {
-        // this is for value increment
-        id: incBtn
-        anchors {
-            top : container.top
-            right: container.right
-            rightMargin: 5
+            right: parent.right
         }
 
-        height: container.height * 0.36
-        width : 20
-        text  : "+"
-        onClicked: btnClick(1)
-    }
+        from:  container.minValue
+        to:    container.maxValue
+        stepSize: container.stepSize
+//        value: realValue * ratio
+//        property real realValue : value / ratio
 
-    Button {
-        // this is for value decrement
-        id: decBtn
-        anchors {
-            top: incBtn.bottom
-            topMargin: container.height * 0.05
-            right: container.right
-            rightMargin: 5
+        validator: DoubleValidator {
+            bottom: Math.min( spinBox.from, spinBox.to )
+            top:    Math.max( spinBox.from, spinBox.to )
         }
-        height: incBtn.height
-        width : incBtn.width
-        text  : "-"
-        onClicked: btnClick(-1)
+
+        textFromValue: function(value, locale) {
+            var t = Number( value / ratio ).toLocaleString( locale, 'f', decimal );
+            return t;
+        }
+
+        valueFromText: function(text, locale) {
+            var v = parseFloat( text );
+//            console.log("text: ", v)
+            return v;
+        }
     }
 
     Slider {
@@ -82,26 +71,18 @@ Rectangle {
         wheelEnabled: false
 
         anchors {
-            top  : decBtn.bottom
+            top: desc.bottom
             left : container.left
             right: container.right
         }
+
+        from:  container.minValue
+        to:    container.maxValue
+        value: spinBox.value
+        stepSize: container.stepSize
         onValueChanged: {
-            valueText.text = (this.value * container.ratio).toFixed(container.precision)
+            spinBox.value = value
         }
-
     }
 
-    function btnClick(op) {
-        // an bug occured when btnSize was less or equal than 0.05, because of
-        // parseFloat will return a value which containes only one decimal fraction
-        var v = parseFloat(value.text);
-        v += op*container.btnSize;
-        // in case of out of range
-        if( v > container.maxValue || v < container.minValue ) {
-            v -= op;
-        }
-        // because of slider being binded to text, just set slider will be fine
-        slider.value = v;
-    }
 }

@@ -87,6 +87,7 @@ function readFile(url, onLoad, onProgress, onError) {
     request.send( null );
 }
 
+var ready = false;
 function initializeGL(canvas, args) {
     gl  = canvas.getContext("canvas3d",
                            { depth: true, antilias: true }
@@ -97,7 +98,7 @@ function initializeGL(canvas, args) {
     camera      = new Camera();
     coordinate  = new Coord();
     craft       = new Craft();
-    sensorPoint = new SensorPoint({ color: [1.0, 0.0, 0.0] });
+    sensorPoint = new SensorPoint({ color: [1.0, 0.0, 0.0], size: 0.5 });
     sensorPath  = new SensorPath();
     refCircle   = new RefCircle();
     recordPoint = new RecordPoint();
@@ -106,6 +107,13 @@ function initializeGL(canvas, args) {
                                 hn: 48
                             });
 
+    sensorPoint.addParamCallback( function( params ) {
+        craft.setQuat( params.roll, 270-params.pitch, params.heading );
+    });
+    sensorPoint.setParam( { dis: 4, pitch: 0, roll: 0, heading: 0 } );
+    craft.setScale( 0.5 );
+
+    ready = true;
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
     scene.add( coordinate );
     scene.add( craft );
@@ -439,13 +447,12 @@ function PaintObj(props) {
     this.translation = vec3.create();
     this.visible = true;
 
-    this.x = 0;
-    this.y = 0;
-    this.z = 0;
-    this.rotateX = 0;
-    this.rotateY = 0;
-    this.rotateZ = 0;
-
+//    this.x = 0;
+//    this.y = 0;
+//    this.z = 0;
+//    this.rotateX = 0;
+//    this.rotateY = 0;
+//    this.rotateZ = 0;
 }
 
 
@@ -462,7 +469,9 @@ function SensorPoint(props) {
     this.dis   = 4;
     this.pitch = 0;
     this.heading = 0;
-    this.setTranslation(4, 45, 20);
+    this.roll    = 0;
+    this.callbacks = [];
+
     this.init();
 }
 
@@ -529,18 +538,32 @@ SensorPoint.prototype = {
         gl.drawElements(gl.TRIANGLE_FAN, this.index_count * 0.5, gl.UNSIGNED_SHORT, this.index_count * 0.5 * 2);
     },
 
-    setSize : function( size ) {
+    setScale : function(size) {
         this.size = size;
-        vec3.set(this.vscale, this.size, this.size, this.size);
+        vec3.set(this.vscale, size, size, size);
     },
 
-    setTranslation: function( r, pitch, heading ) {
-        this.dis = r;
-        this.pitch = pitch;
-        this.heading = heading;
-        var theta = 90 - pitch;
-        this.translation = coordCarte( degToRad( theta ), degToRad( heading ), r );
-        quat.fromEuler( this.quat, 0, theta, heading );
+    setTranslation : function(r, a_theta, a_phi) {
+        this.translation = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
+        quat.fromEuler( this.quat, 0, a_theta, a_phi );
+    },
+
+    setParam : function( params ) {
+//        setParam : function(r, pitch, heading, roll) {
+        this.dis     = params.dis;
+        this.pitch   = params.pitch;
+        this.heading = params.heading;
+        this.roll    = params.roll;
+        var theta = 90 - this.pitch;
+        this.setTranslation( this.dis, theta, this.heading );
+
+        for( var i = 0; i < this.callbacks.length; i++ ) {
+            this.callbacks[i]( params );
+        }
+    },
+
+    addParamCallback : function( cb ) {
+        this.callbacks.push( cb );
     },
 
     /**
@@ -671,7 +694,7 @@ SensorPath.prototype = {
         }
     },
 
-    setGp : function( gap ) {
+    setGap : function( gap ) {
         this.gap = gap;
     },
 
@@ -1041,6 +1064,12 @@ RefCircle.prototype = {
         for( var i = 0; i < 26; i++) {
             this.circles[i].setTranslation( this.dis );
         }
+    },
+
+    setScale : function( size ) {
+        for( var i = 0; i < 26; i++) {
+            this.circles[i].scale( this.size );
+        }
     }
 
 }
@@ -1107,7 +1136,7 @@ ReferCircle.prototype = {
         quat.fromEuler( this.quat, 0, a_theta, a_phi );
     },
 
-    setSize : function( size ) {
+    setScale : function( size ) {
         this.size = size;
         this.vscale  = vec3.fromValues(size, size, size);
     }
@@ -1275,7 +1304,7 @@ Craft.prototype = {
         quat.fromEuler( this.quat, x, y, z);
     },
 
-    setSize : function( size ) {
+    setScale : function( size ) {
         this.size = size;
         vec3.set(this.vscale, size, size, size);
     }

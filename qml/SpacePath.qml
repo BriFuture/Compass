@@ -1,6 +1,6 @@
 ﻿import QtQuick 2.0
 import QtCanvas3D 1.1
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.0
 
 import "SpacePath.js" as GLcode
 
@@ -110,7 +110,7 @@ Item {
                         width: parent.width
                         text: "摄像机距原点："
                         maxValue: 100.0
-                        minValue: 0.5
+                        minValue: 5
                         value: 18.0
                         onValueChanged: {
                             onCameraRotate()
@@ -186,10 +186,16 @@ Item {
                     }
                     width: parent.width
                     text: "参考球半径："
-                    maxValue: 15
-                    minValue: 0.5
-                    btnSize: 0.5
-                    value: 4.0
+                    maxValue: 80000
+                    minValue: 10000
+                    value: 40000
+                    stepSize: 1000
+//                    decimal: 4
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.sphere.setSize( getValue() / 10000 );
+                        }
+                    }
                 }
 
                 MySlider {
@@ -200,10 +206,16 @@ Item {
                     }
                     width: parent.width
                     text:  "球面透明度"
-                    maxValue: 1.0
-                    minValue: 0.1
-                    btnSize: 0.1
-                    value: 0.65
+                    maxValue: 100
+                    minValue: 1
+                    value: 65
+                    stepSize: 5
+                    decimal: 2
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.sphere.alpha = getValue();
+                        }
+                    }
                 }
 
                 MySlider {
@@ -214,10 +226,16 @@ Item {
                     }
                     width: parent.width
                     text: "指示器大小："
-                    maxValue: 1
-                    minValue: 0.1
-                    btnSize: 0.1
-                    value: 0.3
+                    maxValue: 100
+                    minValue: 1
+                    value: 80
+                    decimal: 2
+
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.sensorPoint.setScale( getValue() );
+                        }
+                    }
                 }
 
                 MySlider {
@@ -230,8 +248,14 @@ Item {
                     text: "轨迹宽度："
                     maxValue: 50
                     minValue: 1
-                    stepSize: 1.0
                     value: 8
+                    decimal: 1
+
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.sensorPath.setSize( getValue() );
+                        }
+                    }
                 }
 
                 MySlider {
@@ -242,10 +266,14 @@ Item {
                     }
                     width: parent.width
                     text: "路径间隔："
-                    maxValue: 10
+                    maxValue: 5
                     minValue: 1
-                    stepSize: 1.0
                     value: 1
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.sensorPath.setGap( value );
+                        }
+                    }
                 }
 
                 MySlider {
@@ -256,10 +284,15 @@ Item {
                     }
                     width: parent.width
                     text: "参考圆圈大小："
-                    value: 0.3
-                    maxValue: 1
-                    minValue: 0.1
-                    btnSize: 0.1
+                    maxValue: 100
+                    minValue: 1
+                    value: 30
+                    decimal : 2
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.refCircle.setScale( getValue() );
+                        }
+                    }
                 }
 
                 MySlider {
@@ -270,10 +303,16 @@ Item {
                     }
                     width: parent.width
                     text: "模拟器大小:"
-                    maxValue: 1
-                    minValue: 0.01
-                    value   : 0.3
-                    btnSize: 0.1
+                    maxValue: 100
+                    minValue: 1
+                    value   : 30
+                    decimal : 2
+                    onValueChanged: {
+                        if( GLcode.ready ) {
+                            GLcode.craft.setScale( getValue() );
+                        }
+                    }
+
                 }
             }  // canvasSetting
 
@@ -289,9 +328,9 @@ Item {
                     topMargin: controller.margintop
                     left: parent.left
                 }
-                ExclusiveGroup {
-                    id: drawModeGroup
-                }
+//                ExclusiveGroup {
+//                    id: drawModeGroup
+//                }
 
                 RadioButton {
                     id: lineRB
@@ -303,7 +342,7 @@ Item {
                     width: 20
                     height: 20
                     text: "line"
-                    exclusiveGroup: drawModeGroup
+//                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_LINE;
                     }
@@ -320,7 +359,7 @@ Item {
                     height: 20
                     text: "surface"
                     checked:  true
-                    exclusiveGroup: drawModeGroup
+//                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_SURFACE;
                     }
@@ -337,7 +376,7 @@ Item {
                     height: 20
                     text: "lessLine"
 
-                    exclusiveGroup: drawModeGroup
+//                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_LESSLINE;
                     }
@@ -529,6 +568,15 @@ Item {
                     topMargin: controller.margintop
                     left: parent.left
                 }
+                property var posChanged: function() {
+
+                    if( GLcode.ready ) {
+                        GLcode.sensorPoint.setParam( {  dis:   4,
+                                                        pitch: pitch.value,
+                                                        heading: heading.value,
+                                                        roll: roll.value } );
+                    }
+                }
 
                 MySlider {
                     id: pitch
@@ -540,7 +588,8 @@ Item {
                     text: "pitch："
                     maxValue: 90
                     minValue: -90
-        //                value   : 0
+                    value   : 0
+                    onValueChanged: parent.posChanged()
                 }
 
                 MySlider {
@@ -554,6 +603,7 @@ Item {
                     maxValue: 180
                     minValue: -180
                     value   : 0
+                    onValueChanged: parent.posChanged()
                 }
 
                 MySlider {
@@ -567,39 +617,40 @@ Item {
                     maxValue: 180
                     minValue: -180
                     value   : 0
+                    onValueChanged: parent.posChanged()
                 }
 
             }  // posItem
 
-            Item {
-                // this item is used for calculate the height of Flickable item
-                visible: false
-                Component.onCompleted: {
-                    view.contentHeight = calcHeight(view.contentItem);  // use contentItem to set contentHeight
-                }
-            }
 
             // Only show the scrollbars when the view is moving.
             states: State {
                 name: "ShowBars"
                 when: view.movingVertically
-                PropertyChanges { target: verticalScrollBar; opacity: 1 }
+                PropertyChanges { target: verticalScrollBar;
+                    opacity: 1
+                }
+                Component.onCompleted: {
+                    view.contentHeight = calcHeight(view.contentItem);  // use contentItem to set contentHeight
+                }
             }
 
             transitions: Transition {
                 NumberAnimation { properties: "opacity"; duration: 1000 }
             }
 
+            ScrollBar.vertical: ScrollBar {
+                id: verticalScrollBar
+                width: 10;
+                height: view.height-3
+                opacity: 0.1
+//                orientation: Qt.Vertical
+//                anchors.right: controller.right
+//                position: view.visibleArea.yPosition
+    //            pageSize: view.visibleArea.heightRatio
+            }
         }
-        ScrollBar {
-            id: verticalScrollBar
-            width: 10; height: view.height-3
-            anchors.right: controller.right
-            opacity: 0.1
-            orientation: Qt.Vertical
-            position: view.visibleArea.yPosition
-            pageSize: view.visibleArea.heightRatio
-        }
+
         Button {
             id: controlBtn
             width: 18
@@ -716,6 +767,21 @@ Item {
         focus: true
         property bool stop: true
 //        renderOnDemand: true
+//        property var  callbacks : []
+//        property var  addCallback: function( callback, type ) {
+//            if( callbacks[type] === undefined ) {
+//                callbacks[type] = [];
+//            }
+//            callbacks[type].push( callback );
+//        }
+//        property var onCall: function( type, params ) {
+//            if( callbacks[type] === undefined ) {
+//                return;
+//            }
+//            for( var i = 0; i < callbacks[type].length; i++ ) {
+//                callbacks[type][i](params);
+//            }
+//        }
 
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
@@ -762,7 +828,7 @@ Item {
 
     // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
-        GLcode.recordPoint.record(args);
+        GLcode.recordPoint.record();
     }
 
     /**
@@ -792,7 +858,10 @@ Item {
             return;
         }
 
-        GLcode.camera.rotate( camTheta.value, camBeta.value, camDis.value );
+        GLcode.camera.rotate( camTheta.getValue(), camBeta.getValue(), camDis.getValue() );
+        cameraXPos.value = GLcode.camera.pos[0]
+        cameraYPos.value = GLcode.camera.pos[1]
+        cameraZPos.value = GLcode.camera.pos[2]
     }
 
     function onMouseDraged(ml) {
