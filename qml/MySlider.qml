@@ -10,7 +10,7 @@ import QtQuick.Controls 2.0
 Rectangle {
     id: container
     color : "transparent"
-    height: 50
+    height: 60
 
     property real maxValue :  100
     property real minValue :  1
@@ -42,6 +42,7 @@ Rectangle {
             top: parent.top
             topMargin: 5
             right: parent.right
+            rightMargin: 5
         }
 
         from:  container.minValue
@@ -73,6 +74,7 @@ Rectangle {
 
         anchors {
             top: desc.bottom
+            topMargin: -5
             left : container.left
             right: container.right
         }

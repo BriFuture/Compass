@@ -41,9 +41,9 @@ Item {
 
         Flickable {
             id: view
-            width: parent.width - 5
+            width: parent.width-8
             height: parent.height
-            contentWidth:  parent.width - 5
+            contentWidth:  parent.width-8
             contentHeight: container.height
 
 
@@ -53,25 +53,26 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width:  parent.width
-                height: calcHeight(this, 1)
+                height: childrenRect.height
                 anchors {
                     top: parent.top
                     topMargin: controller.margintop * 0.5
                     left: parent.left
                 }
+
+//                Text {
+////                    id: name
+//                    text: qsTr("摄像机参数")
+//                }
                 Item {
                     id: cameraItem0
                     width: parent.width
-                    height: calcHeight(this)
+                    height: childrenRect.height
 
                     MySlider {
                         id: camTheta
                         objectName: "cam_theta"
-                        anchors {
-                            top: parent.top
-                            topMargin: controller.margintop * 0.5
-                        }
-
+                        anchors.top: parent.top
                         width: parent.width
                         text: "摄像机θ角："
                         maxValue: 180.0
@@ -85,10 +86,7 @@ Item {
                     MySlider {
                         id: camBeta
                         objectName: "cam_beta"
-                        anchors {
-                            top: camTheta.bottom
-                            topMargin: controller.margintop
-                        }
+                        anchors.top: camTheta.bottom
                         width: parent.width
                         text: "摄像机β角："
                         maxValue: 180.0
@@ -103,10 +101,7 @@ Item {
                     MySlider {
                         id: camDis
                         objectName: "cam_dis"
-                        anchors {
-                            top: camBeta.bottom
-                            topMargin: controller.margintop
-                        }
+                        anchors.top: camBeta.bottom
                         width: parent.width
                         text: "摄像机距原点："
                         maxValue: 100.0
@@ -121,15 +116,12 @@ Item {
                 Item {
                     id: cameraItem1
                     width: parent.width
-                    height: calcHeight(this)
+                    height: childrenRect.height
                     visible: false
 
                     MySlider {
                         id: cameraXPos
-                        anchors {
-                            top: cameraItem1.top
-                            topMargin: controller.margintop * 0.5
-                        }
+                        anchors.top: cameraItem1.top
                         enabled: false
                         width: parent.width
                         text: "摄像机X："
@@ -139,10 +131,7 @@ Item {
 
                     MySlider {
                         id: cameraYPos
-                        anchors {
-                            top: cameraXPos.bottom
-                            topMargin: controller.margintop
-                        }
+                        anchors.top: cameraXPos.bottom
                         enabled: false
                         width: parent.width
                         text: "摄像机Y："
@@ -152,10 +141,7 @@ Item {
 
                     MySlider {
                         id: cameraZPos
-                        anchors {
-                            top: cameraYPos.bottom
-                            topMargin: controller.margintop
-                        }
+                        anchors.top: cameraYPos.bottom
                         enabled: false
                         width: parent.width
                         text: "摄像机Z："
@@ -171,7 +157,7 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width: parent.width
-                height: calcHeight(this)
+                height: childrenRect.height
                 anchors {
                     top: cameraItem.bottom
                     topMargin: controller.margintop
@@ -180,10 +166,7 @@ Item {
 
                 MySlider {
                     id: ballRadius
-                    anchors {
-                        top: canvasSetting.top
-                        topMargin: controller.margintop * 0.5
-                    }
+                    anchors.top: canvasSetting.top
                     width: parent.width
                     text: "参考球半径："
                     maxValue: 80000
@@ -200,10 +183,7 @@ Item {
 
                 MySlider {
                     id: ballAlpha
-                    anchors {
-                        top: ballRadius.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: ballRadius.bottom
                     width: parent.width
                     text:  "球面透明度"
                     maxValue: 100
@@ -220,10 +200,7 @@ Item {
 
                 MySlider {
                     id: pointSize
-                    anchors {
-                        top: ballAlpha.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: ballAlpha.bottom
                     width: parent.width
                     text: "指示器大小："
                     maxValue: 100
@@ -240,10 +217,7 @@ Item {
 
                 MySlider {
                     id: pathWidth
-                    anchors {
-                        top: pointSize.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: pointSize.bottom
                     width: parent.width
                     text: "轨迹宽度："
                     maxValue: 50
@@ -260,10 +234,7 @@ Item {
 
                 MySlider {
                     id: pathGap
-                    anchors {
-                        top: pathWidth.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: pathWidth.bottom
                     width: parent.width
                     text: "路径间隔："
                     maxValue: 5
@@ -278,10 +249,7 @@ Item {
 
                 MySlider {
                     id: circleSize
-                    anchors {
-                        top: pathGap.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: pathGap.bottom
                     width: parent.width
                     text: "参考圆圈大小："
                     maxValue: 100
@@ -297,10 +265,7 @@ Item {
 
                 MySlider {
                     id: craftSize
-                    anchors {
-                        top: circleSize.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: circleSize.bottom
                     width: parent.width
                     text: "模拟器大小:"
                     maxValue: 100
@@ -322,7 +287,7 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width: parent.width
-                height: calcHeight(this, 2)
+                height: childrenRect.height
                 anchors {
                     top: canvasSetting.bottom
                     topMargin: controller.margintop
@@ -340,7 +305,7 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     width: 20
-                    height: 20
+                    checkable: true
                     text: "line"
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
@@ -356,9 +321,9 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     width: 20
-                    height: 20
                     text: "surface"
                     checked:  true
+                    checkable: true
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_SURFACE;
@@ -373,9 +338,9 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     width: 20
-                    height: 20
                     text: "lessLine"
 
+                    checkable: true
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_LESSLINE;
@@ -390,8 +355,8 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width: parent.width
-                property int bheight: 15
-                height: calcHeight(this, 5)
+                property int bheight: 25
+                height: childrenRect.height
                 anchors {
                     top: drawMode.bottom
                     topMargin: controller.margintop
@@ -400,7 +365,6 @@ Item {
 
                 CheckBox {
                     id: pathEnableBox
-                    height: parent.bheight
                     text  : "绘制路径"
 
                     anchors {
@@ -418,7 +382,6 @@ Item {
 
                 CheckBox {
                     id: simBox
-                    height: parent.bheight
                     text: "绘制模拟器"
 
                     anchors {
@@ -436,7 +399,6 @@ Item {
 
                 CheckBox {
                     id: axisBox
-                    height: parent.bheight
                     text: "球坐标系"
                     checked: true
 
@@ -454,7 +416,6 @@ Item {
 
                 CheckBox {
                     id: calibrationBox
-                    height: parent.bheight
                     text: "显示修正圆圈"
                     checked: true
 
@@ -479,7 +440,7 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width: parent.width
-                height: calcHeight(this, 5)
+                height: childrenRect.height + controller.margintop
                 anchors {
                     top: checkBoxItem.bottom
                     topMargin: controller.margintop
@@ -488,7 +449,7 @@ Item {
 
                 Button {
                     id: resetCameraBtn
-                    width: 70
+                    width: 100
                     height: 20
                     text: "重置摄像机"
                     anchors {
@@ -508,7 +469,7 @@ Item {
 
                 Button {
                     id: resetPathBtn
-                    width: 70
+                    width: 100
                     height: 20
                     text: "重置路径"
                     anchors {
@@ -525,7 +486,7 @@ Item {
 
                 Button {
                     id: recordBtn
-                    width: 60
+                    width: 100
                     height: 20
                     text: "打点"
                     anchors{
@@ -541,7 +502,7 @@ Item {
 
                 Button {
                     id: resetRecordButton
-                    width: 60
+                    width: 100
                     height: 20
                     text: "重置打点"
                     anchors {
@@ -562,7 +523,7 @@ Item {
                 border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
                 border.width: 2
                 width: parent.width
-                height: calcHeight(this)
+                height: childrenRect.height
                 anchors {
                     top : operateItem.bottom
                     topMargin: controller.margintop
@@ -580,10 +541,7 @@ Item {
 
                 MySlider {
                     id: pitch
-                    anchors {
-                        top: parent.top
-                        topMargin: controller.margintop * 0.5
-                    }
+                    anchors.top: parent.top
                     width: parent.width
                     text: "pitch："
                     maxValue: 90
@@ -595,10 +553,7 @@ Item {
 
                 MySlider {
                     id: heading
-                    anchors {
-                        top: pitch.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: pitch.bottom
                     width: parent.width
                     text: "heading:"
                     maxValue: 180
@@ -610,10 +565,7 @@ Item {
 
                 MySlider {
                     id: roll
-                    anchors {
-                        top: heading.bottom
-                        topMargin: controller.margintop
-                    }
+                    anchors.top: heading.bottom
                     width: parent.width
                     text: "roll:"
                     maxValue: 180
@@ -644,9 +596,10 @@ Item {
 
             ScrollBar.vertical: ScrollBar {
                 id: verticalScrollBar
+                parent: view.parent
                 width: 10
                 height: view.height-3
-                opacity: 0.1
+                opacity: 0.3
 //                orientation: Qt.Vertical
 //                anchors.right: controller.right
 //                position: view.visibleArea.yPosition
