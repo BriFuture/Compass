@@ -41,9 +41,9 @@ Item {
 
         Flickable {
             id: view
-            width: 200
+            width: parent.width - 5
             height: parent.height
-            contentWidth: 200
+            contentWidth:  parent.width - 5
             contentHeight: container.height
 
 
@@ -589,6 +589,7 @@ Item {
                     maxValue: 90
                     minValue: -90
                     value   : 0
+                    stepSize: 5
                     onValueChanged: parent.posChanged()
                 }
 
@@ -603,6 +604,7 @@ Item {
                     maxValue: 180
                     minValue: -180
                     value   : 0
+                    stepSize: 5
                     onValueChanged: parent.posChanged()
                 }
 
@@ -617,6 +619,7 @@ Item {
                     maxValue: 180
                     minValue: -180
                     value   : 0
+                    stepSize: 5
                     onValueChanged: parent.posChanged()
                 }
 
@@ -641,7 +644,7 @@ Item {
 
             ScrollBar.vertical: ScrollBar {
                 id: verticalScrollBar
-                width: 10;
+                width: 10
                 height: view.height-3
                 opacity: 0.1
 //                orientation: Qt.Vertical

@@ -108,7 +108,7 @@ function initializeGL(canvas, args) {
                             });
 
     sensorPoint.addParamCallback( function( params ) {
-        craft.setQuat( params.roll, 270-params.pitch, params.heading );
+        craft.setRotation( params );
     });
     sensorPoint.setParam( { dis: 4, pitch: 0, roll: 0, heading: 0 } );
     craft.setScale( 0.5 );
@@ -1237,7 +1237,6 @@ function Craft(props) {
 
     this.type    = "Craft";
     this.url     = "qrc:/obj/craft.obj";
-    this.scale   = 0.05;
     this.init();
 }
 
@@ -1250,8 +1249,6 @@ Craft.prototype = {
             that.mesh = new OBJ.Mesh(text);
             OBJ.initMeshBuffers(gl, that.mesh);
         } );
-
-        return this;
     },
 
     paint : function( ) {
@@ -1286,10 +1283,10 @@ Craft.prototype = {
 //        mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(90-addon.pitch) );
 //        mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(addon.heading)  );
 //        quat.fromEuler(this.quat, addon.pitch+90, addon.roll, addon.heading-90);
-        mat4.fromRotationTranslationScale(this.mMatrix,
-                                          this.quat,
-                                          this.translation,
-                                          this.vscale);
+//        mat4.fromRotationTranslationScale(this.mMatrix,
+//                                          this.quat,
+//                                          this.translation,
+//                                          this.vscale);
 
         mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
@@ -1300,8 +1297,21 @@ Craft.prototype = {
         gl.uniform1i( uniforms.has_texture, false );
     },
 
-    setQuat : function( x, y, z) {
-        quat.fromEuler( this.quat, x, y, z);
+    setRotation : function(params) {
+//        quat4.fromEuler( this.quat, params.heading, params.pitch, params.roll );
+        mat4.fromScaling( this.mMatrix, this.vscale );
+        // if craft's look at [1, 0, 0] and its up is [0, 0, 1]
+        // following rotation will be fine, now it needs to some calibrations
+        // what's more, the coordinate will rotate with the angle
+//        mat4.rotateZ( this.mMatrix, this.mMatrix, degToRad( params.heading ) );
+//        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( params.pitch ) );
+//        mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( params.roll ) );
+
+        mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( 90 ) );
+//        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( 270 ) );
+        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( params.heading + 270 ) );
+        mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( params.pitch ) );
+        mat4.rotateZ( this.mMatrix, this.mMatrix, degToRad( params.roll ) );
     },
 
     setScale : function( size ) {

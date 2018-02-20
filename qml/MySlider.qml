@@ -37,6 +37,7 @@ Rectangle {
     SpinBox {
         id: spinBox
 
+        height: desc.height
         anchors {
             top: parent.top
             topMargin: 5
