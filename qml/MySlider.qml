@@ -23,6 +23,7 @@ Rectangle {
     property var   getValue: function() {
         return value / ratio
     }
+    property var callback;
 
     Label {
         id: desc
@@ -71,7 +72,7 @@ Rectangle {
     Slider {
         id: slider
         wheelEnabled: false
-
+        signal moving();
         anchors {
             top: desc.bottom
             topMargin: -5
@@ -86,6 +87,8 @@ Rectangle {
         onValueChanged: {
             spinBox.value = value
         }
-    }
 
+//        onMoving:
+//        handle.radius: 12
+    }   
 }

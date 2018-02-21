@@ -32,7 +32,7 @@ var uniforms = {};    // uniform variables from shader
 // matrixs
 var pvMatrix  = mat4.create();
 var mvpMatrix = mat4.create();
-var nMatrix   = mat4.create();
+//var nMatrix   = mat4.create();
 
 var canvasArgs; // 相关绘图变量
 var scene;
@@ -45,11 +45,10 @@ var refCircle;
 var recordPoint;
 var sphere;
 
-function reset(args) {
-    args.heading_offset = args.heading;
-    var angle = calcAngle(args.pitch, 0);
-    var u = angle[0], v = angle[1];
-    sensorPath.resetAllPath(args);
+function reset() {
+    sensorPoint.reset();
+    sensorPath.resetAllPath();
+    camera.reset();
 }
 
 /**
@@ -87,6 +86,28 @@ function readFile(url, onLoad, onProgress, onError) {
     request.send( null );
 }
 
+function addRefCircle( props ) {
+    if( refCircle === undefined ) {
+        refCircle = new RefCircle( props );
+        sensorPoint.addParamCallback( function( params ) {
+            refCircle.onSphericalChanged( params );
+        })
+        sensorPoint.update();
+        scene.add( refCircle, true );
+    }
+}
+
+function addCraft( props ) {
+    if( craft === undefined ) {
+        craft = new Craft( props );
+        sensorPoint.addParamCallback( function( params ) {
+            craft.setRotation( params );
+        });
+        sensorPoint.update();
+        scene.add( craft, true );
+    }
+}
+
 var ready = false;
 function initializeGL(canvas, args) {
     gl  = canvas.getContext("canvas3d",
@@ -97,29 +118,25 @@ function initializeGL(canvas, args) {
     scene       = new Scene();
     camera      = new Camera();
     coordinate  = new Coord();
-    craft       = new Craft();
-    sensorPoint = new SensorPoint({ color: [1.0, 0.0, 0.0], size: 0.5 });
+    sensorPoint = new SensorPoint( { color: [1.0, 0.0, 0.0], size: 0.4 } );
     sensorPath  = new SensorPath();
-    refCircle   = new RefCircle();
+    sensorPoint.addParamCallback( function( params ) {
+        sensorPath.onSphericalChanged( params );
+    });
+
     recordPoint = new RecordPoint();
     sphere      = new Ball({    color: [0.3, 0.3, 0.3],
                                 vn: 48,
                                 hn: 48
                             });
 
-    sensorPoint.addParamCallback( function( params ) {
-        craft.setRotation( params );
-    });
     sensorPoint.setParam( { dis: 4, pitch: 0, roll: 0, heading: 0 } );
-    craft.setScale( 0.5 );
 
     ready = true;
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
     scene.add( coordinate );
-    scene.add( craft );
     scene.add( sensorPoint);
     scene.add( sensorPath );
-    scene.add( refCircle );
     scene.add( recordPoint );
     scene.add( sphere );
     scene.add( camera );
@@ -127,7 +144,7 @@ function initializeGL(canvas, args) {
 }
 
 
-function paintGL(canvas, args) {
+function paintGL(canvas) {
     var pixelRatio = canvas.devicePixelRatio;
     var currentWidth = canvas.width * pixelRatio;
     var currentHeight = canvas.height * pixelRatio;
@@ -136,9 +153,7 @@ function paintGL(canvas, args) {
         camera.setSize( currentWidth, currentHeight );
     }
 
-    /** 如果 heading 有偏移，应把偏移算上(以复位后的位置作为基准方向) **/
-    args.heading = args.heading - args.heading_offset;
-
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
     scene.render();
 }
 
@@ -208,6 +223,7 @@ Camera.prototype = {
         } else if( a_theta > 179.99 ) {
             a_theta = 179.99
         }
+        this.dis = r;
 
         this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
     },
@@ -217,6 +233,10 @@ Camera.prototype = {
         this.height = height;
         gl.viewport( 0, 0, width, height );
         mat4.perspective( this.pMatrix, 45 / 180 * Math.PI, width / height, 0.5, 500.0 );
+    },
+
+    reset : function(  ) {
+        this.rotate( 45, 180, this.dis );
     }
 }
 
@@ -240,21 +260,30 @@ function Scene() {
 Scene.prototype = {
     constructor : Scene,
 
-    add : function(obj) {
+    add : function(obj, first) {
+        if( obj === undefined ) {
+            console.log("[Warn] Undefined on Scene adding.");
+            return;
+        }
+
         if( obj.type === "Camera" ) {
             this.objs.unshift( obj );
         }
-
-        this.objs.push( obj );
+        if( first ) {
+            var c = this.objs.shift();
+            this.objs.unshift( obj );
+            this.objs.unshift( c );
+        } else  {
+            this.objs.push( obj );
+        }
     },
 
     render : function() {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
-        gl.uniform3fv(uniforms.light_direction, this.light_direct);  // where light origins
+        gl.uniform3fv( uniforms.light_direction, this.light_direct );  // where light origins
 
         this.objs.forEach( function(obj) {
             obj.paint();
-        })
+        });
     },
 
     /*
@@ -323,16 +352,17 @@ Scene.prototype = {
         gl.enableVertexAttribArray(attributes.color);
 
         attributes.texture = gl.getAttribLocation( shaderProgram, "aTexture" );
+        attributes.color   = gl.getAttribLocation(shaderProgram, "aColor");
 
-        attributes.color           = gl.getAttribLocation(shaderProgram, "aColor");
-
-        uniforms.pmv_matrix      = gl.getUniformLocation(shaderProgram, "uPMVMatrix"); // 透视模型视图矩阵
-        uniforms.m_matrix        = gl.getUniformLocation(shaderProgram, "uMMatrix")
-    //    uniforms.normal_matrix   = gl.getUniformLocation(shaderProgram, "uNormalMatrix"); // 法线
-        uniforms.light_direction = gl.getUniformLocation(shaderProgram, "uLightDirection"); // 光照
-        uniforms.alpha           = gl.getUniformLocation(shaderProgram, "uAlpha");
-        uniforms.frag_color      = gl.getUniformLocation(shaderProgram, "uFragColor");
+        uniforms.pmv_matrix = gl.getUniformLocation(shaderProgram, "uPMVMatrix"); // 透视模型视图矩阵
+        uniforms.m_matrix   = gl.getUniformLocation(shaderProgram, "uMMatrix")
+        uniforms.n_matrix   = gl.getUniformLocation(shaderProgram, "uNMatrix"); // 法线
+        uniforms.alpha      = gl.getUniformLocation(shaderProgram, "uAlpha");
+        uniforms.frag_color = gl.getUniformLocation(shaderProgram, "uFragColor");
         uniforms.has_texture     = gl.getUniformLocation( shaderProgram, "uHasTexture" );
+        uniforms.light_direction = gl.getUniformLocation(shaderProgram, "uLightDirection"); // 光照
+
+        gl.uniformMatrix4fv( uniforms.n_matrix, false, mat4.create() );
     }
 
 }
@@ -469,6 +499,7 @@ function SensorPoint(props) {
     this.dis   = 4;
     this.pitch = 0;
     this.heading = 0;
+    this.headingOffset = 0;
     this.roll    = 0;
     this.callbacks = [];
 
@@ -516,7 +547,6 @@ SensorPoint.prototype = {
     },
 
     paint : function() {
-//        var angle = this.normal();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color);
         gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);
@@ -552,13 +582,20 @@ SensorPoint.prototype = {
 //        setParam : function(r, pitch, heading, roll) {
         this.dis     = params.dis;
         this.pitch   = params.pitch;
+        params.heading = params.heading - this.headingOffset;
         this.heading = params.heading;
         this.roll    = params.roll;
         var theta = 90 - this.pitch;
         this.setTranslation( this.dis, theta, this.heading );
+        this.update();
+    },
 
+    update : function() {
+        var spherical = this.spherical();
         for( var i = 0; i < this.callbacks.length; i++ ) {
-            this.callbacks[i]( params );
+            this.callbacks[i]( { dis: this.dis, pitch: this.pitch, heading: this.heading,
+                                  roll: this.roll, theta: spherical[0], phi: spherical[1]
+                              } );
         }
     },
 
@@ -571,10 +608,15 @@ SensorPoint.prototype = {
     * @param {Number} heading range [0, 360]
     * @returns {Vec3} the angle returned is in unit of rad  vec[0] and vec[1] is in unit of RAD
     */
-    normal : function() {
+    spherical : function() {
         var u = (90-this.pitch)/180 * Math.PI;
         var v = this.heading   /180 * Math.PI;
         return vec3.fromValues(u, v, this.dis);
+    },
+
+    reset : function() {
+        this.headingOffset = this.heading;
+        this.setParam( { pitch: this.pitch, heading: this.heading, roll: this.roll, dis: this.dis } );
     }
 }  // end of SensorPoint prototype
 
@@ -604,7 +646,6 @@ SensorPath.prototype = {
     constructor: SensorPath,
 
     init : function() {
-        this.last_point = sensorPoint.normal();
         this.angle      = this.last_point;
         this.path       = [];
         this.index      = [];
@@ -621,30 +662,6 @@ SensorPath.prototype = {
         if( !this.visible ) {
             return;
         }
-        var lpos  = vectorPos(this.last_point);
-        var angle = sensorPoint.normal();  // vertical of angle
-        var  pos  = vectorPos(angle);
-        var dist  = vec3.dist( lpos, pos );
-
-        // angle[2] is vector length
-        if( dist > Math.PI * angle[2] * 0.03 ) {
-            this.updateBuffer(angle, this.angle);
-            this.angle      = angle;
-            this.last_point = angle;
-        } else if( dist > Math.PI * angle[2] * 0.001 ) {
-            this.pg ++;
-            this.last_point = angle;
-
-            if( this.pg === this.gap ) {
-                this.angle = angle;
-            }
-            if( this.pg === this.gap+1 ) {
-                this.pg = 1;
-                this.updateBuffer(angle, this.angle);
-                this.angle = angle;
-            }
-        }
-
         gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
     //    mat4.identity(this.mMatrix);
 //        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
@@ -658,20 +675,26 @@ SensorPath.prototype = {
             gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
             gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
-            gl.drawElements(gl.TRIANGLES,     this.max_path_num, gl.UNSIGNED_SHORT, 0);
+            gl.drawElements(gl.TRIANGLES, this.max_path_num, gl.UNSIGNED_SHORT, 0);
         }
         if( this.cur_index_count > 0 ) {
+//            console.log( this.cur_index_count );
             gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.color[this.cur_pi]);     // color buffer
             gl.vertexAttribPointer(attributes.color,           3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);    // normal info
             gl.vertexAttribPointer(attributes.vertex_normal,   3, gl.FLOAT, false, 0, 0);
             gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
-            gl.drawElements(gl.TRIANGLES,     this.cur_index_count, gl.UNSIGNED_SHORT, 0);
+            gl.drawElements(gl.TRIANGLES, this.cur_index_count, gl.UNSIGNED_SHORT, 0);
         }
     },
 
-    updateBuffer : function(nangle, langle) {
+    /**
+      * @param nangle next sphericalCoord
+      * @param langle last sphericalCoord
+      */
+    updateBuffer : function(nangle) {
+        var langle = [ this.last_point.theta, this.last_point.phi, this.last_point.dis ];
         var presult = this.getLinearPoint(nangle, langle);
         this.all_path_count  += presult.point.length;
         this.all_index_count += presult.index.length;
@@ -703,7 +726,7 @@ SensorPath.prototype = {
     },
 
     /**
-     * 用于绘制路径所需的顶点和索引
+     * 用于绘制路径所需的顶点和索引, 每次返回 4 个顶点
      * @param {Array} p     p[0] = theta    p[1] = beta    p[2] = radius
      * @param {Array} lp   lp[0] = theta   lp[1] = beta   lp[2] = lradius
      * @return {Object}
@@ -717,7 +740,7 @@ SensorPath.prototype = {
         var l = vec3.create();
         vec3.cross(l, s, n0);
         vec3.normalize(l, l);
-        vec3.scale(l, l, this.width * 0.002);
+        vec3.scale(l, l, this.size * 0.02);
     //    console.log("vec l: " + vec3.str(l));
 
         var linearPoint = [];
@@ -751,6 +774,43 @@ SensorPath.prototype = {
         }
     },
 
+    onSphericalChanged : function(params) {
+        if( this.last_point === undefined ) {
+            this.last_point = params;
+//            return;
+        }
+
+        var lpos  = coordCarte( this.last_point.theta, this.last_point.phi, this.last_point.dis );
+        var  pos  = coordCarte( params.theta, params.phi, params.dis );
+        var dist  = vec3.dist( lpos, pos );
+        var angle = [ params.theta, params.phi, params.dis ];
+
+        if( dist > Math.PI * params.dis * 0.002 ) {
+            this.updateBuffer( angle );
+            this.angle      = angle;
+            this.last_point = params;
+        }
+
+        // angle[2] is vector length
+//        if( dist > Math.PI * params.dis * 0.03 ) {
+//            this.updateBuffer( angle );
+//            this.angle      = angle;
+//            this.last_point = params;
+//        } else if( dist > Math.PI * params.dis * 0.001 ) {
+//            this.pg ++;
+//            this.last_point = params;
+
+//            if( this.pg === this.gap ) {
+//                this.angle = angle;
+//            }
+//            if( this.pg === this.gap+1 ) {
+//                this.pg = 1;
+//                this.updateBuffer( angle );
+//                this.angle = angle;
+//            }
+//        }
+    },
+
     // 重置路径变量
     resetCurrentPath : function(vec) {
         this.cur_path_count  = 0;
@@ -769,7 +829,7 @@ SensorPath.prototype = {
         this.all_path_count  = 0;
         this.all_index_count = 0;
         this.createBuffer();
-        this.last_point = sensorPoint.normal();
+//        this.last_point = sensorPoint.spherical();
         this.resetCurrentPath();
     },
 
@@ -1020,8 +1080,9 @@ Coord.prototype = {
 
 
 // **************** ReferenceCircle Object (球面上的参考圆圈) **************** //
-function RefCircle() {
-    this.dis = 4;
+function RefCircle( props ) {
+    PaintObj.call( this, props );
+    this.dis = props.dis || 4;
     this.visible = false;
     var circles = [];
     var red   = [1.0, 0.0, 0.0];
@@ -1043,7 +1104,9 @@ function RefCircle() {
         }
     }
     circles[k] = new ReferCircle( {"pos": [4*45, 0, this.dis], color: green } );
+//    circles[20].isCurrent = true;
     this.circles = circles;
+    this.setScale( props.size || 1);
 }
 
 RefCircle.prototype = {
@@ -1062,13 +1125,21 @@ RefCircle.prototype = {
     setDis : function(dis) {
         this.dis = dis;
         for( var i = 0; i < 26; i++) {
-            this.circles[i].setTranslation( this.dis );
+            this.circles[i].setTranslation( this.dis + 0.1 );
         }
     },
 
     setScale : function( size ) {
+        this.size = size;
         for( var i = 0; i < 26; i++) {
-            this.circles[i].scale( this.size );
+            this.circles[i].setScale( this.size );
+        }
+    },
+
+    onSphericalChanged : function( params ) {
+        for( var i = 0; i < 26; i++ ) {
+//            this.circles[i].current = false;
+            this.circles[i].isCurrent( params );
         }
     }
 
@@ -1082,6 +1153,7 @@ function ReferCircle( props ) {
         this.setTranslation( props.pos[2], degToRad( props.pos[0] ), degToRad( props.pos[1] ) );
         this.setQuat( props.pos[0], props.pos[1] );
     }
+    this.current = false;
 
     this.init();
 }
@@ -1117,7 +1189,14 @@ ReferCircle.prototype = {
         mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.drawElements( gl.LINES, this.sides, gl.UNSIGNED_SHORT, 0 );
+        if( this.current ) {
+            var w = gl.getParameter( gl.LINE_WIDTH );
+            gl.lineWidth( 3 );
+            gl.drawElements( gl.LINE_LOOP, this.sides, gl.UNSIGNED_SHORT, 0 );
+            gl.lineWidth( 1 );
+        } else {
+            gl.drawElements( gl.LINES, this.sides, gl.UNSIGNED_SHORT, 0 );
+        }
     },
 
     setTranslation : function(r, theta, phi) {
@@ -1139,6 +1218,14 @@ ReferCircle.prototype = {
     setScale : function( size ) {
         this.size = size;
         this.vscale  = vec3.fromValues(size, size, size);
+    },
+
+    isCurrent : function( spherical ) {
+        this.current = false;
+        if( Math.abs( spherical.theta - this.theta ) < Math.PI * 0.02
+            && Math.abs( spherical.phi - this.phi ) < Math.PI * 0.02   ) {
+            this.current = true;
+        }
     }
 }
 
@@ -1237,6 +1324,8 @@ function Craft(props) {
 
     this.type    = "Craft";
     this.url     = "qrc:/obj/craft.obj";
+    var scale = props.size || 1;
+    this.setScale( scale );
     this.init();
 }
 
@@ -1272,7 +1361,6 @@ Craft.prototype = {
 //            // disabled, then it needs to be re-enabled
 //            gl.enableVertexAttribArray( attributes.texture );
 //            gl.bindBuffer( gl.ARRAY_BUFFER, this.mesh.textureBuffer );
-//            console.log( "texture: " + this.mesh.textureBuffer.itemSize)
 //            gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
 //        }
 
@@ -1298,6 +1386,9 @@ Craft.prototype = {
     },
 
     setRotation : function(params) {
+        this.pitch   = params.pitch;
+        this.heading = params.heading;
+        this.roll    = params.roll;
 //        quat4.fromEuler( this.quat, params.heading, params.pitch, params.roll );
         mat4.fromScaling( this.mMatrix, this.vscale );
         // if craft's look at [1, 0, 0] and its up is [0, 0, 1]
@@ -1317,6 +1408,8 @@ Craft.prototype = {
     setScale : function( size ) {
         this.size = size;
         vec3.set(this.vscale, size, size, size);
+        sensorPoint.update();
+//        this.setRotation( {} );
     }
 }
 

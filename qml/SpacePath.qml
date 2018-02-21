@@ -60,10 +60,6 @@ Item {
                     left: parent.left
                 }
 
-//                Text {
-////                    id: name
-//                    text: qsTr("摄像机参数")
-//                }
                 Item {
                     id: cameraItem0
                     width: parent.width
@@ -205,7 +201,7 @@ Item {
                     text: "指示器大小："
                     maxValue: 100
                     minValue: 1
-                    value: 80
+                    value: 100
                     decimal: 2
 
                     onValueChanged: {
@@ -255,6 +251,7 @@ Item {
                     maxValue: 100
                     minValue: 1
                     value: 30
+                    stepSize: 5
                     decimal : 2
                     onValueChanged: {
                         if( GLcode.ready ) {
@@ -270,10 +267,10 @@ Item {
                     text: "模拟器大小:"
                     maxValue: 100
                     minValue: 1
-                    value   : 30
+                    value   : 60
                     decimal : 2
                     onValueChanged: {
-                        if( GLcode.ready ) {
+                        if( GLcode.craft ) {
                             GLcode.craft.setScale( getValue() );
                         }
                     }
@@ -390,9 +387,12 @@ Item {
                         topMargin: 5
                         leftMargin: controller.marginleft
                     }
-                    checked: true
+                    checked: false
                     onCheckedChanged: {
-                        GLcode.craft.visible = checked;
+                        GLcode.addCraft( { size: craftSize.getValue() });
+                        if( GLcode.craft ) {
+                            GLcode.craft.visible = checked;
+                        }
                         craftSize.enabled  = checked;
                     }
                 }
@@ -417,7 +417,7 @@ Item {
                 CheckBox {
                     id: calibrationBox
                     text: "显示修正圆圈"
-                    checked: true
+                    checked: false
 
                     anchors {
                         top: axisBox.bottom
@@ -427,6 +427,7 @@ Item {
                     }
                     onCheckedChanged: {
 //                        argItem.calibration = checked;
+                        GLcode.addRefCircle( { size: circleSize.getValue() } );
                         GLcode.refCircle.visible = checked;
                         GLcode.recordPoint.visible = checked;
                         circleSize.enabled  = checked;
@@ -463,7 +464,7 @@ Item {
                         camBeta.value  = 90
 
                         onCameraRotate()
-                        GLcode.reset(argItem);
+                        GLcode.reset();
                     }
                 }
 
@@ -480,7 +481,7 @@ Item {
                     }
                     onClicked: {
                         console.log("[Info] Reset all path.")
-                        GLcode.sensorPath.resetAllPath(argItem);
+                        GLcode.sensorPath.resetAllPath();
                     }
                 }
 
@@ -586,7 +587,7 @@ Item {
                     opacity: 1
                 }
                 Component.onCompleted: {
-                    view.contentHeight = calcHeight(view.contentItem);  // use contentItem to set contentHeight
+                    view.contentHeight = calcHeight( view.contentItem );  // use contentItem to set contentHeight
                 }
             }
 
@@ -702,21 +703,6 @@ Item {
         }
     }
 
-    /**
-      * this item is just used for reserved variables
-    **/
-    Item {
-        id: argItem
-        visible: false
-
-        /* 只需要航向角和俯仰角即可确定传感器方向向量(默认向量长度为球体半径, 4) */
-        property alias  heading:    heading.value
-        property alias  pitch:      pitch.value
-        property double roll:       roll.value
-        property double heading_offset: 0
-        property double vector_length:  4
-    }
-
     Canvas3D {
         id: canvas3d
         anchors.fill: parent
@@ -741,8 +727,9 @@ Item {
 
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
-            GLcode.initializeGL(canvas3d, argItem);
+            GLcode.initializeGL(canvas3d);
             onCameraRotate();
+
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
@@ -751,7 +738,7 @@ Item {
                 return;
             }
 
-            GLcode.paintGL(canvas3d, argItem);
+            GLcode.paintGL(canvas3d);
         }
 
         onResizeGL: {
@@ -762,8 +749,15 @@ Item {
     Connections {
         target: dataSource
         onDataChanged: {
-            console.log("dataSource heading changed:  " + dataSource.getHeading());
-//            GLcode.
+//            console.log("dataSource heading changed:  " + dataSource.getHeading());
+            if( GLcode.ready ) {
+                GLcode.sensorPoint.setParam( {
+                    dis:   dataSource.getMagicVectorLength()/10000,
+                    pitch: dataSource.getPitch(),
+                    heading: dataSource.getHeading(),
+                    roll: dataSource.getRoll()
+                } );
+            }
         }
     }
 
