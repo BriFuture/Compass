@@ -174,6 +174,9 @@ Item {
                         if( GLcode.ready ) {
                             GLcode.sphere.setSize( getValue() / 10000 );
                         }
+                        if( GLcode.refCircle ) {
+                            GLcode.refCircle.setSize( getValue() / 10000 );
+                        }
                     }
                 }
 
@@ -201,7 +204,7 @@ Item {
                     text: "指示器大小："
                     maxValue: 100
                     minValue: 1
-                    value: 100
+                    value: 30
                     decimal: 2
 
                     onValueChanged: {
@@ -220,6 +223,7 @@ Item {
                     minValue: 1
                     value: 8
                     decimal: 1
+                    enabled: pathEnableBox.checked
 
                     onValueChanged: {
                         if( GLcode.ready ) {
@@ -228,49 +232,52 @@ Item {
                     }
                 }
 
-                MySlider {
-                    id: pathGap
-                    anchors.top: pathWidth.bottom
-                    width: parent.width
-                    text: "路径间隔："
-                    maxValue: 2
-                    minValue: 1
-                    value: 1
-                    onValueChanged: {
-                        if( GLcode.ready ) {
-                            GLcode.sensorPath.setGap( value );
-                        }
-                    }
-                }
+//                MySlider {
+//                    id: pathGap
+//                    anchors.top: pathWidth.bottom
+//                    width: parent.width
+//                    text: "路径间隔："
+//                    maxValue: 2
+//                    minValue: 1
+//                    value: 1
+//                    enabled:  pathEnableBox.checked
+//                    onValueChanged: {
+//                        if( GLcode.ready ) {
+//                            GLcode.sensorPath.setGap( value );
+//                        }
+//                    }
+//                }
 
-                MySlider {
-                    id: circleSize
-                    anchors.top: pathGap.bottom
-                    width: parent.width
-                    text: "参考圆圈大小："
-                    maxValue: 100
-                    minValue: 1
-                    value: 30
-                    stepSize: 5
-                    decimal : 2
-                    onValueChanged: {
-                        if( GLcode.ready ) {
-                            GLcode.refCircle.setScale( getValue() );
-                        }
-                    }
-                }
+//                MySlider {
+//                    id: circleSize
+//                    anchors.top: pathGap.bottom
+//                    width: parent.width
+//                    text: "参考圆圈大小："
+//                    maxValue: 100
+//                    minValue: 1
+//                    value: 50
+//                    stepSize: 5
+//                    decimal : 2
+//                    enabled:  calibrationBox.checked
+//                    onValueChanged: {
+//                        if( GLcode.refCircle !== undefined ) {
+//                            GLcode.refCircle.setScale( getValue() );
+//                        }
+//                    }
+//                }
 
                 MySlider {
                     id: craftSize
-                    anchors.top: circleSize.bottom
+                    anchors.top: pathWidth.bottom
                     width: parent.width
                     text: "模拟器大小:"
                     maxValue: 100
                     minValue: 1
                     value   : 60
                     decimal : 2
+                    enabled : simBox.checked
                     onValueChanged: {
-                        if( GLcode.craft ) {
+                        if( GLcode.craft !== undefined ) {
                             GLcode.craft.setScale( getValue() );
                         }
                     }
@@ -372,7 +379,6 @@ Item {
                     checked: true
                     onCheckedChanged: {
                         GLcode.sensorPath.visible = checked;
-                        pathGap.enabled     = checked;
                         pathWidth.enabled   = checked;
                     }
                 }
@@ -397,7 +403,6 @@ Item {
                         if( GLcode.craft ) {
                             GLcode.craft.visible = checked;
                         }
-                        craftSize.enabled  = checked;
                     }
                 }
 
@@ -431,10 +436,10 @@ Item {
                     }
                     onCheckedChanged: {
 //                        argItem.calibration = checked;
-                        GLcode.addRefCircle( { size: circleSize.getValue() } );
+                        GLcode.addRefCircle( { size: pointSize.getValue() * 0.9 } );
                         GLcode.refCircle.visible = checked;
                         GLcode.recordPoint.visible = checked;
-                        circleSize.enabled  = checked;
+
                     }
                 }
             }  // checkBoxItem
