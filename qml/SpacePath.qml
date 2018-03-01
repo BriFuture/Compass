@@ -233,7 +233,7 @@ Item {
                     anchors.top: pathWidth.bottom
                     width: parent.width
                     text: "路径间隔："
-                    maxValue: 5
+                    maxValue: 2
                     minValue: 1
                     value: 1
                     onValueChanged: {
@@ -302,7 +302,7 @@ Item {
                         leftMargin: controller.marginleft
                     }
                     width: 20
-                    checkable: true
+//                    checkable: true
                     text: "line"
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
@@ -320,7 +320,7 @@ Item {
                     width: 20
                     text: "surface"
                     checked:  true
-                    checkable: true
+//                    checkable: true
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_SURFACE;
@@ -337,7 +337,7 @@ Item {
                     width: 20
                     text: "lessLine"
 
-                    checkable: true
+//                    checkable: true
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
                         GLcode.sphere.drawMode = GLcode.Ball.MODE_LESSLINE;
@@ -389,7 +389,11 @@ Item {
                     }
                     checked: false
                     onCheckedChanged: {
+                        // on windows platform, read craft.obj file will cost a lot
+                        // of time, in case of re-add craft, set enabled to false
+                        enabled = false;
                         GLcode.addCraft( { size: craftSize.getValue() });
+                        enabled = true;
                         if( GLcode.craft ) {
                             GLcode.craft.visible = checked;
                         }
