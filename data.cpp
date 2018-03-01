@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QDebug>
 #include <QSettings>
+#include <QtGlobal>
+#include <QTimer>
 
 Data::Data(QWindow *parent) : QQuickView( parent ) {
     heading = 0;
@@ -32,6 +34,12 @@ Data::Data(QWindow *parent) : QQuickView( parent ) {
         break;
     }
     this->setSource( source );
+
+    int interval = setting.value( "interval", 500 ).toInt();
+    QTimer *timer = new QTimer( this );
+    connect( timer, &QTimer::timeout, this, &Data::changeData );
+    timer->setInterval( interval );
+//    timer->start( 100 );
 }
 
 Data::~Data() {
@@ -63,12 +71,11 @@ double Data::getRoll() {
     return roll;
 }
 
-double* Data::getData() {
-    double *d = new double[3];
-    pitch   += 0.2274;
-    heading += 0.5252;
-    roll    += 2.3417;
+void Data::changeData() {
+    double weight = 0.00003;
+    pitch   += 0.2274 + qrand() * weight;
+    heading += 0.5252 + qrand() * weight;
+    roll    += 1.3417 + qrand() * weight;
     emit dataChanged();
-    return  d;
 }
 

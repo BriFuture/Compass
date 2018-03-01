@@ -12,6 +12,10 @@ public:
     Data(QWindow *parent = Q_NULLPTR);
     ~Data();
     bool event(QEvent *event);
+    Q_INVOKABLE double getHeading();
+    Q_INVOKABLE double getPitch();
+    Q_INVOKABLE double getRoll();
+    Q_INVOKABLE double getMagicVectorLength();
 
 private:
     double heading;
@@ -22,11 +26,8 @@ signals:
     void dataChanged();
 
 public slots:
-    double getHeading();
-    double getPitch();
-    double getRoll();
-    double* getData();
-    double getMagicVectorLength();
+
+    void changeData();
 };
 
 #endif // DATA_H
