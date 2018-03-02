@@ -1,4 +1,5 @@
-//precision mediump;
+precision mediump float;
+
 attribute vec3 aVertexPosition;
 attribute vec3 aVertexNormal;
 attribute vec2 aTexture;

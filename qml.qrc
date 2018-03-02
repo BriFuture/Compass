@@ -19,5 +19,7 @@
         <file>qml/SPFragCode.fsh</file>
         <file>qml/SPVertexCode.vsh</file>
         <file>qml/gl-matrix-min.js</file>
+        <file>qml/gl-matrix.js</file>
+        <file>qml/webgl-obj-loader.js</file>
     </qresource>
 </RCC>

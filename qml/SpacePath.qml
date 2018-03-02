@@ -45,7 +45,7 @@ Item {
             height: parent.height
             contentWidth:  parent.width-8
             contentHeight: container.height
-
+            property bool ready : false
 
             Rectangle {
                 id: cameraItem
@@ -171,11 +171,11 @@ Item {
                     stepSize: 1000
 //                    decimal: 4
                     onValueChanged: {
-                        if( GLcode.ready ) {
+                        if( view.ready ) {
                             GLcode.sphere.setSize( getValue() / 10000 );
                         }
                         if( GLcode.refCircle ) {
-                            GLcode.refCircle.setSize( getValue() / 10000 );
+                            GLcode.refCircle.setDis( getValue() / 10000 );
                         }
                     }
                 }
@@ -191,7 +191,7 @@ Item {
                     stepSize: 5
                     decimal: 2
                     onValueChanged: {
-                        if( GLcode.ready ) {
+                        if( view.ready ) {
                             GLcode.sphere.alpha = getValue();
                         }
                     }
@@ -208,7 +208,7 @@ Item {
                     decimal: 2
 
                     onValueChanged: {
-                        if( GLcode.ready ) {
+                        if( view.ready ) {
                             GLcode.sensorPoint.setScale( getValue() );
                         }
                     }
@@ -226,7 +226,7 @@ Item {
                     enabled: pathEnableBox.checked
 
                     onValueChanged: {
-                        if( GLcode.ready ) {
+                        if( view.ready ) {
                             GLcode.sensorPath.setSize( getValue() );
                         }
                     }
@@ -242,7 +242,7 @@ Item {
 //                    value: 1
 //                    enabled:  pathEnableBox.checked
 //                    onValueChanged: {
-//                        if( GLcode.ready ) {
+//                        if( view.ready ) {
 //                            GLcode.sensorPath.setGap( value );
 //                        }
 //                    }
@@ -541,7 +541,7 @@ Item {
                 }
                 property var posChanged: function() {
 
-                    if( GLcode.ready ) {
+                    if( view.ready ) {
                         GLcode.sensorPoint.setParam( {  dis:   4,
                                                         pitch: pitch.value,
                                                         heading: heading.value,
@@ -704,7 +704,6 @@ Item {
 
         onWheel: {
             camDis.value -= wheel.angleDelta.y / 120;
-//
         }
 
         onDoubleClicked: {
@@ -716,7 +715,6 @@ Item {
         id: canvas3d
         anchors.fill: parent
         focus: true
-        property bool stop: true
 //        renderOnDemand: true
 //        property var  callbacks : []
 //        property var  addCallback: function( callback, type ) {
@@ -737,16 +735,12 @@ Item {
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
             GLcode.initializeGL(canvas3d);
+            view.ready = true;
             onCameraRotate();
-
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
         onPaintGL: {
-            if( stop ) {
-                return;
-            }
-
             GLcode.paintGL(canvas3d);
         }
 
@@ -759,7 +753,7 @@ Item {
         target: dataSource
         onDataChanged: {
 //            console.log("dataSource heading changed:  " + dataSource.getHeading());
-            if( GLcode.ready ) {
+            if( view.ready ) {
                 GLcode.sensorPoint.setParam( {
                     dis:   dataSource.getMagicVectorLength()/10000,
                     pitch: dataSource.getPitch(),
@@ -777,10 +771,10 @@ Item {
             if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
                 // it can decrease resource consuming when not minimized or hidden
                 console.log("[Info] windos state changed:  now hidden or minimized");
-                canvas3d.stop = true;
+                canvas3d.renderOnDemand = true;
             } else {
 //                console.log("[Info] windos state changed:  now visible");
-                canvas3d.stop = false;
+                canvas3d.renderOnDemand = false;
             }
         }
     }
@@ -813,14 +807,14 @@ Item {
     }
 
     function onCameraRotate() {
-        if( GLcode.camera === undefined ) {
+        if( !view.ready ) {
             return;
         }
 
         GLcode.camera.rotate( camTheta.getValue(), camBeta.getValue(), camDis.getValue() );
-        cameraXPos.value = GLcode.camera.pos[0]
-        cameraYPos.value = GLcode.camera.pos[1]
-        cameraZPos.value = GLcode.camera.pos[2]
+        cameraXPos.value = GLcode.camera.pos[0];
+        cameraYPos.value = GLcode.camera.pos[1];
+        cameraZPos.value = GLcode.camera.pos[2];
     }
 
     function onMouseDraged(ml) {

@@ -1,3 +1,5 @@
+precision mediump float;
+
 varying vec3  vLight;
 varying vec2  vTexture;
 varying vec3  vNormal;

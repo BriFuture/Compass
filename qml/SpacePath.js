@@ -11,8 +11,10 @@
 *******************************/
 
 .pragma library
-.import "gl-matrix-min.js" as MatrixHelper
-.import "webgl-obj-loader.min.js" as ObjLoader
+//.import "gl-matrix-min.js" as MatrixHelper
+//.import "webgl-obj-loader.min.js" as ObjLoader
+.import "gl-matrix.js" as MatrixHelper
+.import "webgl-obj-loader.js" as ObjLoader
 
 var mat4 = MatrixHelper.mat4;
 var vec3 = MatrixHelper.vec3;
@@ -33,9 +35,6 @@ var gl2d;  // this is used for HUD drawing
 var attributes = {};  // attribute variables from shader
 var uniforms = {};    // uniform variables from shader
 
-// matrixs
-var pvMatrix  = mat4.create();
-var mvpMatrix = mat4.create();
 //var nMatrix   = mat4.create();
 
 var canvasArgs; // 相关绘图变量
@@ -112,7 +111,6 @@ function addCraft( props ) {
     }
 }
 
-var ready = false;
 function initializeGL(canvas, args) {
     gl  = canvas.getContext("canvas3d",
                            { depth: true, antilias: true }
@@ -141,7 +139,6 @@ function initializeGL(canvas, args) {
 
     sensorPoint.setParam( { dis: 4, pitch: 0, roll: 0, heading: 0 } );
 
-    ready = true;
     /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
     scene.add( coordinate );
     scene.add( sensorPoint);
@@ -149,9 +146,7 @@ function initializeGL(canvas, args) {
     scene.add( recordPoint );
     scene.add( sphere );
     scene.add( camera );
-
 }
-
 
 function paintGL(canvas) {
     var pixelRatio = canvas.devicePixelRatio;
@@ -182,10 +177,12 @@ function createArrayBuffer(data, drawtype, type) {
 
     if( type === undefined ) {
         type = gl.ELEMENT_ARRAY_BUFFER;
-
+        buffer.itemSize = data.itemSize || 1;
         if( data instanceof Float32Array ) {
             type = gl.ARRAY_BUFFER;
+            buffer.itemSize = data.itemSize || 3;
         }
+        buffer.numItems = data.length / buffer.itemSize;
     }
 
     gl.bindBuffer( type, buffer );
@@ -204,26 +201,52 @@ function subBuffer(buffer, offset, data) {
     gl.bufferSubData( type, offset, data );
 }
 
+/** Test: to watch variables change **/
+function Test() {
+    this._x = 0;
+    this._y = 0;
+    this._z = 0;
+}
+
+Object.defineProperty( Test.prototype, "x", {
+    set : function(val) {
+        this._x = val;
+        console.log( "x: " + val );
+    },
+    get : function() {
+        return this._x;
+    }
+} );
+/************/
 
 // some problem occurred when x or y equals to zero
 // because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
 function Camera() {
+//    PaintObj.call( this );
     this.type = "Camera";
     this.width = 800;
     this.height = 600;
     this.pos = [1, 1, 1];
     this.up  = [0, 0, 1];
     this.lookat = [0, 0, 0];
-    this.pMatrix = mat4.create();
-    this.vMatrix = mat4.create();
+    this.pMatrix  = mat4.create();
+    this.vMatrix  = mat4.create();
+    this.pvMatrix = mat4.create();
 }
 
 Camera.prototype = {
     constructor: Camera,
 
-    paint : function() {
+    update : function() {
         mat4.lookAt( this.vMatrix, this.pos, this.lookat, this.up );
-        mat4.multiply( pvMatrix, this.pMatrix, this.vMatrix );
+        mat4.multiply( this.pvMatrix, this.pMatrix, this.vMatrix );
+        if( this.watcher !== undefined ) {
+            this.watcher( this.pvMatrix );
+        }
+    },
+
+    recv: function(watcher) {
+        this.watcher = watcher;
     },
 
     rotate : function(a_theta, a_phi, r) {
@@ -233,8 +256,8 @@ Camera.prototype = {
             a_theta = 179.99
         }
         this.dis = r;
-
         this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
+        this.update();
     },
 
     setSize : function(width, height) {
@@ -242,10 +265,12 @@ Camera.prototype = {
         this.height = height;
         gl.viewport( 0, 0, width, height );
         mat4.perspective( this.pMatrix, 45 / 180 * Math.PI, width / height, 0.5, 500.0 );
+        this.update();
     },
 
     reset : function(  ) {
         this.rotate( 45, 180, this.dis );
+        this.update();
     }
 }
 
@@ -263,6 +288,10 @@ function Scene() {
     this.type = "Scene";
     this.objs = [];
     this.light_direct = [0.35, 0.35, 0.7];
+
+    this.vertexFile = "qrc:/qml/SPVertexCode.vsh";
+    this.fragFile   = "qrc:/qml/SPFragCode.fsh";
+
     this.initShaders();
 }
 
@@ -276,23 +305,38 @@ Scene.prototype = {
         }
 
         if( obj.type === "Camera" ) {
-            this.objs.unshift( obj );
+            this.camera = obj ;
+            var that = this;
+            obj.recv( function(matrix) {
+                that.onNotify( matrix );
+            } );
         }
-        if( first ) {
-            var c = this.objs.shift();
-            this.objs.unshift( obj );
-            this.objs.unshift( c );
-        } else  {
-            this.objs.push( obj );
+        else {
+            if( first ) {
+                this.objs.unshift( obj );
+            } else  {
+                this.objs.push( obj );
+            }
+            if( this.camera !== undefined ) {
+                // force camera to notify all added object refresh mvpMatrix
+                this.camera.update();
+            }
         }
     },
 
     render : function() {
-        gl.uniform3fv( uniforms.light_direction, this.light_direct );  // where light origins
+//        this.objs.forEach( function(obj) {
+//            obj.paint();
+//        });
+        for( var i = 0; i < this.objs.length; i++ ) {
+            this.objs[i].paint();
+        }
+    },
 
-        this.objs.forEach( function(obj) {
-            obj.paint();
-        });
+    onNotify : function(matrix) {
+        for( var i = 0; i < this.objs.length; i++ ) {
+            this.objs[i].onViewChanged( matrix );
+        }
     },
 
     /*
@@ -325,7 +369,7 @@ Scene.prototype = {
         var that = this;
         var ready = false;
 
-        readFile( "qrc:/qml/SPVertexCode.vsh", function(vertexCode) {
+        readFile( this.vertexFile, function(vertexCode) {
             vertexShader = that.getShader(gl, vertexCode, gl.VERTEX_SHADER);
             gl.attachShader(shaderProgram, vertexShader);
             ready = ( fragShader !== undefined );
@@ -336,7 +380,7 @@ Scene.prototype = {
 
         var fragShader;
 
-        readFile( "qrc:/qml/SPFragCode.fsh", function(fragCode) {
+        readFile( this.fragFile, function(fragCode) {
             fragShader = that.getShader(gl, fragCode, gl.FRAGMENT_SHADER);
             gl.attachShader(shaderProgram, fragShader);
             ready = ( vertexShader !== undefined );
@@ -374,16 +418,15 @@ Scene.prototype = {
         uniforms.vertexColor = gl.getUniformLocation( shaderProgram, "uVertColor" );
 
         gl.uniformMatrix4fv( uniforms.n_matrix, false, mat4.create() );
+        gl.uniform3fv( uniforms.light_direction, this.light_direct );  // where light origins
     }
 
 }
 
 
-
 function degToRad(deg) {
     return deg * Math.PI /180;
 }
-
 
 
 /**
@@ -544,17 +587,19 @@ function PaintObj(props) {
 
     this.buffers = {};
     this.mMatrix = mat4.create();
+    this.pvMatrix  = mat4.create();
+    this.mvpMatrix = mat4.create();
     this.quat    = quat.create();
     this.vscale  = vec3.fromValues(1.0, 1.0, 1.0);   // vec3.create equals to fromValues(0.0, 0.0, 0.0)
     this.translation = vec3.create();
     this.visible = true;
 
-//    this.x = 0;
-//    this.y = 0;
-//    this.z = 0;
-//    this.rotateX = 0;
-//    this.rotateY = 0;
-//    this.rotateZ = 0;
+    this._x = 0;
+    this._y = 0;
+    this._z = 0;
+    this._rotateX = 0;
+    this._rotateY = 0;
+    this._rotateZ = 0;
 }
 
 
@@ -612,11 +657,15 @@ SensorPoint.prototype = {
         gl.uniform1f( uniforms.alpha, this.alpha );          //  set alpha value
 
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        mat4.mul( mvpMatrix, pvMatrix, this.mMatrix );
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
         gl.drawElements(gl.TRIANGLES, this.index_count, gl.UNSIGNED_SHORT, 0);
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     setScale : function(size) {
@@ -647,6 +696,7 @@ SensorPoint.prototype = {
                                           this.quat,
                                           this.translation,
                                           this.vscale);
+        this.onViewChanged();
 
         var spherical = this.spherical();
         for( var i = 0; i < this.callbacks.length; i++ ) {
@@ -722,7 +772,7 @@ SensorPath.prototype = {
     //    mat4.identity(this.mMatrix);
 //        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, pvMatrix );
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
 
         // 分批绘制路径
         for(var i = 0; i < this.cur_pi; i++) {
@@ -742,6 +792,11 @@ SensorPath.prototype = {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
             gl.drawElements(gl.TRIANGLES, this.cur_index_count, gl.UNSIGNED_SHORT, 0);
         }
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     /**
@@ -882,8 +937,6 @@ SensorPath.prototype = {
         }
         this.all_index_count = 0;
         this.cur_pi = 0;
-//        this.createBuffer();
-//        this.last_point = sensorPoint.spherical();
         this.resetCurrentPath();
     },
 
@@ -916,55 +969,58 @@ Ball.prototype = {
     constructor: Ball,
     init : function() {
         var res = this.getVertex();
-        this.getIndex();
+        var index = this.getIndex();
 
         // vertex info，static_draw is enough for both vertex and index now
-        this.buffers.vertex          = createArrayBuffer( new Float32Array( res.vertices ),  gl.STATIC_DRAW );
-        this.buffers.vertex_index    = createArrayBuffer( new Uint16Array( this.vertex_index ),    gl.STATIC_DRAW );
-        this.buffers.line_index      = createArrayBuffer( new Uint16Array( this.line_index ),      gl.STATIC_DRAW );
-        this.buffers.less_line_index = createArrayBuffer( new Uint16Array( this.less_line_index ), gl.STATIC_DRAW );
-        this.buffers.less_ls_index   = createArrayBuffer( new Uint16Array( this.less_ls_index ),   gl.STATIC_DRAW );
-        // no need for normal vertex buffer anymore
-        // this.vertex_normal_buffer   = createArrayBuffer(gl.ARRAY_BUFFER,         new Float32Array(this.vertex),    gl.STATIC_DRAW);
+        this.vertexBuffer        = createArrayBuffer( new Float32Array( res.vertices ),         gl.STATIC_DRAW );
+        this.indexBuffer         = createArrayBuffer( new Uint16Array( index.vertex_index ),    gl.STATIC_DRAW );
+        this.lineIndexBuffer     = createArrayBuffer( new Uint16Array( index.line_index ),      gl.STATIC_DRAW );
+        this.lessLineIndexBuffer = createArrayBuffer( new Uint16Array( index.less_line_index ), gl.STATIC_DRAW );
+        this.lessLSIndexBuffer   = createArrayBuffer( new Uint16Array( index.less_ls_index ),   gl.STATIC_DRAW );
     },
 
 
     paint : function( ) {
-        gl.bindBuffer( gl.ARRAY_BUFFER, this.buffers.vertex );
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.vertexBuffer );
         gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 6 * 4, 0 );
         gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 6 * 4, 0 );
         gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 6 * 4, 3 * 4 );
 
-        mat4.multiply( mvpMatrix, pvMatrix, this.mMatrix );
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, mvpMatrix );
-        switch ( this.drawMode) {
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
+        switch ( this.drawMode ) {
             case Ball.MODE_LINE:
-                gl.uniform1f(uniforms.alpha, this.line_alpha);          //  set alpha value
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.line_index);
-                gl.drawElements(gl.LINES, this.line_index.length, gl.UNSIGNED_SHORT, 0);
+                gl.uniform1f( uniforms.alpha, this.line_alpha );          //  set alpha value
+                gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.lineIndexBuffer );
+                gl.drawElements( gl.LINES, this.lineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
                 break;
             case Ball.MODE_LESSLINE:
-                gl.uniform1f(uniforms.alpha, this.line_alpha);          //  set alpha value
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.less_line_index);
-                gl.drawElements(gl.LINES, this.less_line_index.length, gl.UNSIGNED_SHORT, 0);
+                gl.uniform1f( uniforms.alpha, this.line_alpha );          //  set alpha value
+                gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.lessLineIndexBuffer );
+                gl.drawElements( gl.LINES, this.lessLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0 );
                 // the surface on which equator lies
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.less_ls_index);
-                gl.drawElements(gl.TRIANGLE_FAN, this.less_ls_index.length, gl.UNSIGNED_SHORT,  0);  // multiply 2 times means that UNSIGNED_SHORT occupies 2 bytes
+                gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.buffers.lessLSIndexBuffer );
+                gl.drawElements( gl.TRIANGLE_FAN, this.lessLSIndexBuffer.numItems, gl.UNSIGNED_SHORT,  0 );  // multiply 2 times means that UNSIGNED_SHORT occupies 2 bytes
                 break;
             case Ball.MODE_SURFACE:
             default:
                 gl.uniform1f(uniforms.alpha, this.alpha);
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.vertex_index);
-                gl.drawElements(gl.TRIANGLES, this.vertex_index.length, gl.UNSIGNED_SHORT, 0);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer );
+                gl.drawElements(gl.TRIANGLES, this.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
                 break;
         }
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     setSize : function(size) {
         this.size   = size * this.ratio ;
         vec3.set(this.vscale, this.size, this.size, this.size);
         mat4.fromScaling(this.mMatrix, this.vscale);
+        this.onViewChanged();
     },
 
     setDrawMode : function( mode ) {
@@ -981,18 +1037,14 @@ Ball.prototype = {
      * @returns 返回所有类型的顶点个数
      */
     getVertex : function() {
-//        var vertex = [];
-//        var color  = [];
         var vertices = [];
         //    var vn = [];        // 顶点法向量数组，当球心在原点时，与顶点坐标相同
         var i, j, k;
 
         var that = this;
         var pushData = function(p) {
-//            vertex.push.apply(vertex, p);
-//            color.push.apply(color, that.color);
-            vertices.push.apply( vertices, p );
-            vertices.push.apply( vertices, that.color );
+            vertices = vertices.concat( p );
+            vertices = vertices.concat( that.color );
         }
 
         // i indicates vertical line while j indicates horizontal line,
@@ -1008,8 +1060,6 @@ Ball.prototype = {
         pushData( [0, 0, 0] );
 
         return {
-//            "vertex": vertex,
-//            "color" : color,
             "vertices": vertices
         }
     },
@@ -1067,10 +1117,17 @@ Ball.prototype = {
         }
         lessLSIndex.push((this.vn+1)*(this.hn+1));   // origin point
 
-        this.vertex_index = vertexIndex;
-        this.line_index   = lineIndex;
-        this.less_line_index = lessLineIndex;
-        this.less_ls_index   = lessLSIndex;
+//        this.vertex_index = vertexIndex;
+//        this.line_index   = lineIndex;
+//        this.less_line_index = lessLineIndex;
+//        this.less_ls_index   = lessLSIndex;
+        console.log( "length: " + vertexIndex.length )
+        return {
+            vertex_index: vertexIndex,
+            line_index: lineIndex,
+            less_line_index: lessLineIndex,
+            less_ls_index : lessLSIndex
+        }
     }
 }  // end of Ball prototype
 
@@ -1122,9 +1179,8 @@ Coord.prototype = {
     },
 
     paint : function() {
-        mat4.multiply(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, mvpMatrix );
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
 
         gl.uniform1f(uniforms.alpha, this.alpha);
 
@@ -1135,7 +1191,12 @@ Coord.prototype = {
         // 绘制坐标轴
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.buffers.index );
         gl.drawElements( gl.TRIANGLES, this.buffers.index.numItems, gl.UNSIGNED_SHORT, 0 );
-    }
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
+    },
 }  // end of Coord prototype
 
 
@@ -1206,6 +1267,12 @@ RefCircle.prototype = {
         }
     },
 
+    onViewChanged : function( matrix ) {
+        for( var i = 0; i < 26; i++) {
+            this.circles[i].onViewChanged( matrix );
+        }
+    },
+
     setDis : function(dis) {
         this.dis = dis;
         for( var i = 0; i < 26; i++) {
@@ -1226,7 +1293,6 @@ RefCircle.prototype = {
             this.circles[i].isCurrent( params );
         }
     }
-
 }
 
 function ReferCircle( props ) {
@@ -1245,32 +1311,18 @@ function ReferCircle( props ) {
 ReferCircle.prototype = {
     constructor: ReferCircle,
 
-    init : function() {
-        var vertex = circleShape( this.size, this.sides, 0, Math.PI * 2 );
-        var vertices = [];
-        var i;
-        for( i = 0; i < vertex.length; i += 3 ) {
-            vertices.push( vertex[i], vertex[i+1], vertex[i+2] );
-            vertices.push.apply( vertices, [0.75, 0.75, 0.75] );
-            vertices.push.apply( vertices, this.color );
-        }
-        var index = [];
-        for(i = 1; i < this.sides+1; i++) {
-            index.push(i);
-        }
-        this.vertexBuffer = createArrayBuffer( new Float32Array( vertices ), gl.STATIC_DRAW );
-        this.indexBuffer  = createArrayBuffer( new Uint16Array( index ),     gl.STATIC_DRAW );
-    },
-
     paint : function() {
         gl.uniform1i( uniforms.specColor, 1 );
         gl.uniform3fv( uniforms.vertexColor, this.color );
-
-        mat4.mul( mvpMatrix, pvMatrix, this.mMatrix );
 //        gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, mvpMatrix );
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
         gl.drawElements( this.drawMode, this.sides, gl.UNSIGNED_SHORT, 0 );
         gl.uniform1i( uniforms.specColor, 0 );
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     setTranslation : function(r, theta, phi) {
@@ -1348,18 +1400,24 @@ RecordPoint.prototype = {
         gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 6*4, 0   );
         gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0   );
         gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 6*4, 3*4 );
-//        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.color);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
-//        gl.uniform4fv(uniforms.color_unit, [0.1, 0.1, 0.95, 1.1]); // 传入颜色 uniform，就不再需要颜色顶点数据
+
         gl.uniform1f(uniforms.alpha, this.alpha);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, pvMatrix );
+        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
         gl.drawElements(gl.TRIANGLES, this.index_count, gl.UNSIGNED_SHORT, 0);
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     setSize : function( size ) {
         this.size = size;
         vec3.fromValues( this.vscale, size, size, size );
+        mat4.fromRotationTranslationScale( this.mMatrix, this.quat, this.translation, this.vscale );
+        this.onViewChanged();
     },
 
     record : function() {
@@ -1373,10 +1431,6 @@ RecordPoint.prototype = {
         var point = [];
         var index = [];
 
-//        var color = [];
-//        for(i = 0; i <= this.sides; i++) {
-//            color = color.concat([0, 0.5, 0.5]);
-//        }
         point = circleShape( this.size, this.sides, 0, Math.PI * 2 );
         rotateVertex( point, this.theta, this.phi, this.dis );
 
@@ -1464,15 +1518,19 @@ Craft.prototype = {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
         gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, mvpMatrix);
+        gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.mesh.indexBuffer);
         gl.drawElements(gl.TRIANGLES, this.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
 //        gl.uniform1i( uniforms.has_texture, false );
         gl.uniform1i( uniforms.specColor, false );
+    },
+
+    onViewChanged: function( matrix ) {
+        this.pvMatrix = matrix || this.pvMatrix;
+        mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
     setRotation : function(params) {
@@ -1493,6 +1551,7 @@ Craft.prototype = {
         mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( params.heading + 270 ) );
         mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( params.pitch ) );
         mat4.rotateZ( this.mMatrix, this.mMatrix, degToRad( params.roll ) );
+        this.onViewChanged();
     },
 
     setScale : function( size ) {
