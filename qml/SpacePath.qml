@@ -779,6 +779,16 @@ Item {
         }
     }
 
+    Timer {
+        id: garbageCollect
+        interval: 3000
+        running: true
+        repeat: true
+        onTriggered: {
+            GLcode.gc();
+        }
+    }
+
     // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
         GLcode.recordPoint.record();

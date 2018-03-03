@@ -769,8 +769,6 @@ SensorPath.prototype = {
             return;
         }
         gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
-    //    mat4.identity(this.mMatrix);
-//        mat4.mul(mvpMatrix, pvMatrix, this.mMatrix);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
         gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
 
@@ -1038,14 +1036,9 @@ Ball.prototype = {
      */
     getVertex : function() {
         var vertices = [];
+        var vertex   = [];
         //    var vn = [];        // 顶点法向量数组，当球心在原点时，与顶点坐标相同
         var i, j, k;
-
-        var that = this;
-        var pushData = function(p) {
-            vertices = vertices.concat( p );
-            vertices = vertices.concat( that.color );
-        }
 
         // i indicates vertical line while j indicates horizontal line,
         // vertical line is half a circle, so the number should be 1 more
@@ -1053,11 +1046,12 @@ Ball.prototype = {
             for (i = 0; i <= this.hn; i++) {
                 // (n+1)*n points are needed
                 k = coordCarte(degToRad(i*180/this.hn), degToRad(j*360/this.vn), this.size);
-                pushData( [k[0], k[1], k[2]] );
+                vertex = vertex.concat( k[0], k[1], k[2] );
             }
         }
         // add origin point into array
-        pushData( [0, 0, 0] );
+        vertex = vertex.concat( [0, 0, 0] );
+        vertices = genVertices( vertex, this.color );
 
         return {
             "vertices": vertices
@@ -1121,7 +1115,6 @@ Ball.prototype = {
 //        this.line_index   = lineIndex;
 //        this.less_line_index = lessLineIndex;
 //        this.less_ls_index   = lessLSIndex;
-        console.log( "length: " + vertexIndex.length )
         return {
             vertex_index: vertexIndex,
             line_index: lineIndex,
@@ -1322,6 +1315,7 @@ ReferCircle.prototype = {
 
     onViewChanged: function( matrix ) {
         this.pvMatrix = matrix || this.pvMatrix;
+        mat4.fromRotationTranslationScale(this.mMatrix, this.quat, this.translation, this.vscale);
         mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
@@ -1335,18 +1329,18 @@ ReferCircle.prototype = {
         }
 
         this.translation = coordCarte(  this.theta, this.phi, r );
-        this.update();
+        this.onViewChanged();
     },
 
     setQuat : function( a_theta, a_phi, a_beta ) {
         quat.fromEuler( this.quat, 0, a_theta, a_phi );
-        this.update();
+        this.onViewChanged();
     },
 
     setScale : function( size ) {
         this.size = size;
         this.vscale  = vec3.fromValues(size, size, size);
-        this.update();
+        this.onViewChanged();
     },
 
     isCurrent : function( spherical ) {
@@ -1364,11 +1358,7 @@ ReferCircle.prototype = {
             this.color = this.originColor;
             this.drawMode = gl.LINES;
         }
-        this.update();
-    },
-
-    update: function() {
-        mat4.fromRotationTranslationScale(this.mMatrix, this.quat, this.translation, this.vscale);
+        this.onViewChanged();
     }
 }
 
