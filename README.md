@@ -20,6 +20,11 @@
     2D 部分动画使用的是简单的旋转。
 
 * 3D
-    3D 部分使用的是 QtCanvas3D 和 WebGL 进行绘制。矩阵相关的操作使用的是 [gl-matrix][1] 类库
+    3D 部分使用的是 QtCanvas3D 和 WebGL 进行绘制。
+    - 为了优化性能，所有模型视图矩阵根据需要更新（之前是在 paintGL 中实时更新）。
+    - 增加了 SpacePath.js 中的注释
+    - 矩阵相关的操作使用的是 [gl-matrix][1] 类库。
+    - 由于需要加载飞行器的 OBJ 模型，使用了 [webgl-obj-loader][2]。
 
 [1]: http://glmatrix.net/
+[2]: https://github.com/frenchtoast747/webgl-obj-loader

@@ -122,7 +122,7 @@ function initializeGL(canvas, args) {
     coordinate  = new Coord();
     sensorPoint = new SensorPoint( { color: [0.9, 0.2, 0.15] } );
     sensorPoint.setScale( 0.35 );
-    sensorPath  = new SensorPath();
+    sensorPath  = new SensorPath( { color: [0.9, 0.5, 0.2] } );
     sensorPoint.addParamCallback( function( params ) {
         sensorPath.onSphericalChanged( params );
     });
@@ -156,8 +156,6 @@ function paintGL(canvas) {
     if (currentWidth !== camera.width || currentHeight !== camera.height) {
         camera.setSize( currentWidth, currentHeight );
     }
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
     scene.render();
 }
 
@@ -219,8 +217,16 @@ Object.defineProperty( Test.prototype, "x", {
 } );
 /************/
 
-// some problem occurred when x or y equals to zero
-// because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
+/**
+  * @class Camera
+  * @desc  透视角度摄像机，通过该类控制视窗变化
+  *    设置 pos 改变摄像机的位置
+  *    设置 up  改变摄像机的上方向
+  *    设置 lookat 改变摄像机的视点
+  * 摄像机对象维护 pvMatrix，并会在视图矩阵更新时通知相关联的 watcher 对象，
+  * 若没有设置 watcher 对象则不会更新视图。
+  * 默认摄像机的 lookat 一直是 [0, 0, 0] 原点，up 是 Z 轴方向
+**/
 function Camera() {
 //    PaintObj.call( this );
     this.type = "Camera";
@@ -237,6 +243,9 @@ function Camera() {
 Camera.prototype = {
     constructor: Camera,
 
+    /**
+      * @desc 更新视图矩阵并通知 watcher 对象 pvMatrix 已更新
+    **/
     update : function() {
         mat4.lookAt( this.vMatrix, this.pos, this.lookat, this.up );
         mat4.multiply( this.pvMatrix, this.pMatrix, this.vMatrix );
@@ -245,10 +254,21 @@ Camera.prototype = {
         }
     },
 
+    /**
+      * 设置 watcher 对象
+    **/
     recv: function(watcher) {
         this.watcher = watcher;
     },
 
+    /**
+      * 设置摄像机的旋转操作
+      * @param a_theta  用角度制表示的 theta 角，phi 角相同，
+            为了便于区分参数中的角度制和弧度制，在变量名前加 a 表示角度制
+      * @param r  到原点的距离
+      * @note  some problem occurred when x or y equals to zero
+      *    because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
+    **/
     rotate : function(a_theta, a_phi, r) {
         if( a_theta < 0.01 ) {
             a_theta = 0.01;
@@ -260,6 +280,9 @@ Camera.prototype = {
         this.update();
     },
 
+    /**
+      * 设置 gl 的视口，并更新透视矩阵和视图矩阵
+    **/
     setSize : function(width, height) {
         this.width  = width;
         this.height = height;
@@ -268,12 +291,25 @@ Camera.prototype = {
         this.update();
     },
 
+    /**
+      * 重置摄像机位置
+    **/
     reset : function(  ) {
         this.rotate( 45, 180, this.dis );
         this.update();
     }
 }
 
+/**
+  * @desc 场景控制器
+  * 1. 封装了对 gl 的设置，若无必要，不用再设置 gl；
+  * 异步加载着色器代码，封装了对着色器的编译连接等操作。
+  * 包含对全局变量 attributes 和 uniforms 的设置
+  * 2. 为了方便，实际上将 Renderer 的功能集成到了 Scene 中，
+  * 需要绘制时，调用 Scene 对象的 render 方法即可。
+  * 3. 场景只能接收一个 Camera 对象，若多次添加 Camera 对象，
+  * 则会将最后一个 Camera 对象设为当前的 Camera 对象
+**/
 function Scene() {
     gl.enable(gl.DEPTH_TEST);  // depth test
     gl.depthFunc(gl.LESS);
@@ -298,6 +334,11 @@ function Scene() {
 Scene.prototype = {
     constructor : Scene,
 
+    /**
+      * @params first  将物体添加到序列头部，每次绘制时优先绘制
+      * @desc 添加要绘制的物体。
+      * 若添加的对象是摄像机，则会更新 camera 对象（只有一个有效）
+    **/
     add : function(obj, first) {
         if( obj === undefined ) {
             console.log("[Warn] Undefined on Scene adding.");
@@ -324,15 +365,22 @@ Scene.prototype = {
         }
     },
 
+    /**
+      * 依次绘制物体
+    **/
     render : function() {
 //        this.objs.forEach( function(obj) {
 //            obj.paint();
 //        });
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
         for( var i = 0; i < this.objs.length; i++ ) {
             this.objs[i].paint();
         }
     },
 
+    /**
+      * 通知所有物体视图矩阵有变化
+    **/
     onNotify : function(matrix) {
         for( var i = 0; i < this.objs.length; i++ ) {
             this.objs[i].onViewChanged( matrix );
@@ -363,6 +411,10 @@ Scene.prototype = {
         return shader;
     },
 
+    /**
+      * 初始化着色器
+      * @desc 异步加载着色器代码并在完成加载后进行编译链接
+    **/
     initShaders : function() {
         var shaderProgram = gl.createProgram();
         var vertexShader;
@@ -391,6 +443,10 @@ Scene.prototype = {
 
     },
 
+    /**
+      * 在着色器代码准备好后进行着色器的编译链接；
+      * 设置全局变量 attributes 和 uniforms
+    **/
     onShaderReady : function(shaderProgram) {
         gl.linkProgram(shaderProgram);
         gl.useProgram(shaderProgram);
@@ -452,6 +508,7 @@ function coordCarte(theta, phi, r) {
 *  @param {Array} vertex  the vertices to rotate around the origin point
 *  @param {Number}   theta is in terms of RAD
 *  @param {Number}   beta  is in terms of RAD
+*  @desc 将所有顶点按照世界坐标轴 Y 轴，Z 轴依次进行 theta 角和 beta 角的旋转
 **/
 function rotateVertex(vertex, theta, beta, dis) {
     var v = vec3.create();
@@ -492,6 +549,9 @@ function circleShape(radius, segment, thetaStart, thetaEnd, pos) {
     return vertex;
 }
 
+/**
+  * 计算出圆柱体需要的顶点和索引
+**/
 function cylinderShape( radius, segment, height ) {
     var bottom = circleShape( radius, segment );
     var upper  = circleShape( radius, segment, 0, Math.PI*2, height );
@@ -525,7 +585,11 @@ function cylinderShape( radius, segment, height ) {
     }
 }
 
-// 用更紧凑的方式得到顶点信息的数组
+/**
+  * 用更紧凑的方式得到顶点信息的数组，
+  * 认为每 9 个数据表示一个顶点、颜色和法向量数据，
+  * 可根据 color，normal 的长度自动进行颜色的复制
+**/
 function genVertices( vertex, color, normal ) {
     var vertices = [];
     var i = 0;
@@ -572,9 +636,9 @@ function genVertices( vertex, color, normal ) {
     return vertices;
 }
 
-
-var epsilon = 0.01;
-
+/**
+  * 所有需要绘制的对象在构造时需要调用此函数对参数进行初始化
+**/
 function PaintObj(props) {
     if( props === undefined ) {
         props = {};
@@ -603,7 +667,13 @@ function PaintObj(props) {
 }
 
 
-// **************** SensorPoint Object **************** //
+/**
+  * SensorPoint Object
+  * 在三维空间中绘制斑点，用于模拟传感器的指向。
+  * 当指向变化时会通知注册的回调函数，以便其它对象可以得到最新的传感器位置
+  * 尚未实现的功能：
+  * - 从原点指向 Point 的圆锥体
+**/
 function SensorPoint(props) {
     PaintObj.call(this, props);
 
@@ -691,6 +761,9 @@ SensorPoint.prototype = {
         this.setTranslation( this.dis, theta, this.heading );
     },
 
+    /**
+      * 更新自身的模型视图矩阵并通知已注册的回调函数
+    **/
     update : function() {
         mat4.fromRotationTranslationScale(this.mMatrix,
                                           this.quat,
@@ -707,6 +780,9 @@ SensorPoint.prototype = {
         }
     },
 
+    /**
+      * 注册回调函数
+    **/
     addParamCallback : function( cb ) {
         this.callbacks.push( cb );
     },
@@ -715,6 +791,7 @@ SensorPoint.prototype = {
     * @param {Number} pitch   range [-90, 90]
     * @param {Number} heading range [0, 360]
     * @returns {Vec3} the angle returned is in unit of rad  vec[0] and vec[1] is in unit of RAD
+    *  当前指向的球坐标系坐标
     */
     spherical : function() {
         var u = (90-this.pitch)/180 * Math.PI;
@@ -722,17 +799,26 @@ SensorPoint.prototype = {
         return vec3.fromValues(u, v, this.dis);
     },
 
+    // 重置指向
     reset : function() {
         this.headingOffset = this.heading;
         this.setParam( { pitch: this.pitch, heading: this.heading, roll: this.roll, dis: this.dis } );
     }
 }  // end of SensorPoint prototype
 
-// ****************  SensorPath Object  **************** //
-function SensorPath() {
-    PaintObj.call(this, {
-        color: [0.9, 0.5, 0.2],
-    } );
+/**
+  * SensorPath Object
+  * 1. 绘制传感器的路径，由于绘制路径采用的是记录传感器位置周围点的方法
+  * 因此很可能在运行过程中出现缓冲区被用完的情况，此时会自动申请新的
+  * 缓冲区，记录的点越多，需要的缓冲区越多。
+  * 2. 每申请一次约占用 90k 的内存（或显存）。另外 js 数组中保存的数据
+  * 也会占用内存，所以根据已写入缓冲区的数据量进行偏移，对之后的缓冲区
+  * 进行写操作，不在 js 数组中保留所有的点。
+  * 3. 18.03.03 将路径绘制成虚线的绘制方法存在问题。因此路径每隔 gap 段
+  * 绘制一次并没有实现，调整 gap 不会影响路径的绘制。（即路径以实线形式绘制）
+**/
+function SensorPath( props ) {
+    PaintObj.call(this, props );
 
     this.type            = "SensorPath";
     this.all_index_count = 0;
@@ -944,7 +1030,10 @@ SensorPath.prototype = {
     }
 }  // end of SensorPath prototype
 
-// **************** Ball Object **************** //
+/**
+  * Ball Object
+  * 绘制参考球。绘制模式有 1. 球面 2. 线条 3.少数线条 等模式
+**/
 function Ball(props) {
     PaintObj.call(this, props);
 
@@ -953,8 +1042,8 @@ function Ball(props) {
     this.hn         = (props.hn || 48) * 0.5;
     this.ratio      = 0.25;
     this.size       = 4;    // default radius
-    this.line_alpha = 0.55;
-    this.drawMode = Ball.MODE_SURFACE;
+    this.drawMode   = Ball.MODE_SURFACE;
+    this.line_alpha = 0.75;
     this.alpha = 0.5;
     this.init();
 }
@@ -997,8 +1086,8 @@ Ball.prototype = {
                 gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.lessLineIndexBuffer );
                 gl.drawElements( gl.LINES, this.lessLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0 );
                 // the surface on which equator lies
-                gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.buffers.lessLSIndexBuffer );
-                gl.drawElements( gl.TRIANGLE_FAN, this.lessLSIndexBuffer.numItems, gl.UNSIGNED_SHORT,  0 );  // multiply 2 times means that UNSIGNED_SHORT occupies 2 bytes
+                gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.lessLSIndexBuffer );
+                gl.drawElements( gl.TRIANGLES, this.lessLSIndexBuffer.numItems, gl.UNSIGNED_SHORT,  0 );
                 break;
             case Ball.MODE_SURFACE:
             default:
@@ -1105,11 +1194,15 @@ Ball.prototype = {
             lessLineIndex.push( i + j * (this.hn+1), i + (j+1) * (this.hn+1) ); // equator line
         }
         // 赤道所在平面
-        for (j = this.vn*0.5; j < this.vn*0.75+1; j++) {
+        for (j = this.vn*0.5; j < this.vn*0.75; j++) {
             // 原点 -- 赤道上的点 -- 赤道上的点
+            lessLSIndex.push( (this.vn+1)*(this.hn+1) );   // origin point
+            lessLSIndex.push( this.hn*0.5 + j * (this.hn+1) );
+            lessLSIndex.push( this.hn*0.5 + (j+1) * (this.hn+1) );
+            lessLSIndex.push( (this.vn+1)*(this.hn+1) );   // origin point
+            lessLSIndex.push( this.hn*0.5 + (j+1) * (this.hn+1) );
             lessLSIndex.push( this.hn*0.5 + j * (this.hn+1) );
         }
-        lessLSIndex.push((this.vn+1)*(this.hn+1));   // origin point
 
 //        this.vertex_index = vertexIndex;
 //        this.line_index   = lineIndex;
@@ -1125,7 +1218,10 @@ Ball.prototype = {
 }  // end of Ball prototype
 
 
-// ****************  Coord Object **************** //
+/**
+  * Coord Object
+  * 绘制坐标轴
+**/
 function Coord() {
     PaintObj.call(this, {});
 
@@ -1172,16 +1268,14 @@ Coord.prototype = {
     },
 
     paint : function() {
+        gl.uniform1f( uniforms.alpha, this.alpha );
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
         gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
 
-        gl.uniform1f(uniforms.alpha, this.alpha);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.buffers.vertex );
         gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 9 * 4, 0 );
         gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 9 * 4, 3 * 4 );
         gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 9 * 4, 6 * 4 );
-        // 绘制坐标轴
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.buffers.index );
         gl.drawElements( gl.TRIANGLES, this.buffers.index.numItems, gl.UNSIGNED_SHORT, 0 );
     },
@@ -1193,7 +1287,12 @@ Coord.prototype = {
 }  // end of Coord prototype
 
 
-// **************** ReferenceCircle Object (球面上的参考圆圈) **************** //
+/**
+  * ReferenceCircle Object (球面上的参考圆圈)
+  * 通过该对象管理分离的 26 个不同的 circle。但为了节省内存占用和
+  * 减少绑定的缓冲区的次数，实际上只存储了一个 Circle 的 buffer，
+  * 利用模型变换矩阵绘制出 26 个圆圈。
+**/
 function RefCircle( props ) {
     PaintObj.call( this, props );
     this.dis = props.dis || 4;
@@ -1202,9 +1301,7 @@ function RefCircle( props ) {
     var red   = [1.0, 0.0, 0.0];
     var green = [0.0, 1.0, 0.0];
     var blue  = [0.0, 0.0, 1.0];
-    var i, j, k;
-
-    k = 0;
+    var i = 0, j = 0, k = 0;
     circles[k] = new ReferCircle( { "pos": [0, 0, this.dis], color: green } );
     k++;
     for( i = 0; i <= 2; i ++ ) {
@@ -1247,6 +1344,7 @@ RefCircle.prototype = {
             return;
         }
         gl.uniform1f(uniforms.alpha, this.alpha);
+        gl.uniform1i( uniforms.specColor, 1 );
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 9 * 4, 0 );
@@ -1256,8 +1354,13 @@ RefCircle.prototype = {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 
         for( var i = 0; i < 26; i++ ) {
-            this.circles[i].paint();
+//            this.circles[i].paint();
+//        gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
+            gl.uniform3fv( uniforms.vertexColor, this.circles[i].color );
+            gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.circles[i].mvpMatrix );
+            gl.drawElements( this.circles[i].drawMode, this.sides, gl.UNSIGNED_SHORT, 0 );
         }
+        gl.uniform1i( uniforms.specColor, 0 );
     },
 
     onViewChanged : function( matrix ) {
@@ -1288,6 +1391,13 @@ RefCircle.prototype = {
     }
 }
 
+/**
+  * 参考圆圈
+  * 为节省内存和提高性能，该类不再存储圆圈的顶点缓冲区。
+  * 实际上该类存储的只是每个圆圈的位置等信息。
+  * 在 SensorPoint 移动时检测 SensorPoint 是否与当前圆圈相近，
+  * 若距离很近则会改变绘制方式。
+**/
 function ReferCircle( props ) {
     PaintObj.call( this, props );
     this.type = "RCircle";
@@ -1303,15 +1413,6 @@ function ReferCircle( props ) {
 
 ReferCircle.prototype = {
     constructor: ReferCircle,
-
-    paint : function() {
-        gl.uniform1i( uniforms.specColor, 1 );
-        gl.uniform3fv( uniforms.vertexColor, this.color );
-//        gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
-        gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
-        gl.drawElements( this.drawMode, this.sides, gl.UNSIGNED_SHORT, 0 );
-        gl.uniform1i( uniforms.specColor, 0 );
-    },
 
     onViewChanged: function( matrix ) {
         this.pvMatrix = matrix || this.pvMatrix;
@@ -1343,6 +1444,7 @@ ReferCircle.prototype = {
         this.onViewChanged();
     },
 
+    // 判断 Sensor point 是否接近该圆圈。（目前只考虑 theta 和 phi 角而不是计算两个圆心的距离）
     isCurrent : function( spherical ) {
         if( Math.abs( spherical.theta - this.theta ) < Math.PI * 0.02
             && Math.abs( spherical.phi - this.phi ) < Math.PI * 0.02   ) {
@@ -1360,8 +1462,13 @@ ReferCircle.prototype = {
         }
         this.onViewChanged();
     }
-}
+}  // end of ReferCircle prototype
 
+/**
+  * 打点操作
+  * 初始化时为顶点申请一定大小的缓冲区，打点的数量有限制，
+  * 因为在程序运行时不会自动申请缓冲区。
+**/
 function RecordPoint() {
     PaintObj.call(this, {});
 
@@ -1458,6 +1565,11 @@ RecordPoint.prototype = {
 }  // end of RecordPoint prototype
 
 
+/**
+  * 飞行器模拟器，模型是从 https://archive3d.net/ 中下载的，
+  * 模型转换成 OBJ 格式，并利用 [webgl-obj-loader](https://github.com/frenchtoast747/webgl-obj-loader)
+  * 进行加载
+**/
 function Craft(props) {
     PaintObj.call( this );
 
@@ -1523,6 +1635,11 @@ Craft.prototype = {
         mat4.mul( this.mvpMatrix, this.pvMatrix, this.mMatrix );
     },
 
+    /**
+      * 加载模型不进行旋转操作时，可以看到模型指向 Z 轴负半轴，模型顶部指向 Y 轴
+      * 正半轴，因此需要在跟随 SensorPoint 做旋转操作时需要首先调整指向。
+      * mat4.rotate 方法会将物体的坐标轴进行旋转，即旋转后物体坐标轴与世界坐标系的轴不同
+    **/
     setRotation : function(params) {
         this.pitch   = params.pitch;
         this.heading = params.heading;
