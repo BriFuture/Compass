@@ -227,7 +227,7 @@ Object.defineProperty( Test.prototype, "x", {
   * 若没有设置 watcher 对象则不会更新视图。
   * 默认摄像机的 lookat 一直是 [0, 0, 0] 原点，up 是 Z 轴方向
 **/
-function Camera() {
+function Camera( props ) {
 //    PaintObj.call( this );
     this.type = "Camera";
     this.width = 800;
@@ -238,13 +238,20 @@ function Camera() {
     this.pMatrix  = mat4.create();
     this.vMatrix  = mat4.create();
     this.pvMatrix = mat4.create();
+
+    this.dis   = 1.732;
+    this.theta = 45;
+    this.phi   = 45;
+    // 防止画布的初始长宽和默认相同
+    gl.viewport( 0, 0, this.width, this.height );
+    mat4.perspective( this.pMatrix, 45 / 180 * Math.PI, this.width / this.height, 0.5, 500.0 );
 }
 
 Camera.prototype = {
     constructor: Camera,
 
     /**
-      * @desc 更新视图矩阵并通知 watcher 对象 pvMatrix 已更新
+         * @desc 更新视图矩阵并通知 watcher 对象 pvMatrix 已更新
     **/
     update : function() {
         mat4.lookAt( this.vMatrix, this.pos, this.lookat, this.up );
@@ -255,19 +262,19 @@ Camera.prototype = {
     },
 
     /**
-      * 设置 watcher 对象
+         * 设置 watcher 对象
     **/
     recv: function(watcher) {
         this.watcher = watcher;
     },
 
     /**
-      * 设置摄像机的旋转操作
-      * @param a_theta  用角度制表示的 theta 角，phi 角相同，
+         * 设置摄像机的旋转操作
+        * @param a_theta  用角度制表示的 theta 角，phi 角相同，
             为了便于区分参数中的角度制和弧度制，在变量名前加 a 表示角度制
-      * @param r  到原点的距离
-      * @note  some problem occurred when x or y equals to zero
-      *    because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
+        * @param r  到原点的距离
+        * @note  some problem occurred when x or y equals to zero
+        *    because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
     **/
     rotate : function(a_theta, a_phi, r) {
         if( a_theta < 0.01 ) {
@@ -275,13 +282,15 @@ Camera.prototype = {
         } else if( a_theta > 179.99 ) {
             a_theta = 179.99
         }
-        this.dis = r;
-        this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
+        this.theta = a_theta || this.theta;
+        this.phi   = a_phi   || this.phi;
+        this.dis = r || this.dis;
+        this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), this.dis );
         this.update();
     },
 
     /**
-      * 设置 gl 的视口，并更新透视矩阵和视图矩阵
+         * 设置 gl 的视口，并更新透视矩阵和视图矩阵
     **/
     setSize : function(width, height) {
         this.width  = width;
@@ -292,7 +301,7 @@ Camera.prototype = {
     },
 
     /**
-      * 重置摄像机位置
+         * 重置摄像机位置
     **/
     reset : function(  ) {
         this.rotate( 45, 180, this.dis );

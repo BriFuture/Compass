@@ -10,7 +10,7 @@ import QtQuick.Controls 2.0
 Rectangle {
     id: container
     color : "transparent"
-    height: 60
+    height: 72
 
     property real maxValue :  100
     property real minValue :  1
@@ -28,7 +28,7 @@ Rectangle {
     Label {
         id: desc
         text: "MySlider"
-        font.pixelSize: 18
+        font.pixelSize: 14
         anchors {
             top: parent.top
             topMargin: 5
@@ -38,12 +38,12 @@ Rectangle {
     SpinBox {
         id: spinBox
 
-        height: desc.height
+        height: 20
         anchors {
-            top: parent.top
+            top: desc.bottom
             topMargin: 5
-            right: parent.right
-            rightMargin: 5
+            left: parent.left
+            leftMargin: 5
         }
 
         from:  container.minValue
@@ -74,7 +74,7 @@ Rectangle {
         wheelEnabled: false
         signal moving();
         anchors {
-            top: desc.bottom
+            top: spinBox.bottom
             topMargin: -5
             left : container.left
             right: container.right
