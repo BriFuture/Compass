@@ -121,8 +121,8 @@ function initializeGL(canvas, args) {
     camera      = new Camera();
     coordinate  = new Coord();
     sensorPoint = new SensorPoint( { color: [0.9, 0.2, 0.15] } );
-    sensorPoint.setScale( 0.35 );
-    sensorPath  = new SensorPath( { color: [0.9, 0.5, 0.2] } );
+    sensorPoint.setScale( 0.1 );
+    sensorPath  = new SensorPath( { color: [0.9, 0.5, 0.2], size: 0.3 } );
     sensorPoint.addParamCallback( function( params ) {
         sensorPath.onSphericalChanged( params );
     });
@@ -132,7 +132,7 @@ function initializeGL(canvas, args) {
     sensorPoint.addParamCallback( function( params ) {
         recordPoint.onSphericalChanged(params);
     });
-    sphere      = new Ball({    color: [0.5, 0.5, 0.5],
+    sphere      = new Ball({    color: [0.95, 0.2, 0.2],
                                 vn: 48,
                                 hn: 48
                             });
@@ -227,7 +227,7 @@ Object.defineProperty( Test.prototype, "x", {
   * 若没有设置 watcher 对象则不会更新视图。
   * 默认摄像机的 lookat 一直是 [0, 0, 0] 原点，up 是 Z 轴方向
 **/
-function Camera( props ) {
+function Camera() {
 //    PaintObj.call( this );
     this.type = "Camera";
     this.width = 800;
@@ -238,20 +238,13 @@ function Camera( props ) {
     this.pMatrix  = mat4.create();
     this.vMatrix  = mat4.create();
     this.pvMatrix = mat4.create();
-
-    this.dis   = 1.732;
-    this.theta = 45;
-    this.phi   = 45;
-    // 防止画布的初始长宽和默认相同
-    gl.viewport( 0, 0, this.width, this.height );
-    mat4.perspective( this.pMatrix, 45 / 180 * Math.PI, this.width / this.height, 0.5, 500.0 );
 }
 
 Camera.prototype = {
     constructor: Camera,
 
     /**
-         * @desc 更新视图矩阵并通知 watcher 对象 pvMatrix 已更新
+      * @desc 更新视图矩阵并通知 watcher 对象 pvMatrix 已更新
     **/
     update : function() {
         mat4.lookAt( this.vMatrix, this.pos, this.lookat, this.up );
@@ -262,19 +255,19 @@ Camera.prototype = {
     },
 
     /**
-         * 设置 watcher 对象
+      * 设置 watcher 对象
     **/
     recv: function(watcher) {
         this.watcher = watcher;
     },
 
     /**
-         * 设置摄像机的旋转操作
-        * @param a_theta  用角度制表示的 theta 角，phi 角相同，
+      * 设置摄像机的旋转操作
+      * @param a_theta  用角度制表示的 theta 角，phi 角相同，
             为了便于区分参数中的角度制和弧度制，在变量名前加 a 表示角度制
-        * @param r  到原点的距离
-        * @note  some problem occurred when x or y equals to zero
-        *    because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
+      * @param r  到原点的距离
+      * @note  some problem occurred when x or y equals to zero
+      *    because you can't set up [0, 0, 1] and look at [0, 0, 0] the origin point.
     **/
     rotate : function(a_theta, a_phi, r) {
         if( a_theta < 0.01 ) {
@@ -282,15 +275,13 @@ Camera.prototype = {
         } else if( a_theta > 179.99 ) {
             a_theta = 179.99
         }
-        this.theta = a_theta || this.theta;
-        this.phi   = a_phi   || this.phi;
-        this.dis = r || this.dis;
-        this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), this.dis );
+        this.dis = r;
+        this.pos = coordCarte( degToRad( a_theta ), degToRad( a_phi ), r );
         this.update();
     },
 
     /**
-         * 设置 gl 的视口，并更新透视矩阵和视图矩阵
+      * 设置 gl 的视口，并更新透视矩阵和视图矩阵
     **/
     setSize : function(width, height) {
         this.width  = width;
@@ -301,10 +292,11 @@ Camera.prototype = {
     },
 
     /**
-         * 重置摄像机位置
+      * 重置摄像机位置
     **/
     reset : function(  ) {
-        this.rotate( 45, 180, this.dis );
+//        this.rotate( 45, 180, this.dis );
+        this.rotate( 45, 0, this.dis );
         this.update();
     }
 }
@@ -760,7 +752,6 @@ SensorPoint.prototype = {
     },
 
     setParam : function( params ) {
-//        setParam : function(r, pitch, heading, roll) {
         this.dis     = params.dis;
         this.pitch   = params.pitch;
         params.heading = params.heading - this.headingOffset;
@@ -810,7 +801,8 @@ SensorPoint.prototype = {
 
     // 重置指向
     reset : function() {
-        this.headingOffset = this.heading;
+        this.headingOffset += this.heading;
+//        console.log( this.heading, this.headingOffset );
         this.setParam( { pitch: this.pitch, heading: this.heading, roll: this.roll, dis: this.dis } );
     }
 }  // end of SensorPoint prototype
@@ -1030,6 +1022,7 @@ SensorPath.prototype = {
         }
         this.all_index_count = 0;
         this.cur_pi = 0;
+        this.last_point = undefined
         this.resetCurrentPath();
     },
 
@@ -1052,8 +1045,8 @@ function Ball(props) {
     this.ratio      = 0.25;
     this.size       = 4;    // default radius
     this.drawMode   = Ball.MODE_SURFACE;
-    this.line_alpha = 0.75;
-    this.alpha = 0.5;
+    this.line_alpha = 0.65;
+    this.alpha = 0.25;
     this.init();
 }
 
@@ -1243,15 +1236,15 @@ Coord.prototype = {
     constructor: Coord,
 
     init : function() {
-        var xcoord = cylinderShape( 0.03, this.sides, this.length );
+        var xcoord = cylinderShape( 0.01, this.sides, this.length );
         rotateVertex( xcoord.vertex, degToRad(90), 0 );
         var xvertices = genVertices( xcoord.vertex, [0.9, 0.1, 0.0], [1.0, 1.0, 1.0] );
 
-        var ycoord = cylinderShape( 0.03, this.sides, this.length );
+        var ycoord = cylinderShape( 0.01, this.sides, this.length );
         rotateVertex( ycoord.vertex, degToRad(90), degToRad(90) );
         var yvertices = genVertices( ycoord.vertex, [0.0, 0.9, 0.0], [1.0, 1.0, 1.0] );
 
-        var zcoord = cylinderShape( 0.03, this.sides, this.length );
+        var zcoord = cylinderShape( 0.01, this.sides, this.length );
         var zvertices = genVertices( zcoord.vertex, [0.0, 0.0, 0.9], [1.0, 1.0, 1.0] );
 
         var vertices = [];
@@ -1482,7 +1475,7 @@ function RecordPoint() {
     PaintObj.call(this, {});
 
     this.type        = "RecordPoint";
-    this.max_vertex   = this.sides * 100;
+    this.max_vertex   = this.sides * 1000;
     this.vertex_count = 0;
     this.index_count  = 0;
     this.init();
@@ -1583,7 +1576,7 @@ function Craft(props) {
     PaintObj.call( this );
 
     this.type    = "Craft";
-    this.url     = "qrc:/obj/craft.obj";
+    this.url     = "qrc:/res/obj/craft.obj";
     var scale = props.size || 1;
     this.setScale( scale );
     this.init();
