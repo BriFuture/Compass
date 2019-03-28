@@ -1,0 +1,3 @@
+[submodule "compassvue"]
+	path = compassvue
+	url = git@gitee.com:brifuture/compassvue.git

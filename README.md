@@ -2,6 +2,10 @@
 ------
 
 显示罗盘动画的一部分代码，包含 qml 绘图和 QtCanvas3D api
+
+### 使用 Vue 进行开发
+
+直接使用 QtQuick 开发这款程序不如使用 Vue 开发来的方便（尤其是开发 3D 的时候）。我将 3D 程序的核心 JS 文件移植到了 Vue 项目中，可以使用浏览器很方便的开发 3D 程序（界面尚未开发完成），对 SpacePath.js 文件及依赖文件的改动都会导致 devserver 的重新加载。
  
 ### Qt C++ 部分
 - main.cpp
@@ -25,6 +29,10 @@
     - 增加了 SpacePath.js 中的注释
     - 矩阵相关的操作使用的是 [gl-matrix][1] 类库。
     - 由于需要加载飞行器的 OBJ 模型，使用了 [webgl-obj-loader][2]。
+
+### License 
+
+GPLv3
 
 [1]: http://glmatrix.net/
 [2]: https://github.com/frenchtoast747/webgl-obj-loader
