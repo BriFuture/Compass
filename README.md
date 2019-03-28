@@ -5,7 +5,9 @@
 
 ### 使用 Vue 进行开发
 
-直接使用 QtQuick 开发这款程序不如使用 Vue 开发来的方便（尤其是开发 3D 的时候）。我将 3D 程序的核心 JS 文件移植到了 Vue 项目中，可以使用浏览器很方便的开发 3D 程序（界面尚未开发完成），对 SpacePath.js 文件及依赖文件的改动都会导致 devserver 的重新加载。
+直接使用 QtQuick 开发这款程序不如使用 Vue 开发来的方便（尤其是开发 3D 的时候）。我将 3D 程序的核心 JS 文件移植到了 Vue 项目中 (submodule compassvue)，可以使用浏览器很方便的开发 3D 程序（界面尚未开发完成），对 SpacePath.js 文件及依赖文件的改动都会导致 devserver 的重新加载。
+
+现在可以直接在浏览器中预览 3D 程序的效果：[点击链接](https://brifuture.github.io/blog-code-example/19-01to03/compassvue-demo/index.html)
  
 ### Qt C++ 部分
 - main.cpp
