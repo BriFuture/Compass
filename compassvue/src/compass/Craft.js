@@ -1,64 +1,80 @@
+import {PaintObj, degToRad} from './PaintObj'
+import {states, attributes, uniforms} from './Variables'
 
-
+// import CraftObj from '!'
 /**
 * 飞行器模拟器，模型是从 https://archive3d.net/ 中下载的，
 * 模型转换成 OBJ 格式，并利用 [webgl-obj-loader](https://github.com/frenchtoast747/webgl-obj-loader)
 * 进行加载
 **/
-class Craft {
+class Craft extends PaintObj{
   constructor(props) {
-    PaintObj.call(this);
+    super(props);
     this.type = "Craft";
-    this.url = "qrc:/res/obj/craft.obj";
     var scale = props.size || 1;
     this.setScale(scale);
-    this.init();
+    this.visible = false;
+    // this.init();
+    if(props.obj) {
+      this.init(props.obj)
+    }
   }
-  init() {
-    var that = this;
-    readFile(this.url, function (text) {
-      that.mesh = new ObjLoader.OBJ.Mesh(text);
-      ObjLoader.OBJ.initMeshBuffers(gl, that.mesh);
-    });
+
+  init(obj) {
+    this.mesh = new OBJ.Mesh(obj)
+    OBJ.initMeshBuffers(states.gl, this.mesh)
+    this.visible = true;
   }
 
   paint() {
 
-    if (this.mesh === undefined || !this.visible) {
+    if (this.mesh === undefined) {
       return;
     }
 
-    gl.uniform1f(uniforms.alpha, this.alpha);
-    //        gl.uniform3fv( uniforms.frag_color, [0.8, 0.3, 0.6] );
-    //        gl.uniform1i(  uniforms.has_texture, true );
-    gl.uniform1i(uniforms.specColor, 1);
-    gl.uniform3fv(uniforms.vertexColor, this.color);
+    states.gl.uniform1f(uniforms.alpha, this.alpha);
+    states.gl.uniform3fv( uniforms.frag_color, [0.8, 0.3, 0.6] );
+    //  states.gl.uniform1i(  uniforms.has_texture, true );
+    states.gl.uniform1i(uniforms.specColor, 1);
+    states.gl.uniform3fv(uniforms.vertexColor, this.color);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.vertexBuffer);
-    gl.vertexAttribPointer(attributes.vertex_position, this.mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    // states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer);
+    // console.log(this.mesh.vertexBuffer)
+    states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.mesh.vertexBuffer);
+    states.gl.vertexAttribPointer(attributes.vertex_position, 
+      this.mesh.vertexBuffer.itemSize, states.gl.FLOAT, false, 0, 0);
+    states.gl.vertexAttribPointer(attributes.color,   
+      3, states.gl.FLOAT, false, 0, 0);
+    
+    if(!this.mesh.textures.length){
+        states.gl.disableVertexAttribArray(attributes.textureCoordAttribute);
+    }
+    else{
+        // if the texture vertexAttribArray has been previously
+        // disabled, then it needs to be re-enabled
+        states.gl.enableVertexAttribArray( attributes.texture );
+        states.gl.bindBuffer( states.gl.ARRAY_BUFFER, this.mesh.textureBuffer );
+        states.gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, states.gl.FLOAT, false, 0, 0);
+    }
 
-    //        if(!this.mesh.textures.length){
-    //            gl.disableVertexAttribArray(attributes.textureCoordAttribute);
-    //        }
-    //        else{
-    //            // if the texture vertexAttribArray has been previously
-    //            // disabled, then it needs to be re-enabled
-    //            gl.enableVertexAttribArray( attributes.texture );
-    //            gl.bindBuffer( gl.ARRAY_BUFFER, this.mesh.textureBuffer );
-    //            gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    //        }
+    states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.mesh.normalBuffer);
+    states.gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, 
+      states.gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
-    gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    states.gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
+    states.gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
 
-    gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
-    gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.mesh.indexBuffer);
-    gl.drawElements(gl.TRIANGLES, this.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-
-    //        gl.uniform1i( uniforms.has_texture, false );
-    gl.uniform1i(uniforms.specColor, false);
+    states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.mesh.indexBuffer);
+    states.gl.drawElements(states.gl.TRIANGLES, this.mesh.indexBuffer.numItems, states.gl.UNSIGNED_SHORT, 0);
+    
+    // var binding1 = states.gl.getParameter(states.gl.ARRAY_BUFFER_BINDING);
+    // var binding2 = states.gl.getParameter(states.gl.ELEMENT_ARRAY_BUFFER_BINDING);
+    // console.log("this: ", this.mesh.vertexBuffer, this.mesh.indexBuffer)
+    // console.log("binding: ", binding1, binding2)
+    // states.gl.drawElements(states.gl.TRIANGLES, this.elements, states.gl.UNSIGNED_SHORT, 0);
+    
+//        states.gl.uniform1i( uniforms.has_texture, false );
+    states.gl.uniform1i(uniforms.specColor, false);
   }
 
   onViewChanged(matrix) {
@@ -95,9 +111,10 @@ class Craft {
   setScale(size) {
     this.size = size;
     vec3.set(this.vscale, size, size, size);
-    sensorPoint.update();
+    // sensorPoint.update();
     //        this.setRotation( {} );
   }
 }
+Craft.prototype.onSphericalChanged = Craft.prototype.setRotation
 
 export {Craft};

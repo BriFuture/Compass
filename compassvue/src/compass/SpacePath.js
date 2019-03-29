@@ -7,131 +7,49 @@
  * License: GPLv3
  * Note: 默认 glMatrix 已加载，并且 mat4, vec3 可以直接使用，否则程序运行会出错
  */
-/* 保存画布上下文 */
 export const version = "0.0.01";
 
-import {states} from './Variables'
-var gl2d;  // this is used for HUD drawing
+import {states, attributes, uniforms} from './Variables'
 //var nMatrix   = mat4.create();
 import Coord from './Coord'
-import { Camera, Scene } from './Scene'
-import { SensorPoint, SensorPath, RecordPoint } from './SensorPoint'
-import { Craft } from './Craft'
+import {Camera, Scene} from './Scene'
+import {SensorPoint, SensorPath, RecordPoint} from './SensorPoint'
+import {Craft} from './Craft'
 import {Sphere, RefCircle} from './Sphere'
 // const fs = require('fs')
 
-import vertexCode from '!raw-loader!../assets/SPVertexCode.vsh'
-import fragCode from '!raw-loader!../assets/SPFragCode.fsh'
+import vertexCode from '!raw-loader!@/assets/SPVertexCode.vsh'
+import fragCode from '!raw-loader!@/assets/SPFragCode.fsh'
+// this.url = "qrc:/res/obj/craft.obj";
 var canvasArgs; // 相关绘图变量
-var gl;
 
 export class SpacePath {
-  constructor(canvas) {
-    gl  = canvas.getContext("webgl",
-      { depth: true, antilias: true }
-    );
-    states.gl = gl;
-    // console.log(vertexCode)
-    var scene = new Scene({gl});
+  constructor() {
+    // var gl2d;  // this is used for HUD drawing
+    // return;
+    this.attributes = attributes;
+    this.uniforms = uniforms;
+    this.states = states;
+  }
+
+  // initializeGL(canvas, args) {
+  //   gl = canvas.getContext("canvas3d",
+  //     { depth: true, antilias: true }
+  //   );
+  //   gl2d = canvas.getContext("2d");
+
+  //   this.init();
+  // }
+
+  init(canvasGL) {
+    states.gl = canvasGL;
+    var scene = new Scene({});
     this.scene = scene;
     scene.initShaders(vertexCode, fragCode)
     this.camera = new Camera({height: 600, width: 800});
     scene.addCamera(this.camera)
-    
-    this.coord = new Coord({gl});
+    this.coord = new Coord({});
     scene.add(this.coord);
-
-    var sensorPoint = new SensorPoint({gl, color: [1.0, 0.2, 0.1]});
-    // sensorPoint.setParam({dis: 3, pitch: 0, heading: 0});
-    this.sensorPoint = sensorPoint;
-    scene.add(sensorPoint);
-    var sensorPath = new SensorPath({gl});
-    this.sensorPath = sensorPath;
-    scene.add(this.sensorPath);
-    this.sphere = new Sphere({gl});
-    scene.add(this.sphere);
-    var recordPoint = new RecordPoint({gl});
-    this.recordPoint = recordPoint;
-    
-    scene.add(this.recordPoint);
-    var refCircle = new RefCircle({gl});
-    this.refCircle = refCircle;
-    scene.add(this.refCircle);
-    sensorPoint.addParamCallback(function( params ) {
-      sensorPath.onSphericalChanged( params );
-      recordPoint.onSphericalChanged(params);
-      refCircle.onSphericalChanged( params );
-      // craft.setRotation( params );
-    });
-    // this.craft = craft;
-    scene.render()
-    // return;
-  }
-
-  reset() {
-    sensorPoint.reset();
-    sensorPath.resetAllPath();
-    camera.reset();
-  }
-
-  addRefCircle(props) {
-    if (refCircle === undefined) {
-      refCircle = new RefCircle(props);
-      sensorPoint.addParamCallback(function (params) {
-        refCircle.onSphericalChanged(params);
-      });
-      sensorPoint.update();
-      scene.add(refCircle, true);
-    }
-  }
-
-  addCraft(props) {
-    if (craft === undefined) {
-      craft = new Craft(props);
-      sensorPoint.addParamCallback(function (params) {
-        craft.setRotation(params);
-      });
-      sensorPoint.update();
-      scene.add(craft, true);
-    }
-  }
-
-  initializeGL(canvas, args) {
-    gl = canvas.getContext("canvas3d",
-      { depth: true, antilias: true }
-    );
-    gl2d = canvas.getContext("2d");
-
-    scene = new Scene();
-    camera = new Camera();
-    coordinate = new Coord();
-    sensorPoint = new SensorPoint({ color: [0.9, 0.2, 0.15] });
-    sensorPoint.setScale(0.1);
-    sensorPath = new SensorPath({ color: [0.9, 0.5, 0.2], size: 0.3 });
-    sensorPoint.addParamCallback(function (params) {
-      sensorPath.onSphericalChanged(params);
-    });
-
-    recordPoint = new RecordPoint();
-
-    sensorPoint.addParamCallback(function (params) {
-      recordPoint.onSphericalChanged(params);
-    });
-    sphere = new Ball({
-      color: [0.95, 0.2, 0.2],
-      vn: 48,
-      hn: 48
-    });
-
-    sensorPoint.setParam({ dis: 4, pitch: 0, roll: 0, heading: 0 });
-
-    /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/
-    scene.add(coordinate);
-    scene.add(sensorPoint);
-    scene.add(sensorPath);
-    scene.add(recordPoint);
-    scene.add(sphere);
-    scene.add(camera);
   }
 
   paintGL(canvas) {
@@ -140,10 +58,100 @@ export class SpacePath {
     var currentHeight = canvas.height * pixelRatio;
 
     if (currentWidth !== camera.width || currentHeight !== camera.height) {
-      camera.setSize(currentWidth, currentHeight);
+      this.camera.setSize(currentWidth, currentHeight);
     }
-    scene.render();
+    this.scene.render();
   }
+
+  hideAll() {
+    this.sensorPoint.visible = false;
+    this.sensorPath.visible = false;
+    this.recordPoint.visible = false;
+    this.refCircle.visible = false;
+    this.sphere.visible = false;
+  }
+
+  reset() {
+    this.sensorPoint.reset();
+    this.sensorPath.resetAllPath();
+    this.camera.reset();
+  }
+
+  defaultInit() {
+    this.addIndicator();
+    this.addSensorPath();
+    this.addRefCircle();
+    this.addRecordPoint();
+    this.addSphere();
+  }
+
+  /**
+   * 需要第一个添加
+   * @param {*} props 
+   */
+  addIndicator(props) {
+    props = props || {
+      color: [1.0, 0.2, 0.1]
+    };
+    this.sensorPoint = new SensorPoint(props);
+    this.sensorPoint.init()
+    // 调整初始位置
+    this.sensorPoint.setParam({ dis: 4, pitch: 0, roll: 0, heading: 0 });
+    this.scene.add(this.sensorPoint, true);
+  }
+
+  addSensorPath(props) {
+    if(this.sensorPath === undefined) {
+      props = props || {color: [0.9, 0.5, 0.2] };
+      this.sensorPath = new SensorPath(props);
+      this.scene.add(this.sensorPath, true);
+      this.sensorPoint.addSphericalChange(this.sensorPath);
+    }
+  }
+
+  addRecordPoint(props) {
+    if(this.recordPoint === undefined) {
+      this.recordPoint = new RecordPoint(props);
+      this.scene.add(this.recordPoint, true);
+      this.sensorPoint.addSphericalChange(this.recordPoint);
+      this.sensorPoint.update();
+    }
+  }
+
+  addRefCircle(props) {
+    if (this.refCircle === undefined) {
+      this.refCircle = new RefCircle(props);
+      this.scene.add(this.refCircle, true);
+      this.sensorPoint.addSphericalChange(this.refCircle);
+      this.sensorPoint.update();
+    }
+  }
+
+  /** 开始执行实际的绘图操作，由于开启了 ALPHA BLEND 功能，先绘制球内物体 **/  
+  addSphere(props) {
+    if(this.sphere === undefined) {
+      props = props || {
+        color: [0.95, 0.2, 0.2],
+        vn: 48,
+        hn: 48
+      };
+      this.sphere = new Sphere(props);
+      this.sphere.init()
+      this.scene.add(this.sphere);
+    } 
+  }
+
+
+  addCraft(props) {
+    if (this.craft === undefined) {
+      this.craft = new Craft(props || {});
+      this.scene.add(this.craft, true);
+      this.sensorPoint.addSphericalChange(this.craft);
+      this.sensorPoint.update();
+    }
+  }
+
+
 
   resizeGL(canvas) {
     var pixelRatio = canvas.devicePixelRatio;

@@ -5,17 +5,23 @@ import {states, uniforms, attributes} from './Variables'
 * 绘制参考球。绘制模式有 1. 球面 2. 线条 3.少数线条 等模式
 **/
 class Sphere extends PaintObj{
+  MODE_SURFACE = 0;
+  MODE_LINE = 1;
+  MODE_LESSLINE = 2;
+
+  DEFAULT_RADIUS = 4;
+
   constructor(props) {
     super(props);
     this.type = "Sphere";
     this.vn = props.vn || 48;
     this.hn = (props.hn || 48) * 0.5;
-    this.ratio = 0.25;
-    this.size = 4; // default radius
-    this.drawMode = Sphere.MODE_SURFACE;
+    this.size = props.size || this.DEFAULT_RADIUS; // default radius
+    this.drawMode = this.MODE_SURFACE;
     this.line_alpha = 0.65;
-    this.alpha = 0.25;
-    this.init();
+    this.alpha = props.alpha || 0.25;
+    this.setSize();
+    // this.visible = false;
   }
 
   init() {
@@ -23,8 +29,8 @@ class Sphere extends PaintObj{
     var index = this.getIndex();
 
     // vertex info，static_draw is enough for both vertex and index now
-    this.vertexBuffer = this.createArrayBuffer(new Float32Array(res.vertices), states.gl.STATIC_DRAW);
-    this.indexBuffer = this.createArrayBuffer(new Uint16Array(index.vertex_index), states.gl.STATIC_DRAW);
+    this.vertexBuffer    = this.createArrayBuffer(new Float32Array(res.vertices),     states.gl.STATIC_DRAW);
+    this.indexBuffer     = this.createArrayBuffer(new Uint16Array(index.vertex_index), states.gl.STATIC_DRAW);
     this.lineIndexBuffer = this.createArrayBuffer(new Uint16Array(index.line_index), states.gl.STATIC_DRAW);
     this.lessLineIndexBuffer = this.createArrayBuffer(new Uint16Array(index.less_line_index), states.gl.STATIC_DRAW);
     this.lessLSIndexBuffer = this.createArrayBuffer(new Uint16Array(index.less_ls_index), states.gl.STATIC_DRAW);
@@ -34,18 +40,18 @@ class Sphere extends PaintObj{
   paint() {
     states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer);
     states.gl.vertexAttribPointer(attributes.vertex_position, 3, states.gl.FLOAT, false, 6 * 4, 0);
-    states.gl.vertexAttribPointer(attributes.vertex_normal, 3, states.gl.FLOAT, false, 6 * 4, 0);
-    states.gl.vertexAttribPointer(attributes.color, 3, states.gl.FLOAT, false, 6 * 4, 3 * 4);
+    states.gl.vertexAttribPointer(attributes.vertex_normal,   3, states.gl.FLOAT, false, 6 * 4, 0);
+    states.gl.vertexAttribPointer(attributes.color,           3, states.gl.FLOAT, false, 6 * 4, 3 * 4);
 
     states.gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
     states.gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
     switch (this.drawMode) {
-      case Sphere.MODE_LINE:
+      case this.MODE_LINE:
         states.gl.uniform1f(uniforms.alpha, this.line_alpha);          //  set alpha value
         states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.lineIndexBuffer);
         states.gl.drawElements(states.gl.LINES, this.lineIndexBuffer.numItems, states.gl.UNSIGNED_SHORT, 0);
         break;
-      case Sphere.MODE_LESSLINE:
+      case this.MODE_LESSLINE:
         states.gl.uniform1f(uniforms.alpha, this.line_alpha);          //  set alpha value
         states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.lessLineIndexBuffer);
         states.gl.drawElements(states.gl.LINES, this.lessLineIndexBuffer.numItems, states.gl.UNSIGNED_SHORT, 0);
@@ -53,7 +59,7 @@ class Sphere extends PaintObj{
         states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.lessLSIndexBuffer);
         states.gl.drawElements(states.gl.TRIANGLES, this.lessLSIndexBuffer.numItems, states.gl.UNSIGNED_SHORT, 0);
         break;
-      case Sphere.MODE_SURFACE:
+      case this.MODE_SURFACE:
       default:
         states.gl.uniform1f(uniforms.alpha, this.alpha);
         states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -68,7 +74,11 @@ class Sphere extends PaintObj{
   }
 
   setSize(size) {
-    this.size = size * this.ratio;
+    if(size)
+      this.size = size;
+    else
+      this.size = this.DEFAULT_RADIUS;
+
     vec3.set(this.vscale, this.size, this.size, this.size);
     mat4.fromScaling(this.mMatrix, this.vscale);
     this.onViewChanged();
@@ -98,7 +108,7 @@ class Sphere extends PaintObj{
     for (j = 0; j <= this.vn; j++) {
       for (i = 0; i <= this.hn; i++) {
         // (n+1)*n points are needed
-        k = coordCarte(degToRad(i * 180 / this.hn), degToRad(j * 360 / this.vn), this.size);
+        k = coordCarte(degToRad(i * 180 / this.hn), degToRad(j * 360 / this.vn), 1);
         vertex = vertex.concat(k[0], k[1], k[2]);
       }
     }
@@ -181,9 +191,6 @@ class Sphere extends PaintObj{
   }
 }
 
-Sphere.MODE_SURFACE = 0;
-Sphere.MODE_LINE = 1;
-Sphere.MODE_LESSLINE = 2;
 // end of Sphere prototype
 
 
@@ -195,6 +202,7 @@ Sphere.MODE_LESSLINE = 2;
 **/
 class RefCircle extends PaintObj{
   constructor(props) {
+    props = props || {};
     super(props);
     this.dis = props.dis || 4;
     this.visible = false;

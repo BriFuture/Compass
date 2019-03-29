@@ -1,6 +1,11 @@
-var path = require('path');
+const path = require('path');
 
 module.exports = {
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src/')
+    }
+  },
   entry: "./src/compass/SpacePath.js",
   // chainWebpack: config => {
   //     config.module.rules.delete('eslint');

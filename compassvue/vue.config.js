@@ -4,6 +4,19 @@ module.exports = {
     chainWebpack: config => {
         config.module.rules.delete('eslint');
     },
+    // module: {
+    //     rules: [
+    //         {
+    //             test: /\.(png|jpg|gif|obj)$/,
+    //             use: [
+    //                 {
+    //                     loader: 'raw-loader',
+    //                     options: {},
+    //                 },
+    //             ],
+    //         },
+    //     ],
+    // },
     configureWebpack: {
         plugins: [
             // 使用 ParallelUglifyPlugin 并行压缩输出的 JS 代码

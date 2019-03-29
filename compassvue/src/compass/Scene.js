@@ -190,7 +190,11 @@ class Scene {
     function r() {
       states.gl.clear(states.gl.COLOR_BUFFER_BIT | states.gl.DEPTH_BUFFER_BIT);   // clear color buffer and depth buffer bit
       for (var i = 0; i < scope.objs.length; i++) {
-        scope.objs[i].paint();
+        if(scope.objs[i].visible) {
+          scope.objs[i].paint();
+          // states.gl.bindBuffer(states.gl.ARRAY_BUFFER, null);
+          // states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, null);
+        }
       }
       if(scope.running) {
         requestAnimationFrame(r)

@@ -3,15 +3,15 @@
     <!-- <script type="text/javascript" src="@/components/gl-matrix-min.js"></script> -->
     <b-row>
       <b-col cols="2" class="">
-        <c-sidebar :camera="camera"
+        <c-sidebar ref="sidebar"
         ></c-sidebar>
-        <c-information></c-information>
       </b-col>
       <b-col cols="10">
         <canvas ref="canvas" width="800" height="600"></canvas>
-      </b-col>
-      <b-col cols="3">
-        <c-debug-panel @valueChanged="debugValueChanged($event)"></c-debug-panel>
+        <div class="float-right">
+          <c-debug-panel @valueChanged="debugValueChanged($event)"></c-debug-panel>
+          <c-information></c-information>
+        </div>
       </b-col>
     </b-row>
   </b-container>
@@ -21,7 +21,7 @@
 import CSidebar from './components/Sidebar.vue'
 import CInformation from './components/Information.vue'
 import CDebugPanel from './components/DebugPanel.vue'
-import {SpacePath} from './compass/SpacePath'
+import {spacepath} from './states'
 
 export default {
   name: 'app',
@@ -32,8 +32,6 @@ export default {
   },
   data() {
     return {
-      camera: {},
-      // spacepath: {}
     }
   },
   created() {
@@ -42,8 +40,13 @@ export default {
   },
   mounted() {
     console.log("Mounted")
-    this.spacepath = new SpacePath(this.$refs.canvas)
-    this.camera = this.spacepath.camera;
+    var gl = this.$refs.canvas.getContext('webgl2',
+      { depth: true, antilias: true }
+    );
+    this.spacepath = spacepath;
+    this.spacepath.init(gl);
+    this.spacepath.defaultInit();
+    this.spacepath.scene.render()
   },
   methods: {
     debugValueChanged(event) {

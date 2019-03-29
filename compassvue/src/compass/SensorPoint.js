@@ -24,7 +24,6 @@ class SensorPoint extends PaintObj {
     this.headingOffset = 0;
     this.roll = 0;
     this.callbacks = [];
-    this.init();
   }
   
   init() {
@@ -45,12 +44,12 @@ class SensorPoint extends PaintObj {
     var vertices = genVertices(vertex, color, [0, 1, 1]);
     this.index_count = index.length;
 
-    this.buffers.vertex = this.createArrayBuffer(new Float32Array(vertices), states.gl.STATIC_DRAW);
-    this.buffers.index = this.createArrayBuffer(new Uint16Array(index), states.gl.STATIC_DRAW);
+    this.vertexBuffer = this.createArrayBuffer(new Float32Array(vertices), states.gl.STATIC_DRAW);
+    this.indexBuffer  = this.createArrayBuffer(new Uint16Array(index), states.gl.STATIC_DRAW);
   }
 
   paint() {
-    states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.buffers.vertex);
+    states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer);
     states.gl.vertexAttribPointer(attributes.vertex_position, 3, states.gl.FLOAT, false, 9 * 4, 0);
     states.gl.vertexAttribPointer(attributes.color, 3, states.gl.FLOAT, false, 9 * 4, 3 * 4);
     states.gl.vertexAttribPointer(attributes.vertex_normal, 3, states.gl.FLOAT, false, 9 * 4, 6 * 4);
@@ -60,7 +59,7 @@ class SensorPoint extends PaintObj {
     states.gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
     states.gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
 
-    states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
+    states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     states.gl.drawElements(states.gl.TRIANGLES, this.index_count, states.gl.UNSIGNED_SHORT, 0);
   }
 
@@ -124,7 +123,7 @@ class SensorPoint extends PaintObj {
 
     var spherical = this.spherical();
     for (var i = 0; i < this.callbacks.length; i++) {
-      this.callbacks[i]({
+      this.callbacks[i].onSphericalChanged({
         dis: this.dis, pitch: this.pitch, heading: this.heading,
         roll: this.roll, theta: spherical[0], phi: spherical[1],
         size: this.size
@@ -135,7 +134,7 @@ class SensorPoint extends PaintObj {
   /**
     * 注册回调函数
   **/
-  addParamCallback(cb) {
+  addSphericalChange(cb) {
     this.callbacks.push(cb);
   }
 
@@ -182,7 +181,6 @@ class SensorPath extends PaintObj{
     this.buffer_index_bytes = this.MaxPathNum * 2; // 2 means the bytes uint  occupies
     this.gap = 1; // must equal or greater then 1
     this.pg = 1; // path gap count
-    this.width = 1.0;
     this.init();
   }
 

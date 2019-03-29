@@ -1576,7 +1576,7 @@ function Craft(props) {
     PaintObj.call( this );
 
     this.type    = "Craft";
-    this.url     = "qrc:/res/obj/craft.obj";
+    this.url     = "qrc:/obj/craft.obj";
     var scale = props.size || 1;
     this.setScale( scale );
     this.init();
@@ -1588,8 +1588,10 @@ Craft.prototype = {
     init : function() {
         var that = this;
         readFile( this.url, function(text) {
+//            console.log("Craft: ", text)
             that.mesh = new ObjLoader.OBJ.Mesh(text);
             ObjLoader.OBJ.initMeshBuffers(gl, that.mesh);
+            console.log(that.mesh.vertexBuffer.numItems, that.mesh.indexBuffer.numItems)
         } );
     },
 
@@ -1619,8 +1621,8 @@ Craft.prototype = {
 //            gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
 //        }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
-        gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
+//        gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
