@@ -8,6 +8,10 @@
 直接使用 QtQuick 开发这款程序不如使用 Vue 开发来的方便（尤其是开发 3D 的时候）。我将 3D 程序的核心 JS 文件移植到了 Vue 项目中 (submodule compassvue)，可以使用浏览器很方便的开发 3D 程序（界面尚未开发完成），对 SpacePath.js 文件及依赖文件的改动都会导致 devserver 的重新加载。
 
 现在可以直接在浏览器中预览 3D 程序的效果：[点击链接](https://brifuture.github.io/blog-code-example/19-01to03/compassvue-demo/index.html)
+
+### 存在的问题
+
+在着色器代码 `SPVertexCode.vsh` 或 `SPFragCode.fsh` 文件中存在一个可能的问题 [详见 WebGL: Fixing "INVALID_OPERATION: drawArrays: attribs not setup correctly"](http://www.mjbshaw.com/2013/03/webgl-fixing-invalidoperation.html)，这是我在移植 `Craft.js` 功能的时候发现的一个 Bug，发生原因再 `attributes.texture` 没有正确的获取到 Buffer 中的数据，但是在 QQuick 引擎中运行现有的代码不会出现这个问题。
  
 ### Qt C++ 部分
 - main.cpp
