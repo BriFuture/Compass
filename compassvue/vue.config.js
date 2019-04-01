@@ -17,6 +17,7 @@ module.exports = {
     //         },
     //     ],
     // },
+    // filenameHashing: false,
     configureWebpack: {
         plugins: [
             // 使用 ParallelUglifyPlugin 并行压缩输出的 JS 代码
@@ -63,11 +64,12 @@ module.exports = {
         //     ]
         // },
         proxy: {
-            '/api': {
-                target: 'http://127.0.0.1:5050/api/',
-                changeOrigin: true,
+            '/socket.io/*': {
+                target: 'ws://127.0.0.1:5050/socket.io/',
+                ws: true,
+                // changeOrigin: true,
                 pathRewrite: {
-                    '^/api': ''
+                    '^/socket.io': ''
                 }
             }
         }

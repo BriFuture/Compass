@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-QT += qml quick core gui
+QT += qml quick core gui  webenginewidgets
 CONFIG += c++11
 
 SOURCES += main.cpp \

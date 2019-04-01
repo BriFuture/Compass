@@ -1,33 +1,25 @@
 <template>
 <div>
   <b-checkbox v-model="scene.running" @change="setSceneRun($event)">实时更新 3D 图像</b-checkbox>
+  <craft-setting :craft="craft" @initCraft="initCraft()" ></craft-setting>
   <b-card header="其他参数设置"> 
     <div class="option">
       <b-checkbox v-model="sensorPath.visible">绘制路径</b-checkbox>
-      <b-checkbox @change="paintCraft($event)">绘制模拟器</b-checkbox>{{ craft.elements}}
+      <b-btn @click="resetPath()">重置路径</b-btn>
+      <div>轨迹宽度 {{pathWidth}}
+        <b-form-input type="range" id="pathWidth" :value="pathWidth" min="1" max="100" 
+          @change="setPathWidth($event)" />
+      </div>
       <b-checkbox v-model="refCircle.visible">显示修正圆圈</b-checkbox>
     </div>
     <div class="action">
-      <b-btn>重置摄像机位置</b-btn>
-      <b-btn>重置路径</b-btn>
-      <b-btn>打点</b-btn>
-      <b-btn>重置打点</b-btn>
+      <b-btn @click="recordPoint()">打点</b-btn>
+      <b-btn @click="resetRecordedPoint()">重置打点</b-btn>
     </div>
-    <div>球面透明度: {{sphereAlpha}}
-      <b-form-input type="range" id="sphereOpacity" :value="sphereAlpha" min="0" max="100" 
-        @change="sphere.alpha = parseFloat($event) / 100" />
-    </div>
+
     <div>指示器大小: {{indicatorSize.toFixed(1)}}
       <b-form-input type="range" id="indicatorSize" :value="indicatorSize" min="1" max="100" 
         @change="setIndicatorSize($event)" />
-    </div>
-    <div>轨迹宽度 {{pathWidth}}
-      <b-form-input type="range" id="pathWidth" :value="pathWidth" min="1" max="100" 
-        @change="setPathWidth($event)" />
-    </div>
-    <div class="hidden">模拟器大小
-      <b-form-input type="range" id="craftSize" :value="pathWidth" min="1" max="100" 
-        @change="setPathWidth($event)" />
     </div>
     <div class="">修正圆圈大小
       <b-form-input type="range" id="refCircleSize" :value="refCircle.size" min="0.1" max="1" step="0.01" 
@@ -41,15 +33,17 @@
 
 <script>
 
-import {spacepath, craftObj, radToDeg} from '@/states'
+import {spacepath, craftObj} from '@/states'
 import { setTimeout } from 'timers';
 import CameraSetting from './CameraSetting'
 import SphereSetting from './SphereSetting'
+import CraftSetting from './CraftSetting'
 
 export default {
   components: {
     CameraSetting,
-    SphereSetting
+    SphereSetting,
+    CraftSetting
   },
   data() {
     return {
@@ -78,15 +72,16 @@ export default {
         size: 1
       },
       craft: { 
-        visible: false
+        visible: false,
+        size: 1,
+        headingOffset: 0,
+        pitchOffset: 0,
+        rollOffset: 0,
       }
     }
   },
   computed: {
 
-    sphereAlpha() {
-      return this.sphere.alpha * 100;
-    },
     indicatorSize() {
       return this.indicator.size * 100;
     },
@@ -100,7 +95,12 @@ export default {
         this.scene.render()
       }
     },
-
+    recordPoint() {
+      this.spacePath.recordPoint.record();
+    },
+    resetRecordedPoint() {
+      this.spacePath.recordPoint.reset();
+    },
     setIndicatorSize(value) {
       this.indicator.setScale(parseFloat(value) / 100);
     },
@@ -110,27 +110,26 @@ export default {
     setRefCircleSize(value) {
       this.refCircle.setScale(parseFloat(value));
     },
-    paintCraft(value) {
-      if(value) {
-        // this.spacePath.addCraft({obj: craftObj});
-        this.spacePath.addCraft({});
-
-        this.craft = this.spacePath.craft;
-        this.craft.init(craftObj)
-        // console.log(craftObj)
-        // var mesh = new OBJ.Mesh(craftObj)
-        // OBJ.initMeshBuffers(this.spacePath.states.gl, mesh)
-        // console.log(mesh)
-        // this.craft.mesh = mesh;
-        this.craft.visible = true;
-      } else {
-        this.craft.visible = false;
+    setCraftSize(value) {
+      if(this.craft.visible) {
+        this.craft.setScale(value);
       }
-      console.log("Paint", value)
+    },
+    initCraft() {
+      // this.spacePath.addCraft({obj: craftObj});
+      this.spacePath.addCraft({});
+      this.craft = this.spacePath.craft;
+      this.craft.init(craftObj)
+      this.craft.headingOffset = 270
+      this.craft.pitchOffset = 90
+      this.craft.setRotation({})
+    },
+    resetPath() {
+      this.sensorPath.resetAllPath()
     },
     init(spacePath) {
       this.spacePath = spacePath;
-      console.log(spacePath)
+      // console.log(spacePath)
       this.scene = spacePath.scene;
       this.camera = spacePath.camera;
       if(spacePath.sphere) {

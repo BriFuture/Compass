@@ -211,20 +211,20 @@ class RefCircle extends PaintObj{
     var green = [0.0, 1.0, 0.0];
     var blue = [0.0, 0.0, 1.0];
     var i = 0, j = 0, k = 0;
-    circles[k] = new ReferCircle({ "pos": [0, 0, this.dis], color: green, gl: states.gl });
+    circles[k] = new SingleReferCircle({ "pos": [0, 0, this.dis], color: green, gl: states.gl });
     k++;
     for (i = 0; i <= 2; i++) {
       for (j = 0; j < 8; j++) {
         if (i === 1 && j % 2 === 0) {
-          circles[k] = new ReferCircle({ "pos": [(i + 1) * 45, j * 45, this.dis], color: green, gl: states.gl });
+          circles[k] = new SingleReferCircle({ "pos": [(i + 1) * 45, j * 45, this.dis], color: green, gl: states.gl });
         }
         else {
-          circles[k] = new ReferCircle({ "pos": [(i + 1) * 45, j * 45, this.dis], color: blue, gl: states.gl });
+          circles[k] = new SingleReferCircle({ "pos": [(i + 1) * 45, j * 45, this.dis], color: blue, gl: states.gl });
         }
         k++;
       }
     }
-    circles[k] = new ReferCircle({ "pos": [4 * 45, 0, this.dis], color: green, gl: states.gl });
+    circles[k] = new SingleReferCircle({ "pos": [4 * 45, 0, this.dis], color: green, gl: states.gl });
     this.circles = circles;
     this.setScale(props.size || 1);
     this.init();
@@ -290,8 +290,11 @@ class RefCircle extends PaintObj{
   }
 
   onSphericalChanged(params) {
+    if(!this.visible) {
+      return;
+    }
     for (var i = 0; i < 26; i++) {
-      //            this.circles[i].current = false;
+//            this.circles[i].current = false;
       this.circles[i].isCurrent(params);
     }
   }
@@ -305,10 +308,11 @@ class RefCircle extends PaintObj{
 * 在 SensorPoint 移动时检测 SensorPoint 是否与当前圆圈相近，
 * 若距离很近则会改变绘制方式。
 **/
-class ReferCircle extends PaintObj{
+const DeltaRad = 0.05 * Math.PI;
+class SingleReferCircle extends PaintObj{
   constructor(props) {
     super(props);
-    this.type = "RCircle";
+    this.type = "SingleReferCircle";
     if (props.pos !== undefined) {
       this.setTranslation(props.pos[2], degToRad(props.pos[0]), degToRad(props.pos[1]));
       this.setQuat(props.pos[0], props.pos[1]);
@@ -350,14 +354,16 @@ class ReferCircle extends PaintObj{
 
   // 判断 Sensor point 是否接近该圆圈。（目前只考虑 theta 和 phi 角而不是计算两个圆心的距离）
   isCurrent(spherical) {
-    if (Math.abs(spherical.theta - this.theta) < Math.PI * 0.02
-      && Math.abs(spherical.phi - this.phi) < Math.PI * 0.02) {
+    // console.log(spherical.theta, spherical.phi)
+    if (Math.abs(spherical.theta - this.theta) < DeltaRad
+      && Math.abs(spherical.phi - this.phi) < DeltaRad) {
       this.current = true;
       var size = spherical.size * 1.15;
       vec3.set(this.vscale, size, size, size);
       this.originColor = new Float32Array(this.color);
       this.color = [1.0, 0.0, 0.0];
       this.drawMode = states.gl.LINE_LOOP;
+      // console.log("ReferCircle is currently highlight")
     } else if (this.current) {
       this.current = false;
       vec3.set(this.vscale, this.size, this.size, this.size);
@@ -367,6 +373,6 @@ class ReferCircle extends PaintObj{
     this.onViewChanged();
   }
 }
-// end of ReferCircle prototype
+// end of SingleReferCircle prototype
 
 export {Sphere, RefCircle};

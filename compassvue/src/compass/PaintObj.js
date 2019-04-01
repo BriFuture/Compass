@@ -58,7 +58,7 @@ class PaintObj {
     if (data instanceof Float32Array) {
       type = states.gl.ARRAY_BUFFER;
     }
-
+    // console.log(type, offset + data.length)
     states.gl.bindBuffer(type, buffer);
     states.gl.bufferSubData(type, offset, data);
   }

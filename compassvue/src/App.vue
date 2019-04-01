@@ -10,7 +10,7 @@
         <canvas ref="canvas" width="800" height="600"></canvas>
         <div class="float-right">
           <c-debug-panel @valueChanged="debugValueChanged($event)"></c-debug-panel>
-          <c-information></c-information>
+          <c-information :data="data"></c-information>
         </div>
       </b-col>
     </b-row>
@@ -21,7 +21,8 @@
 import CSidebar from './components/Sidebar.vue'
 import CInformation from './components/Information.vue'
 import CDebugPanel from './components/DebugPanel.vue'
-import {spacepath} from './states'
+import {spacepath, radToDeg, wheelScroll, onMouseUp, onMouseMove, onMouseDown, cameraParam} from './states'
+
 
 export default {
   name: 'app',
@@ -32,6 +33,7 @@ export default {
   },
   data() {
     return {
+      data: {}
     }
   },
   created() {
@@ -39,14 +41,25 @@ export default {
     // this.sp = new SpacePath()
   },
   mounted() {
-    console.log("Mounted")
-    var gl = this.$refs.canvas.getContext('webgl2',
+    console.log("SpacePath is Mounted")
+    var canvas = this.$refs.canvas;
+    var gl = canvas.getContext('webgl',
       { depth: true, antilias: true }
     );
     this.spacepath = spacepath;
     this.spacepath.init(gl);
     this.spacepath.defaultInit();
-    this.spacepath.scene.render()
+    this.spacepath.scene.render();
+
+    cameraParam.camera = this.spacepath.camera;
+    cameraParam.canvas = canvas;
+    canvas.addEventListener('mousedown', onMouseDown);
+
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+
+    canvas.addEventListener('wheel', wheelScroll, false);
+    this.$socket.emit('connect')
   },
   methods: {
     debugValueChanged(event) {
@@ -59,7 +72,21 @@ export default {
       }
       // console.log(event);
     }
-  }
+  },
+  sockets: {
+    connect: function () {
+        console.log('socket connected')
+    },
+    feedHPR(data) {
+      this.data = data;
+      this.spacepath.setAttitude(data)
+      // console.log(this.spacepath.attitude)
+        // console.log('this method was fired by the socket server. eg: io.emit("customEmit", data)')
+    },
+    my_response: function(data) {
+      console.log("Test my response", data);
+    }
+  },
 }
 </script>
 

@@ -9,7 +9,7 @@
  */
 export const version = "0.0.01";
 
-import {states, attributes, uniforms} from './Variables'
+import {states, attributes, uniforms, attitude} from './Variables'
 //var nMatrix   = mat4.create();
 import Coord from './Coord'
 import {Camera, Scene} from './Scene'
@@ -63,6 +63,9 @@ export class SpacePath {
     this.scene.render();
   }
 
+  setAttitude(attitude) {
+    this.sensorPoint.setParam(attitude)
+  }
   hideAll() {
     this.sensorPoint.visible = false;
     this.sensorPath.visible = false;

@@ -14,6 +14,12 @@ class Craft extends PaintObj{
     var scale = props.size || 1;
     this.setScale(scale);
     this.visible = false;
+    this.heading = 0;
+    this.pitch = 0;
+    this.roll = 0;
+    this.headingOffset = 0;
+    this.pitchOffset = 0;
+    this.rollOffset = 0;
     // this.init();
     if(props.obj) {
       this.init(props.obj)
@@ -88,11 +94,11 @@ class Craft extends PaintObj{
     * mat4.rotate 方法会将物体的坐标轴进行旋转，即旋转后物体坐标轴与世界坐标系的轴不同
   **/
   setRotation(params) {
-    this.pitch = params.pitch;
-    this.heading = params.heading;
-    this.roll = params.roll;
+    this.pitch = params.pitch || this.pitch;
+    this.heading = params.heading || this.heading;
+    this.roll = params.roll || this.roll;
     //        quat4.fromEuler( this.quat, params.heading, params.pitch, params.roll );
-    mat4.fromScaling(this.mMatrix, this.vscale);
+    mat4.fromScaling(this.mMatrix, this.vscale);    
     // if craft's look at [1, 0, 0] and its up is [0, 0, 1]
     // following rotation will be fine, now it needs to some calibrations
     // what's more, the coordinate will rotate with the angle
@@ -100,19 +106,19 @@ class Craft extends PaintObj{
     //        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( params.pitch ) );
     //        mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( params.roll ) );
 
-    mat4.rotateX(this.mMatrix, this.mMatrix, degToRad(90));
+    mat4.rotateX(this.mMatrix, this.mMatrix, degToRad(this.pitchOffset));
     //        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( 270 ) );
-    mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(params.heading + 270));
-    mat4.rotateX(this.mMatrix, this.mMatrix, degToRad(params.pitch));
-    mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(params.roll));
+    mat4.rotateY(this.mMatrix, this.mMatrix, degToRad(this.heading + this.headingOffset));
+    mat4.rotateX(this.mMatrix, this.mMatrix, degToRad(this.pitch));
+    mat4.rotateZ(this.mMatrix, this.mMatrix, degToRad(this.roll));
     this.onViewChanged();
   }
 
   setScale(size) {
     this.size = size;
     vec3.set(this.vscale, size, size, size);
+    this.setRotation({});
     // sensorPoint.update();
-    //        this.setRotation( {} );
   }
 }
 Craft.prototype.onSphericalChanged = Craft.prototype.setRotation

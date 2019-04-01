@@ -1,14 +1,14 @@
 <template>
   <div>
-    <div>Heading
+    <div>Heading: {{heading}}
       <b-form-input type="range" id="heading" v-model="heading" min="0" max="360" 
         @change="$emit('valueChanged', {'key': 'heading', 'value': heading})" />
     </div>
-    <div>Picth
+    <div>Picth: {{pitch}}
       <b-form-input type="range" id="pitch" v-model="pitch" min="-90" max="90"
         @change="$emit('valueChanged', {'key': 'pitch', 'value': pitch})"/>
     </div>
-    <div>Roll
+    <div>Roll: {{roll}}
       <b-form-input type="range" id="roll" v-model="roll" min="0" max="180"
         @change="$emit('valueChanged', {'key': 'roll', 'value': roll})"/>
     </div>

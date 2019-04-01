@@ -1,5 +1,6 @@
-import {PaintObj, cylinderShape, genVertices, coordCarte, degToRad} from './PaintObj'
-import {states, attributes, uniforms} from './Variables'
+import {PaintObj, cylinderShape, genVertices, 
+  coordCarte, degToRad, circleShape, rotateVertex} from './PaintObj'
+import {states, attributes, uniforms, attitude} from './Variables'
 
 /**
 * SensorPoint Object
@@ -19,10 +20,10 @@ class SensorPoint extends PaintObj {
     // this.rMatrix  = mat4.create();
     this.inv_color = props.inv_color || [0.0, 1.0, 0.0];
     this.dis = 4;
-    this.pitch = 0;
-    this.heading = 0;
+    attitude.pitch = 0;
+    attitude.heading = 0;
     this.headingOffset = 0;
-    this.roll = 0;
+    attitude.roll = 0;
     this.callbacks = [];
   }
   
@@ -98,17 +99,17 @@ class SensorPoint extends PaintObj {
 
     this.dis = params.dis || this.dis;
     if(params.pitch) {
-      this.pitch = params.pitch;
+      attitude.pitch = params.pitch;
     }
     if(params.heading) {
-      this.heading = params.heading;
+      attitude.heading = params.heading;
       params.heading = params.heading - this.headingOffset;
     }
     if(params.roll) {
-      this.roll = params.roll;
+      attitude.roll = params.roll;
     }
-    var theta = 90 - this.pitch;
-    this.setTranslation(this.dis, theta, this.heading);
+    var theta = 90 - attitude.pitch;
+    this.setTranslation(this.dis, theta, attitude.heading);
   }
 
   /**
@@ -124,8 +125,8 @@ class SensorPoint extends PaintObj {
     var spherical = this.spherical();
     for (var i = 0; i < this.callbacks.length; i++) {
       this.callbacks[i].onSphericalChanged({
-        dis: this.dis, pitch: this.pitch, heading: this.heading,
-        roll: this.roll, theta: spherical[0], phi: spherical[1],
+        dis: this.dis, pitch: attitude.pitch, heading: attitude.heading,
+        roll: attitude.roll, theta: spherical[0], phi: spherical[1],
         size: this.size
       });
     }
@@ -145,16 +146,16 @@ class SensorPoint extends PaintObj {
   *  当前指向的球坐标系坐标
   */
   spherical() {
-    var u = (90 - this.pitch) / 180 * Math.PI;
-    var v = this.heading / 180 * Math.PI;
+    var u = (90 - attitude.pitch) / 180 * Math.PI;
+    var v = attitude.heading / 180 * Math.PI;
     return vec3.fromValues(u, v, this.dis);
   }
 
   // 重置指向
   reset() {
-    this.headingOffset += this.heading;
-    //        console.log( this.heading, this.headingOffset );
-    this.setParam({ pitch: this.pitch, heading: this.heading, roll: this.roll, dis: this.dis });
+    this.headingOffset += attitude.heading;
+    //        console.log( attitude.heading, this.headingOffset );
+    this.setParam({ pitch: attitude.pitch, heading: attitude.heading, roll: attitude.roll, dis: this.dis });
   }
 }
 // end of SensorPoint prototype
@@ -168,8 +169,11 @@ class SensorPoint extends PaintObj {
 * 3. 18.03.03 将路径绘制成虚线的绘制方法存在问题。因此路径每隔 gap 段绘制一次并没有实现，调整 gap 不会
 * 影响路径的绘制。（即路径以实线形式绘制）
 **/
+const PathBytes = 4
+const IndexBytes = 2
+const PathSegment = 6;
 class SensorPath extends PaintObj{
-  MaxPathNum = 4800 * 12
+  MaxPathIndexNum = 4800 * PathSegment * 2  // 2 PathSegment 是最小的单位
   constructor(props) {
     super(props);
     this.type = "SensorPath";
@@ -177,8 +181,8 @@ class SensorPath extends PaintObj{
     this.cur_path_count = 0;
     this.cur_index_count = 0;
     this.cur_pi = 0; // path index
-    this.buffer_path_bytes = this.MaxPathNum * 4; // 4 means the bytes float occupies, 3 means a point contains 3 coordinate
-    this.buffer_index_bytes = this.MaxPathNum * 2; // 2 means the bytes uint  occupies
+    this.buffer_path_bytes = this.MaxPathIndexNum * PathBytes; // 4 means the bytes float occupies, 3 means a point contains 3 coordinate
+    this.buffer_index_bytes = this.MaxPathIndexNum * IndexBytes; // 2 means the bytes uint  occupies
     this.gap = 1; // must equal or greater then 1
     this.pg = 1; // path gap count
     this.init();
@@ -191,36 +195,33 @@ class SensorPath extends PaintObj{
     this.index = [];
 
     // path buffer initialization
-    this.buffers.path = [];
-    this.buffers.index = [];
+    this.vertexBuffer = [];
+    this.indexBuffer = [];
 
     this.createBuffer();
   }
 
   paint() {
-    if (!this.visible) {
-      return;
-    }
     states.gl.uniform1f(uniforms.alpha, this.alpha);     // set alpha value
     states.gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
     states.gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
 
     // 分批绘制路径
     for (var i = 0; i < this.cur_pi; i++) {
-      states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.buffers.path[i]);
+      states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer[i]);
       states.gl.vertexAttribPointer(attributes.vertex_normal, 3, states.gl.FLOAT, false, 6 * 4, 0);
       states.gl.vertexAttribPointer(attributes.vertex_position, 3, states.gl.FLOAT, false, 6 * 4, 0);
       states.gl.vertexAttribPointer(attributes.color, 3, states.gl.FLOAT, false, 6 * 4, 3 * 4);
-      states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[i]);
-      states.gl.drawElements(states.gl.TRIANGLES, this.MaxPathNum, states.gl.UNSIGNED_SHORT, 0);
+      states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer[i]);
+      states.gl.drawElements(states.gl.TRIANGLES, this.MaxPathIndexNum, states.gl.UNSIGNED_SHORT, 0);
     }
     if (this.cur_index_count > 0) {
-      //            console.log( this.cur_index_count );
-      states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.buffers.path[this.cur_pi]);
+      // console.log( this.cur_index_count );
+      states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer[this.cur_pi]);
       states.gl.vertexAttribPointer(attributes.vertex_normal, 3, states.gl.FLOAT, false, 6 * 4, 0);
       states.gl.vertexAttribPointer(attributes.vertex_position, 3, states.gl.FLOAT, false, 6 * 4, 0);
       states.gl.vertexAttribPointer(attributes.color, 3, states.gl.FLOAT, false, 6 * 4, 3 * 4);
-      states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.buffers.index[this.cur_pi]);
+      states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer[this.cur_pi]);
       states.gl.drawElements(states.gl.TRIANGLES, this.cur_index_count, states.gl.UNSIGNED_SHORT, 0);
     }
   }
@@ -228,33 +229,6 @@ class SensorPath extends PaintObj{
   onViewChanged(matrix) {
     this.pvMatrix = matrix || this.pvMatrix;
     mat4.mul(this.mvpMatrix, this.pvMatrix, this.mMatrix);
-  }
-
-  /**
-    * @param nangle next sphericalCoord
-    * @param langle last sphericalCoord
-    */
-  updateBuffer(nangle) {
-    var langle = [this.last_point.theta, this.last_point.phi, this.last_point.dis];
-    var presult = this.getLinearPoint(nangle, langle);
-    this.all_index_count += presult.index.length;
-
-    this.subBuffer(this.buffers.path[this.cur_pi], this.cur_path_count * 4, new Float32Array(presult.vertices));
-    this.subBuffer(this.buffers.index[this.cur_pi], this.cur_index_count * 2, new Uint16Array(presult.index));
-
-    // Note! because the updateSubBuffer() should use the offset as the parameter,
-    // the addition of path or index count should be later, or the buffer will be out of its size
-    this.cur_path_count += presult.vertices.length;
-    this.cur_index_count += presult.index.length;
-
-    // when path index count is greater or equal to this.MaxPathNum, then a new buffer should be realloced
-    // and the counter should be reset
-    if (this.cur_index_count >= this.MaxPathNum) {
-      this.cur_pi++;
-      console.log("Info: [Path] create a new buffer!\n");
-      this.createBuffer();
-      this.resetCurrentPath();
-    }
   }
 
   setGap(gap) {
@@ -285,13 +259,13 @@ class SensorPath extends PaintObj{
 
     var vertex;
     var vertices = [];
-    var that = this;
+    var color = this.color;
 
     var pushVertex = function () {
       vertices = vertices.concat(vertex);
-      vertices = vertices.concat(that.color);
+      vertices = vertices.concat(color);
     }
-
+    // console.log("Linear Point: ", s1, l)
     vertex = [s1[0] - l[0], s1[1] - l[1], s1[2] - l[2]];   // 0
     pushVertex();
     vertex = [s1[0] + l[0], s1[1] + l[1], s1[2] + l[2]];   // 1
@@ -303,16 +277,15 @@ class SensorPath extends PaintObj{
     // until now, vertices length should be 24
 
     var index = [];
-    var seg = 6;
-    var n = this.cur_path_count / seg;  // it is better than index.length
+    var n = this.cur_path_count / PathSegment;  // it is better than index.length
     index.push(n + 0, n + 2, n + 3, n + 0, n + 3, n + 1);
     index.push(n + 0, n + 3, n + 2, n + 0, n + 1, n + 3);
 
     return {
-      //            "point" : linearPoint,
-      //            "color" : color,
-      "vertices": vertices,
-      "index": index,
+//            "point" : linearPoint,
+//            "color" : color,
+      "vertices": new Float32Array(vertices),
+      "index": new Uint16Array(index),
     }
   }
 
@@ -328,29 +301,59 @@ class SensorPath extends PaintObj{
     var angle = [params.theta, params.phi, params.dis];
 
     if (dist > Math.PI * params.dis * 0.002) {
-      this.updateBuffer(angle);
+      // console.log("test", angle)
+      this._updateBuffer(angle);
       this.angle = angle;
       this.last_point = params;
     }
 
     // angle[2] is vector length
-    //        if( dist > Math.PI * params.dis * 0.03 ) {
-    //            this.updateBuffer( angle );
-    //            this.angle      = angle;
-    //            this.last_point = params;
-    //        } else if( dist > Math.PI * params.dis * 0.001 ) {
-    //            this.pg ++;
-    //            this.last_point = params;
+//        if( dist > Math.PI * params.dis * 0.03 ) {
+//            this._updateBuffer( angle );
+//            this.angle      = angle;
+//            this.last_point = params;
+//        } else if( dist > Math.PI * params.dis * 0.001 ) {
+//            this.pg ++;
+//            this.last_point = params;
 
-    //            if( this.pg === this.gap ) {
-    //                this.angle = angle;
-    //            }
-    //            if( this.pg === this.gap+1 ) {
-    //                this.pg = 1;
-    //                this.updateBuffer( angle );
-    //                this.angle = angle;
-    //            }
-    //        }
+//            if( this.pg === this.gap ) {
+//                this.angle = angle;
+//            }
+//            if( this.pg === this.gap+1 ) {
+//                this.pg = 1;
+//                this._updateBuffer( angle );
+//                this.angle = angle;
+//            }
+//        }
+  }
+
+    /**
+    * @param nangle next sphericalCoord
+    * @param langle last sphericalCoord
+    */
+   _updateBuffer(nangle) {
+    var langle = [this.last_point.theta, this.last_point.phi, this.last_point.dis];
+    var presult = this.getLinearPoint(nangle, langle);
+    this.all_index_count += presult.index.length;
+    // when path index count is greater or equal to this.MaxPathIndexNum, then a new buffer should be realloced
+    // and the counter should be reset
+    
+    // console.log("before vertex", this.cur_index_count)
+    this.subBuffer(this.vertexBuffer[this.cur_pi], this.cur_path_count  * PathBytes, presult.vertices);
+    // console.log("vertex", this.cur_path_count, this.cur_path_count  * PathBytes , this.cur_path_count  * PathBytes + presult.vertices.length)
+    this.subBuffer( this.indexBuffer[this.cur_pi], this.cur_index_count * IndexBytes, presult.index);
+    // console.log("index", this.cur_index_count, this.cur_index_count * IndexBytes, this.cur_index_count * IndexBytes + presult.index.length)
+
+    // Note! because the updateSubBuffer() should use the offset as the parameter,
+    // the addition of path or index count should be later, or the buffer will be out of its size
+    this.cur_path_count  += presult.vertices.length;
+    this.cur_index_count += presult.index.length;
+    if (this.cur_path_count >= this.MaxPathIndexNum) {
+      this.cur_pi++;
+      console.info("Info: [Path] create a new buffer!\n");
+      this.createBuffer();
+      this.resetCurrentPath();
+    }
   }
 
   // 重置路径变量
@@ -363,8 +366,8 @@ class SensorPath extends PaintObj{
   resetAllPath(args) {
     // 删掉无用的buffer，节省内存
     for (var i = 1; i <= this.cur_pi; i++) {
-      gl.deleteBuffer(this.buffers.path[i]);
-      gl.deleteBuffer(this.buffers.index[i]);
+      states.gl.deleteBuffer(this.vertexBuffer[i]);
+      states.gl.deleteBuffer(this.indexBuffer[i]);
     }
     this.all_index_count = 0;
     this.cur_pi = 0;
@@ -373,8 +376,8 @@ class SensorPath extends PaintObj{
   }
 
   createBuffer() {
-    this.buffers.path[this.cur_pi] = this.createArrayBuffer(this.buffer_path_bytes, states.gl.DYNAMIC_DRAW, states.gl.ARRAY_BUFFER);
-    this.buffers.index[this.cur_pi] = this.createArrayBuffer(this.buffer_index_bytes, states.gl.DYNAMIC_DRAW, states.gl.ELEMENT_ARRAY_BUFFER);
+    this.vertexBuffer[this.cur_pi] = this.createArrayBuffer(this.buffer_path_bytes, states.gl.STATIC_DRAW, states.gl.ARRAY_BUFFER);
+    this.indexBuffer[this.cur_pi] = this.createArrayBuffer(this.buffer_index_bytes, states.gl.STATIC_DRAW, states.gl.ELEMENT_ARRAY_BUFFER);
   }
 }
 // end of SensorPath prototype
@@ -396,26 +399,26 @@ class RecordPoint extends PaintObj{
   }
   
   init () {
-    this.buffers.vertex = this.createArrayBuffer(this.max_vertex * 4, states.gl.DYNAMIC_DRAW, states.gl.ARRAY_BUFFER);
-    this.buffers.index = this.createArrayBuffer(this.max_vertex * 2, states.gl.DYNAMIC_DRAW, states.gl.ELEMENT_ARRAY_BUFFER);
+    this.vertexBuffer = this.createArrayBuffer(this.max_vertex * 4, states.gl.DYNAMIC_DRAW, states.gl.ARRAY_BUFFER);
+    this.indexBuffer = this.createArrayBuffer(this.max_vertex * 2, states.gl.DYNAMIC_DRAW, states.gl.ELEMENT_ARRAY_BUFFER);
   }
 
   paint () {
     // 进行采点操作
-    if (this.vertex_count === 0 || !this.visible) {
+    if (this.vertex_count === 0) {
       return;
     }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.vertex);
-    gl.vertexAttribPointer(attributes.vertex_normal, 3, gl.FLOAT, false, 6 * 4, 0);
-    gl.vertexAttribPointer(attributes.vertex_position, 3, gl.FLOAT, false, 6 * 4, 0);
-    gl.vertexAttribPointer(attributes.color, 3, gl.FLOAT, false, 6 * 4, 3 * 4);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
+    states.gl.bindBuffer(states.gl.ARRAY_BUFFER, this.vertexBuffer);
+    states.gl.vertexAttribPointer(attributes.vertex_normal, 3, states.gl.FLOAT, false, 6 * 4, 0);
+    states.gl.vertexAttribPointer(attributes.vertex_position, 3, states.gl.FLOAT, false, 6 * 4, 0);
+    states.gl.vertexAttribPointer(attributes.color, 3, states.gl.FLOAT, false, 6 * 4, 3 * 4);
+    states.gl.bindBuffer(states.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 
-    gl.uniform1f(uniforms.alpha, this.alpha);
-    gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
-    gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
-    gl.drawElements(gl.TRIANGLES, this.index_count, gl.UNSIGNED_SHORT, 0);
+    states.gl.uniform1f(uniforms.alpha, this.alpha);
+    states.gl.uniformMatrix4fv(uniforms.m_matrix, false, this.mMatrix);
+    states.gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);
+    states.gl.drawElements(states.gl.TRIANGLES, this.index_count, states.gl.UNSIGNED_SHORT, 0);
   }
 
   onViewChanged (matrix) {
@@ -455,8 +458,8 @@ class RecordPoint extends PaintObj{
     index.push(n, n + this.sides, n + 1,
       n, n + 1, n + this.sides
     );
-    this.subBuffer(this.buffers.vertex, this.vertex_count * 4, new Float32Array(vertices));
-    this.subBuffer(this.buffers.index, this.index_count * 2, new Uint16Array(index));
+    this.subBuffer(this.vertexBuffer, this.vertex_count * 4, new Float32Array(vertices));
+    this.subBuffer( this.indexBuffer, this.index_count * 2, new Uint16Array(index));
 
     this.vertex_count += vertices.length;
     this.index_count += index.length;

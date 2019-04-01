@@ -12,7 +12,8 @@
 ### 存在的问题
 
 在着色器代码 `SPVertexCode.vsh` 或 `SPFragCode.fsh` 文件中存在一个可能的问题 [详见 WebGL: Fixing "INVALID_OPERATION: drawArrays: attribs not setup correctly"](http://www.mjbshaw.com/2013/03/webgl-fixing-invalidoperation.html)，这是我在移植 `Craft.js` 功能的时候发现的一个 Bug，发生原因再 `attributes.texture` 没有正确的获取到 Buffer 中的数据，但是在 QQuick 引擎中运行现有的代码不会出现这个问题。
- 
+
+
 ### Qt C++ 部分
 - main.cpp
 <br>
@@ -35,6 +36,14 @@
     - 增加了 SpacePath.js 中的注释
     - 矩阵相关的操作使用的是 [gl-matrix][1] 类库。
     - 由于需要加载飞行器的 OBJ 模型，使用了 [webgl-obj-loader][2]。
+
+### Qt WebEngine 部分
+
+最新的程序采用了 QWebEngineView 进行显示，开发时使用 vue-cli 脚手架，在浏览器界面中进行调试。
+
+### change log
+
+- v0.0.10 :  现在采用 web 端开发，QWebEngineView 进行桌面显示，稍后会添加 QWebSocket 支持，以便在程序中传递数据。
 
 ### License 
 
