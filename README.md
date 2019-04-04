@@ -25,6 +25,12 @@
 
 ### Qt Quick 部分
 
+要启用 QuickView，确定 `main.cpp` 中如下语句是被注释的状态：
+
+```cpp
+// #ifndef WEBVIEW
+```
+
 使用 QML + JavaScript 进行动画演示。最新修改的版本对自定义滑块和 3D 部分的 QML 文件全部重写，去掉冗余的部分。
 
 * 2D 
@@ -39,7 +45,24 @@
 
 ### Qt WebEngine 部分
 
-最新的程序采用了 QWebEngineView 进行显示，开发时使用 vue-cli 脚手架，在浏览器界面中进行调试。
+要启用 WebEngine, 需要 `main.cpp` 中的如下语句：
+
+```cpp
+#ifndef WEBVIEW
+```
+
+最新的程序采用了 QWebEngineView 进行显示，开发时使用 vue-cli 脚手架，在浏览器界面中进行调试。与 Qt 部分通讯时需要使用 QWebSocket，协议如下：
+
+```js
+// data: 
+{ type: 'feedHPR', heading: 0 , pitch: 0, roll: 0 }
+//  action 
+{type: 'action', idx: 0, record: true, resetRecord: false, resetPath: false}
+```
+
+**Note: Debug 模式下 WebEngineView 会加载失败。请使用 Release 模式运行程序。另外，QtWebEngine 模块不被 MinGW 编译器所支持，在 Windows 平台下请使用 MSVC 版本的 Qt 进行编译。**
+
+开发时可以使用浏览器开发，构建生产环境代码时使用 `yarn build` 进行构建，简化完成后可在项目根目录下使用 python 脚本 `python process_index.py` 复制构建好的代码。Qt 程序编译后，运行程序默认不会产生模拟数据，要产生模拟数据，将可执行文件同级目录下的 `display.ini` 文件中的 `mock_data` 值改为 `true`。
 
 ### change log
 

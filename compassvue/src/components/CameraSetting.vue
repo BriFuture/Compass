@@ -1,6 +1,6 @@
 <template>
   <b-card header="相机设置">
-    <b-btn @click="resetCamera()">重置摄像机位置</b-btn>
+    <b-btn @click="resetCamera()">重置位置</b-btn>
     <div>
       摄像机θ角(与Z轴正半轴夹角): {{ cameraTheta.toFixed(1) }}
       <b-form-input
@@ -24,7 +24,7 @@
       />
     </div>
     <div>
-      摄像机距原点: {{cameraDis}}
+      摄像机距原点: {{cameraDis.toFixed(1)}}
       <b-form-input
         type="range"
         id="cameraDis"

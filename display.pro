@@ -1,10 +1,12 @@
 TEMPLATE = app
 
-QT += qml quick core gui  webenginewidgets
+QT += qml quick core gui  webenginewidgets websockets
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    data.cpp
+    data.cpp \
+    WebDataFeeder.cpp \
+    Feeder.cpp
 
 RESOURCES += qml.qrc
 
@@ -29,6 +31,8 @@ DISTFILES += \
     qml/SPFragCode.fsh
 
 HEADERS += \
-    data.h
+    data.h \
+    WebDataFeeder.h \
+    Feeder.h
 
 RC_FILE = icon.rc

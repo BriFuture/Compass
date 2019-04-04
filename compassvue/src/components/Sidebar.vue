@@ -13,8 +13,8 @@
       <b-checkbox v-model="refCircle.visible">显示修正圆圈</b-checkbox>
     </div>
     <div class="action">
-      <b-btn @click="recordPoint()">打点</b-btn>
-      <b-btn @click="resetRecordedPoint()">重置打点</b-btn>
+      <b-btn @click="recordPoint()" class="mx-4">打点</b-btn>
+      <b-btn @click="resetRecordedPoint()" class="mx-4">重置打点</b-btn>
     </div>
 
     <div>指示器大小: {{indicatorSize.toFixed(1)}}
@@ -33,12 +33,12 @@
 
 <script>
 
-import {spacepath, craftObj} from '@/states'
+import {spacepath} from '@/states'
 import { setTimeout } from 'timers';
 import CameraSetting from './CameraSetting'
 import SphereSetting from './SphereSetting'
 import CraftSetting from './CraftSetting'
-
+const craftObj = import('!raw-loader!@/assets/craft.obj')
 export default {
   components: {
     CameraSetting,
@@ -96,10 +96,12 @@ export default {
       }
     },
     recordPoint() {
-      this.spacePath.recordPoint.record();
+      this.spacepath.recordPoint.record();
+      this.$socket.emit('action', {record: true});
     },
     resetRecordedPoint() {
-      this.spacePath.recordPoint.reset();
+      this.spacepath.recordPoint.reset();
+      this.$socket.emit('action', {resetRecord: true});
     },
     setIndicatorSize(value) {
       this.indicator.setScale(parseFloat(value) / 100);
@@ -116,34 +118,34 @@ export default {
       }
     },
     initCraft() {
-      // this.spacePath.addCraft({obj: craftObj});
-      this.spacePath.addCraft({});
-      this.craft = this.spacePath.craft;
+      // this.spacepath.addCraft({obj: craftObj});
+      this.spacepath.addCraft({});
+      this.craft = this.spacepath.craft;
       this.craft.init(craftObj)
       this.craft.headingOffset = 270
       this.craft.pitchOffset = 90
       this.craft.setRotation({})
     },
     resetPath() {
-      this.sensorPath.resetAllPath()
+      this.sensorPath.resetAllPath();
     },
-    init(spacePath) {
-      this.spacePath = spacePath;
-      // console.log(spacePath)
-      this.scene = spacePath.scene;
-      this.camera = spacePath.camera;
-      if(spacePath.sphere) {
-        this.sphere = spacePath.sphere;
+    init(spacepath) {
+      this.spacepath = spacepath;
+      // console.log(spacepath)
+      this.scene = spacepath.scene;
+      this.camera = spacepath.camera;
+      if(spacepath.sphere) {
+        this.sphere = spacepath.sphere;
       }
-      if(spacePath.sensorPoint) {
-        this.indicator = spacePath.sensorPoint;
+      if(spacepath.sensorPoint) {
+        this.indicator = spacepath.sensorPoint;
         this.indicator.setScale(0.4);
       }
-      if(spacePath.sensorPath) {
-        this.sensorPath = spacePath.sensorPath;
+      if(spacepath.sensorPath) {
+        this.sensorPath = spacepath.sensorPath;
       }
-      if(spacePath.refCircle) {
-        this.refCircle = spacePath.refCircle;
+      if(spacepath.refCircle) {
+        this.refCircle = spacepath.refCircle;
         this.refCircle.setScale(0.5)
       }
       // console.log(craftObj)

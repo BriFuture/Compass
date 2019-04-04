@@ -5,7 +5,7 @@
  * 利用 webpack 的打包功能重写了核心的 JS 绘图程序。
  * 
  * License: GPLv3
- * Note: 默认 glMatrix 已加载，并且 mat4, vec3 可以直接使用，否则程序运行会出错
+ * Note: 默认 glMatrix 和 webgl-loader 已加载，并且 mat4, vec3 可以直接使用，否则程序运行会出错
  */
 export const version = "0.0.01";
 

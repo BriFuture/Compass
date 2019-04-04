@@ -26,10 +26,14 @@ class Craft extends PaintObj{
     }
   }
 
-  init(obj) {
-    this.mesh = new OBJ.Mesh(obj)
-    OBJ.initMeshBuffers(states.gl, this.mesh)
-    this.visible = true;
+  init(objPromise) {
+    objPromise.then( (obj) => {
+      // console.log("test", txt.default)
+      // console.log(obj, typeof(obj))
+      this.mesh = new OBJ.Mesh(obj.default)
+      OBJ.initMeshBuffers(states.gl, this.mesh)
+      this.visible = true;
+    })
   }
 
   paint() {

@@ -15,6 +15,7 @@
     "file-loader": "^3.0.1",
     "gl-matrix": "^3.0.0",
     "vue": "^2.6.6",
+    "vue-native-websocket": "^2.0.12",
     "vue-socket.io": "^3.0.7"
   },
   "devDependencies": {

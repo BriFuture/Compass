@@ -1,3 +1,9 @@
+/**
+ * Author: BriFuture
+ * Date: 2019/04/05
+ * Desc: 球体和球面上的参考圆圈
+ */
+
 import {PaintObj, degToRad, coordCarte, circleShape, genVertices} from './PaintObj'
 import {states, uniforms, attributes} from './Variables'
 /**
@@ -200,17 +206,21 @@ class Sphere extends PaintObj{
 * 减少绑定的缓冲区的次数，实际上只存储了一个 Circle 的 buffer，
 * 利用模型变换矩阵绘制出 26 个圆圈。
 **/
+const DeltaRad = 0.03 * Math.PI;
+
 class RefCircle extends PaintObj{
   constructor(props) {
     props = props || {};
     super(props);
     this.dis = props.dis || 4;
     this.visible = false;
-    var circles = [];
+    this.current = -1;
+    
     var red = [1.0, 0.0, 0.0];
     var green = [0.0, 1.0, 0.0];
     var blue = [0.0, 0.0, 1.0];
     var i = 0, j = 0, k = 0;
+    var circles = [];
     circles[k] = new SingleReferCircle({ "pos": [0, 0, this.dis], color: green, gl: states.gl });
     k++;
     for (i = 0; i <= 2; i++) {
@@ -289,15 +299,45 @@ class RefCircle extends PaintObj{
     }
   }
 
+  // 判断 Sensor point 是否接近该圆圈。（目前只考虑 theta 和 phi 角而不是计算两个圆心的距离）
   onSphericalChanged(params) {
     if(!this.visible) {
       return;
     }
-    for (var i = 0; i < 26; i++) {
-//            this.circles[i].current = false;
-      this.circles[i].isCurrent(params);
+    let c;
+    c = this.circles[0];
+    if(Math.abs(params.theta - c.theta) < DeltaRad) {
+      c.setCurrent(params.size)
+      this.current = 0;
+      return;
+    } else if(c.current) {
+      c.unsetCurrent();
+      this.current = -1;
+    }
+    c = this.circles[25];
+    if(Math.abs(params.theta - c.theta) < DeltaRad) {
+      c.setCurrent(params.size)
+      this.current = 25;
+      return;
+    } else if(c.current) {
+      c.unsetCurrent();
+      this.current = -1;
+    }
+    for (var i = 1; i < 25; i++) {
+      c = this.circles[i];
+      if(Math.abs(params.phi - c.phi) < DeltaRad && Math.abs(params.theta - c.theta) < DeltaRad) {
+        if(c.current) {
+          continue;
+        }
+        c.setCurrent(params.size)
+        this.current = i;
+      } else if(c.current) {
+        c.unsetCurrent();
+        this.current = -1;
+      }
     }
   }
+
 }
 
 
@@ -306,9 +346,11 @@ class RefCircle extends PaintObj{
 * 为节省内存和提高性能，该类不再存储圆圈的顶点缓冲区。
 * 实际上该类存储的只是每个圆圈的位置等信息。
 * 在 SensorPoint 移动时检测 SensorPoint 是否与当前圆圈相近，
-* 若距离很近则会改变绘制方式。
+* 若距离很近则会改变绘制方式（高亮）。
+* 2019/04/05 BriFuture
+* 高亮的实现方式是改变颜色和形状，这样做的效率并不高，更好的实现方式是修改 vsh 着色器代码，
+* 在着色器中对其高亮处理。
 **/
-const DeltaRad = 0.05 * Math.PI;
 class SingleReferCircle extends PaintObj{
   constructor(props) {
     super(props);
@@ -319,6 +361,9 @@ class SingleReferCircle extends PaintObj{
     }
     this.current = false;
     this.drawMode = states.gl.LINES;
+    this.size = props.size || 1;
+    this.originColor = new Float32Array(props.color);
+
     //    this.init();
   }
   
@@ -347,31 +392,32 @@ class SingleReferCircle extends PaintObj{
   }
 
   setScale(size) {
-    this.size = size;
-    this.vscale = vec3.fromValues(size, size, size);
+    this.size = size || this.size;
+    this.vscale = vec3.fromValues(this.size, this.size, this.size);
     this.onViewChanged();
   }
 
-  // 判断 Sensor point 是否接近该圆圈。（目前只考虑 theta 和 phi 角而不是计算两个圆心的距离）
-  isCurrent(spherical) {
-    // console.log(spherical.theta, spherical.phi)
-    if (Math.abs(spherical.theta - this.theta) < DeltaRad
-      && Math.abs(spherical.phi - this.phi) < DeltaRad) {
-      this.current = true;
-      var size = spherical.size * 1.15;
-      vec3.set(this.vscale, size, size, size);
-      this.originColor = new Float32Array(this.color);
-      this.color = [1.0, 0.0, 0.0];
-      this.drawMode = states.gl.LINE_LOOP;
-      // console.log("ReferCircle is currently highlight")
-    } else if (this.current) {
-      this.current = false;
-      vec3.set(this.vscale, this.size, this.size, this.size);
-      this.color = this.originColor;
-      this.drawMode = states.gl.LINES;
-    }
-    this.onViewChanged();
+  setCurrent(size) {
+    this.current = true;
+    this.color = new Float32Array([1.0, 0.0, 0.0]);
+    // console.log("set", this.originColor, this.color)
+    this.drawMode = states.gl.LINE_LOOP;
+    
+    size *= 1.15;
+    this.setScale(size);
   }
+  
+  unsetCurrent() {
+    this.current = false;
+    this.color[0] = this.originColor[0];
+    this.color[1] = this.originColor[1];
+    this.color[2] = this.originColor[2];
+    // console.log("unset", this.originColor, this.color)
+    this.drawMode = states.gl.LINES;
+    this.setScale();
+  }
+
+  
 }
 // end of SingleReferCircle prototype
 
