@@ -28,7 +28,7 @@
 要启用 QuickView，确定 `main.cpp` 中如下语句是被注释的状态：
 
 ```cpp
-// #ifndef WEBVIEW
+// #define WEBVIEW
 ```
 
 使用 QML + JavaScript 进行动画演示。最新修改的版本对自定义滑块和 3D 部分的 QML 文件全部重写，去掉冗余的部分。
@@ -48,7 +48,7 @@
 要启用 WebEngine, 需要 `main.cpp` 中的如下语句：
 
 ```cpp
-#ifndef WEBVIEW
+#define WEBVIEW
 ```
 
 最新的程序采用了 QWebEngineView 进行显示，开发时使用 vue-cli 脚手架，在浏览器界面中进行调试。与 Qt 部分通讯时需要使用 QWebSocket，协议如下：
