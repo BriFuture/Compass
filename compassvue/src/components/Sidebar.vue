@@ -97,11 +97,13 @@ export default {
     },
     recordPoint() {
       this.spacepath.recordPoint.record();
-      this.$socket.emit('action', {record: true});
+      let msg = JSON.stringify({type: 'action', record: true});
+      this.$socket.send(msg);
     },
     resetRecordedPoint() {
       this.spacepath.recordPoint.reset();
-      this.$socket.emit('action', {resetRecord: true});
+      let msg = JSON.stringify({type: 'action', resetRecord: true});
+      this.$socket.send(msg);
     },
     setIndicatorSize(value) {
       this.indicator.setScale(parseFloat(value) / 100);
