@@ -107,9 +107,10 @@ export default {
         let data = JSON.parse(msg.data)
         // console.log('socket recv after: ', data)
         if(data.type === "feedHPR") {
-          this.data.heading = data.heading;
-          this.data.pitch = data.pitch;
-          this.data.roll = data.roll;
+          this.data.heading = data.heading || this.data.heading;
+          this.data.pitch = data.pitch || this.data.pitch;
+          this.data.roll = data.roll || this.data.roll;
+          this.data.length = data.length || this.data.length;
           this.spacepath.setAttitude(this.data)
 
         } else if(data.type === "action") {

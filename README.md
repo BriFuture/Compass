@@ -25,10 +25,11 @@
 
 ### Qt Quick 部分
 
-要启用 QuickView，确定 `main.cpp` 中如下语句是被注释的状态：
+要启用 QuickView，确定 `display.pro` 中有如下语句（第一行不是注释状态，第二行是）：
 
-```cpp
-// #define WEBVIEW
+```
+DEFINES += QUICKVIEW
+# DEFINES += WEBVIEW
 ```
 
 使用 QML + JavaScript 进行动画演示。最新修改的版本对自定义滑块和 3D 部分的 QML 文件全部重写，去掉冗余的部分。
@@ -45,17 +46,18 @@
 
 ### Qt WebEngine 部分
 
-要启用 WebEngine, 需要 `main.cpp` 中的如下语句：
+要启用 WebEngine, 确定 `display.pro` 中有如下语句（第二行不是注释状态，第一行是）：
 
-```cpp
-#define WEBVIEW
+```
+# DEFINES += QUICKVIEW
+DEFINES += WEBVIEW
 ```
 
 最新的程序采用了 QWebEngineView 进行显示，开发时使用 vue-cli 脚手架，在浏览器界面中进行调试。与 Qt 部分通讯时需要使用 QWebSocket，协议如下：
 
 ```js
-// data: 
-{ type: 'feedHPR', heading: 0 , pitch: 0, roll: 0 }
+// data:  默认的 length 为 4
+{ type: 'feedHPR', heading: 0 , pitch: 0, roll: 0, length: 4 }
 //  action 
 {type: 'action', idx: 0, record: true, resetRecord: false, resetPath: false}
 ```

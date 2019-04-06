@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>html/favicon.ico</file>
+        <file>html/index.html</file>
+        <file>html/js/chunk-2d221f75.9d307733.js</file>
+        <file>html/js/chunk-2d221f75.9d307733.js.map</file>
+        <file>html/js/chunk-vendors.452fc551.js</file>
+        <file>html/js/chunk-vendors.452fc551.js.map</file>
+        <file>html/js/gl-matrix-min.js</file>
+        <file>html/js/index.279f6866.js</file>
+        <file>html/js/index.279f6866.js.map</file>
+        <file>html/js/webgl-obj-loader.min.js</file>
+        <file>html/css/chunk-vendors.84e22b27.css</file>
+        <file>html/css/index.67ce39e7.css</file>
+    </qresource>
+</RCC>

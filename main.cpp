@@ -1,6 +1,4 @@
-﻿#define WEBVIEW
-
-#ifndef WEBVIEW
+﻿#ifdef QUICKVIEW
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include "data.h"
@@ -16,8 +14,9 @@ int old_main(int argc, char *argv[])
 
     return app.exec();
 }
-#else
-
+#endif
+// ifdef QUICKVIEW
+#ifdef WEBVIEW
 #ifdef _MSC_VER
 #pragma execution_character_set("utf-8")
 #endif

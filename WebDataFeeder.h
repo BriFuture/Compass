@@ -30,7 +30,7 @@ private Q_SLOTS:
     void socketDisconnected();
 
 private:
-    QWebSocketServer *m_server;
+    QWebSocketServer *m_server = 0;
 //    QWebSocket *m_webSocket = 0;
     QList<QWebSocket *> m_clients;
     QWebSocket *m_curClient;

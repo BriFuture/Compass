@@ -56,11 +56,12 @@ void Feeder::setRate(int value)
 void Feeder::start()
 {
     wdf.init();
-    // avoid crash
-    QThread::msleep(100);
+//     avoid crash
+//    QThread::msleep(100);
 
     timer.setInterval(300);
 
     connect(&timer, &QTimer::timeout, this, &Feeder::simulate);
-    timer.start();
+//    timer.start();
+    QTimer::singleShot(1500, &timer, SLOT(start()));
 }

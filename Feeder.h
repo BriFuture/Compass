@@ -2,8 +2,8 @@
 #define FEEDER_H
 
 #include <QObject>
+#include <QTimer>
 #include "WebDataFeeder.h"
-
 #ifdef RAND_MAX
 #undef RAND_MAX
 #endif
