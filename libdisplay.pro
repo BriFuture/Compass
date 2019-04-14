@@ -1,13 +1,25 @@
-TEMPLATE = app
+DISPLAY_VER = 0.0.12
+
+DEFINES += _NO_LINK_DISPLAY_LIB DISPLAY_LIBRARY
+include(./libdisplay.pri)
+TEMPLATE = lib
 TARGET = display
+
 QT += core gui widgets
 CONFIG += c++11
 
 #DEFINES += QUICKVIEW
 DEFINES += WEBVIEW
-INCLUDEPATH += include
-## Default rules for deployment.
-#include(deployment.pri)
+
+DESTDIR = $$PWD/lib/
+CONFIG(debug, debug|release) {
+    TARGET = LibDisplayd
+} else {
+    TARGET = LibDisplay
+}
+
+HEADERS += include/display_global.h \
+    include/Displayer3d.h
 
 contains(DEFINES, QUICKVIEW) {
 QT += qml quick
@@ -35,7 +47,7 @@ DISTFILES += \
     qml/SPFragCode.fsh
 } # contains(DEFINES, QUICKVIEW)
 contains(DEFINES, WEBVIEW) {
-message($$DEFINES)
+#message($$DEFINES)
 
 QT += websockets
 QT += webenginewidgets
@@ -43,14 +55,13 @@ QT += webenginewidgets
 RESOURCES += web.qrc
 
 SOURCES += src/WebDataFeeder.cpp \
-    src/TestFeeder.cpp \
-    src/Displayer3d.cpp
+    src/TestFeeder.cpp
 
 HEADERS += include/WebDataFeeder.h \
-    include/TestFeeder.h \
-    include/Displayer3d.h
+    include/TestFeeder.h
 } #contains(DEFINES, WEBVIEW)
 
-SOURCES += main.cpp
-
 RC_FILE = icon.rc
+
+SOURCES += \
+    src/Displayer3d.cpp

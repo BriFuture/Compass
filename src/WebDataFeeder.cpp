@@ -1,6 +1,6 @@
-﻿#include "WebDataFeeder.h"
-const int WebDataFeeder::Port = 4900;
+﻿#include <WebDataFeeder.h>
 #include <QJsonDocument>
+const int WebDataFeeder::Port = 4900;
 
 WebDataFeeder::WebDataFeeder(QObject *parent) : QObject(parent)
 {
@@ -17,20 +17,27 @@ WebDataFeeder::~WebDataFeeder()
 
 void WebDataFeeder::init()
 {
+    if(m_server != 0) {
+        return;
+    }
     m_server = new QWebSocketServer("localhost", QWebSocketServer::NonSecureMode, this);
     if(m_server->listen(QHostAddress::Any, Port)) {
-        qInfo() << "WebSocket Server listening on port: " << Port;
         connect(m_server, &QWebSocketServer::newConnection, this, &WebDataFeeder::onNewConnection);
+        qInfo() << "[WebDataFeeder] Server listening on port: " << Port;
 //        connect(m_server, &QWebSocketServer::sslErrors, this, &WebDataFeeder::onSslErrors);
     }
+    // 延迟一秒，防止 WebSocketServer 没有准备好
+    QTimer::singleShot(1000, this, &WebDataFeeder::ready);
+//    emit ready();
 }
 
 
 void WebDataFeeder::onNewConnection()
 {
+    qDebug() << "[WebDataFeeder] Client connected:" ;
     QWebSocket *pSocket = m_server->nextPendingConnection();
 
-    qDebug() << "Client connected:" << pSocket->peerName() << pSocket->origin();
+    qDebug() << "[WebDataFeeder] Client connected:" << pSocket;
 
     connect(pSocket, &QWebSocket::textMessageReceived, this, &WebDataFeeder::processTextMessage);
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebDataFeeder::processBinaryMessage);
@@ -42,7 +49,10 @@ void WebDataFeeder::onNewConnection()
 
 void WebDataFeeder::processTextMessage(QString message)
 {
-    Q_UNUSED(message)
+    if(processor) {
+        processor->process(message);
+    }
+//    Q_UNUSED(message)
 //    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 //    if (pClient)
 //    {
@@ -62,13 +72,23 @@ void WebDataFeeder::processBinaryMessage(QByteArray message)
 void WebDataFeeder::socketDisconnected()
 {
     m_curClient = 0;
-    qDebug() << "Client disconnected";
+    qDebug() << "[WebDataFeeder] Client disconnected";
 //    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 //    if (pClient)
 //    {
 //        m_clients.removeAll(pClient);
 //        pClient->deleteLater();
 //    }
+}
+
+DataProcessInterface *WebDataFeeder::getProcessor() const
+{
+    return processor;
+}
+
+void WebDataFeeder::setProcessor(DataProcessInterface *value)
+{
+    processor = value;
 }
 
 QJsonObject WebDataFeeder::getHprData() const
@@ -81,8 +101,11 @@ void WebDataFeeder::setHprData(double heading, double pitch, double roll)
     hprData.insert("heading", QJsonValue(heading));
     hprData.insert("pitch", QJsonValue(pitch));
     hprData.insert("roll", QJsonValue(roll));
-    if(m_curClient)
+    if(m_curClient) {
+//        qDebug() << "[WebDataFeeder] Send msg" << hprData;
         m_curClient->sendTextMessage(QJsonDocument(hprData).toJson());
+//        qDebug() << "[WebDataFeeder] After Send msg" << hprData;
+    }
 //    foreach(auto sock, m_clients) {
 //        sock->sendTextMessage(QJsonDocument(hprData).toJson());
 //    }

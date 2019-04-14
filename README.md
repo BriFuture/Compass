@@ -1,7 +1,10 @@
 ## 基于 QtQuick 制作的罗盘动画
 ------
 
-显示罗盘动画的一部分代码，包含 qml 绘图和 QtCanvas3D api
+显示罗盘动画的一部分代码，包含 qml 绘图和 QtCanvas3D api。
+
+> 现在该程序(webview 版本)可以通过 DLL 的形式导入到项目中。如果想以 QProcess 子进程方式运行可执行文件 .exe，需要先编译出可执行文件，然后指定可执行文件的位置。
+> 注意：在 Debug 模式下 QWebEngineView 的显示会有问题，如果有问题的话使用 Release 模式下构建程序可以看到正常的画面。
 
 ### 使用 Vue 进行开发
 
@@ -67,6 +70,8 @@ DEFINES += WEBVIEW
 开发时可以使用浏览器开发，构建生产环境代码时使用 `yarn build` 进行构建，简化完成后可在项目根目录下使用 python 脚本 `python process_index.py` 复制构建好的代码。Qt 程序编译后，运行程序默认不会产生模拟数据，要产生模拟数据，将可执行文件同级目录下的 `display.ini` 文件中的 `mock_data` 值改为 `true`。
 
 ### change log
+
+- v0.0.12: 更新了代码组织方式，可以以 DLL 动态链接库的形式使用本程序。在 `examples` 目录下增加了关于 DLL 的使用示例。
 
 - v0.0.10 :  现在采用 web 端开发，QWebEngineView 进行桌面显示，稍后会添加 QWebSocket 支持，以便在程序中传递数据。
 

@@ -7,7 +7,14 @@
 #include <QTimer>
 #include <QJsonObject>
 
-class WebDataFeeder : public QObject
+#include "display_global.h"
+
+class DataProcessInterface {
+public:
+    virtual void process(QString &msg) = 0;
+};
+
+class DISPLAY_DLL_EXPORT WebDataFeeder : public QObject
 {
     Q_OBJECT
 public:
@@ -19,7 +26,11 @@ public:
     void setHprData(double heading, double pitch, double roll);
     void setAction(bool record, bool resetRecord = false, bool resetPath = false);
 
-signals:
+    DataProcessInterface *getProcessor() const;
+    void setProcessor(DataProcessInterface *value);
+
+Q_SIGNALS:
+    void ready();
 
 public Q_SLOTS:
     void init();
@@ -33,7 +44,10 @@ private:
     QWebSocketServer *m_server = 0;
 //    QWebSocket *m_webSocket = 0;
     QList<QWebSocket *> m_clients;
-    QWebSocket *m_curClient;
+    QWebSocket *m_curClient = 0;
+
+    DataProcessInterface *processor = 0;
+
     QJsonObject hprData;
     QJsonObject action;
     int idx = 0;

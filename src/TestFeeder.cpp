@@ -1,11 +1,13 @@
-﻿#include "Feeder.h"
+﻿#include "TestFeeder.h"
 #include <QThread>
-Feeder::Feeder(QObject *parent) : QObject(parent)
+
+TestFeeder::TestFeeder(WebDataFeeder *feeder, QObject *parent) : QObject(parent),
+    wdf(feeder)
 {
 
 }
 
-void Feeder::simulate()
+void TestFeeder::simulate()
 {
     heading += qrand() / rate;
     pitch += qrand() / rate;
@@ -25,43 +27,44 @@ void Feeder::simulate()
     } else if(pitch < -89.9) {
         pitch = 90;
     }
-    wdf.setHprData(heading, pitch, roll);
+    wdf->setHprData(heading, pitch, roll);
     QThread::msleep(1);
     if(auto_action) {
         counter += 1;
         if(counter == 50) {
-            wdf.setAction(true, true, true);
+            wdf->setAction(true, true, true);
             QThread::msleep(1);
             counter = 0;
         }
         if(counter % 10 == 0) {
-            wdf.setAction(true, false, false);
+            wdf->setAction(true, false, false);
             QThread::msleep(1);
         }
     }
 }
 
-int Feeder::getRate() const
+int TestFeeder::getRate() const
 {
     return rate;
 }
 
-void Feeder::setRate(int value)
+void TestFeeder::setRate(int value)
 {
     if(value < 0){
         return;
     }
     rate = value;
 }
-void Feeder::start()
+void TestFeeder::start()
 {
-    wdf.init();
-//     avoid crash
-//    QThread::msleep(100);
+    connect(wdf, &WebDataFeeder::ready, &timer, static_cast<void (QTimer::*)()>(&QTimer::start));
+    wdf->init();
 
     timer.setInterval(300);
+    connect(&timer, &QTimer::timeout, this, &TestFeeder::simulate);
+}
 
-    connect(&timer, &QTimer::timeout, this, &Feeder::simulate);
-//    timer.start();
-    QTimer::singleShot(1500, &timer, SLOT(start()));
+void TestFeeder::stop()
+{
+    timer.stop();
 }
