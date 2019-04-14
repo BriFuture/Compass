@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     setWindowTitle("TestLibDisplayer");
     ui->setupUi(this);
+
     bool inited = displayer->init();
     if(inited) {
         QWebEngineView *view = displayer->getView();

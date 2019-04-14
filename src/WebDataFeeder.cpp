@@ -37,8 +37,6 @@ void WebDataFeeder::onNewConnection()
     qDebug() << "[WebDataFeeder] Client connected:" ;
     QWebSocket *pSocket = m_server->nextPendingConnection();
 
-    qDebug() << "[WebDataFeeder] Client connected:" << pSocket;
-
     connect(pSocket, &QWebSocket::textMessageReceived, this, &WebDataFeeder::processTextMessage);
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebDataFeeder::processBinaryMessage);
     connect(pSocket, &QWebSocket::disconnected, this, &WebDataFeeder::socketDisconnected);

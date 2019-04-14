@@ -4,7 +4,7 @@
 显示罗盘动画的一部分代码，包含 qml 绘图和 QtCanvas3D api。
 
 > 现在该程序(webview 版本)可以通过 DLL 的形式导入到项目中。如果想以 QProcess 子进程方式运行可执行文件 .exe，需要先编译出可执行文件，然后指定可执行文件的位置。
-> 注意：在 Debug 模式下 QWebEngineView 的显示会有问题，如果有问题的话使用 Release 模式下构建程序可以看到正常的画面。
+> 注意：在 `Debug` 模式下 QWebEngineView 的显示会有问题，如果有问题的话使用 `Release` 模式下构建程序可以看到正常的画面。
 
 ### 使用 Vue 进行开发
 
