@@ -1,5 +1,5 @@
 const ParallelUglifyPlugin = require('./node_modules/webpack-parallel-uglify-plugin');
-
+// __webpack_public_path__ = "";
 module.exports = {
     chainWebpack: config => {
         config.module.rules.delete('eslint');
@@ -18,6 +18,7 @@ module.exports = {
     //     ],
     // },
     // filenameHashing: false,
+    publicPath: "./",
     configureWebpack: {
         plugins: [
             // 使用 ParallelUglifyPlugin 并行压缩输出的 JS 代码
@@ -74,4 +75,5 @@ module.exports = {
             }
         }
     },
+
 }
