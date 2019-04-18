@@ -5,15 +5,33 @@
 #include <QTcpSocket>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QWebEngineSettings>
+
+#include <QDebug>
 
 #define REMOTE_PORT 8811
+
+/** 通过串口传递数据
+ */
 
 class DataRecver:public QObject {
 
 public:
-    void init() {
-        m_socket.connectToHost("localhost", REMOTE_PORT);
-        connect(&m_socket, &QTcpSocket::readyRead, this, &DataRecver::read);
+    bool init() {
+        displayer = new Displayer3D(0);
+        bool inited = displayer->init();
+        if(inited) {
+    //        displayer->getView()->settings()->setAttribute( QWebEngineSettings::Accelerated2dCanvasEnabled, false);
+            displayer->show();
+            QObject::connect(displayer, &Displayer3D::closed, this, &QObject::deleteLater);
+
+            m_socket.connectToHost("localhost", REMOTE_PORT);
+            connect(displayer->getView(), &QWebEngineView::loadFinished, [=] {
+                connect(&m_socket, &QTcpSocket::readyRead, this, &DataRecver::read);
+            });
+            m_feeder = displayer->getDataFeeder();
+        }
+        return inited;
     }
     WebDataFeeder *feeder() const;
     void setFeeder(WebDataFeeder *feeder);
@@ -28,7 +46,8 @@ public Q_SLOTS:
                              obj.value("pitch").toDouble(),
                              obj.value("roll").toDouble());
     }
-
+public:
+    Displayer3D *displayer;
 private:
     WebDataFeeder *m_feeder;
     QTcpSocket m_socket;
@@ -48,24 +67,13 @@ void DataRecver::setFeeder(WebDataFeeder *feeder)
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-//    MainWindow w;
-//    w.show();
     DataRecver *dr = new DataRecver();
 
-//    /*
-    Displayer3D *displayer = new Displayer3D(0);
-    bool inited = displayer->init();
-    if(inited) {
-        displayer->show();
+    if(dr->init()) {
+        QObject::connect(dr->displayer, &Displayer3D::closed, &a, &QApplication::quit);
+        int result = a.exec();
+        return result;
     }
-    dr->setFeeder(displayer->getDataFeeder());
-
-    QObject::connect(displayer, &Displayer3D::closed, dr, &QObject::deleteLater);
-    QObject::connect(displayer, &Displayer3D::closed, &a, &QApplication::quit);
-//*/
-    dr->init();
-    int result = a.exec();
-//    delete displayer;
-    return result;
+    return 1;
 }
 

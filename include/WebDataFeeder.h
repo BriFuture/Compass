@@ -23,7 +23,7 @@ public:
     ~WebDataFeeder();
 
     QJsonObject getHprData() const;
-    void setHprData(double heading, double pitch, double roll);
+    void setHprData(double heading, double pitch, double roll, double length = 4.0);
     void setAction(bool record, bool resetRecord = false, bool resetPath = false);
 
     DataProcessInterface *getProcessor() const;

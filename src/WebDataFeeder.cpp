@@ -94,11 +94,12 @@ QJsonObject WebDataFeeder::getHprData() const
     return hprData;
 }
 
-void WebDataFeeder::setHprData(double heading, double pitch, double roll)
+void WebDataFeeder::setHprData(double heading, double pitch, double roll, double length)
 {
     hprData.insert("heading", QJsonValue(heading));
     hprData.insert("pitch", QJsonValue(pitch));
     hprData.insert("roll", QJsonValue(roll));
+    hprData.insert("length", QJsonValue(length));
     if(m_curClient) {
 //        qDebug() << "[WebDataFeeder] Send msg" << hprData;
         m_curClient->sendTextMessage(QJsonDocument(hprData).toJson());
