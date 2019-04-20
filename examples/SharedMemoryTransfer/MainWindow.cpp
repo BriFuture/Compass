@@ -52,7 +52,7 @@ void MainWindow::readData()
 void MainWindow::init()
 {
     timer.setSingleShot(false);
-    timer.setInterval(100);
+    timer.setInterval(16);
     connect(&timer, &QTimer::timeout, this, &MainWindow::readData);
     displayer = new Displayer3D(this);
 //    setCentralWidget(displayer->getView());
