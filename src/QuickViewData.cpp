@@ -1,11 +1,11 @@
-﻿#include "data.h"
+﻿#include "QuickViewData.h"
 #include <QQmlApplicationEngine>
 #include <QDebug>
 #include <QSettings>
 #include <QtGlobal>
 #include <QTimer>
 
-Data::Data(QWindow *parent) : QQuickView( parent ) {
+QuickViewData::QuickViewData(QWindow *parent) : QQuickView( parent ) {
     heading = 0;
     pitch = 0;
     roll = 0;
@@ -37,15 +37,15 @@ Data::Data(QWindow *parent) : QQuickView( parent ) {
 
     int interval = setting.value( "interval", 500 ).toInt();
     QTimer *timer = new QTimer( this );
-    connect( timer, &QTimer::timeout, this, &Data::changeData );
+    connect( timer, &QTimer::timeout, this, &QuickViewData::changeData );
     timer->setInterval( interval );
 //    timer->start( 100 );
 }
 
-Data::~Data() {
+QuickViewData::~QuickViewData() {
 }
 
-bool Data::event(QEvent *event) {
+bool QuickViewData::event(QEvent *event) {
     if( event->type() == QEvent::Close ) {
         // on my deepin system, the program always quit with segment fault
         // so it is used to tell Qt to delete itself without error
@@ -55,23 +55,23 @@ bool Data::event(QEvent *event) {
     return QQuickView::event( event );
 }
 
-double Data::getHeading() {
+double QuickViewData::getHeading() {
     return heading;
 }
 
-double Data::getPitch() {
+double QuickViewData::getPitch() {
     return pitch;
 }
 
-double Data::getMagicVectorLength() {
+double QuickViewData::getMagicVectorLength() {
     return 10000*(4);
 }
 
-double Data::getRoll() {
+double QuickViewData::getRoll() {
     return roll;
 }
 
-void Data::changeData() {
+void QuickViewData::changeData() {
     double weight = 0.00003;
     pitch   += 0.2274 + qrand() * weight;
     heading += 0.5252 + qrand() * weight;

@@ -1,3 +1,9 @@
+####################
+# Webview version of 3D Program Library
+# See more examples under directory `example/`
+# Author: BriFuture
+# Date: 2019/05/02
+####################
 CONFIG += c++11
 QT += printsupport
 QT += websockets webenginewidgets

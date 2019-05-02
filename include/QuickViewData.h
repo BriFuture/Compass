@@ -1,16 +1,16 @@
-﻿#ifndef DATA_H
-#define DATA_H
+﻿#ifndef QUICKVIEWDATA_H
+#define QUICKVIEWDATA_H
 
 #include <QObject>
 #include <QQuickView>
 #include <QQmlContext>
 
-class Data : public QQuickView{
+class QuickViewData : public QQuickView{
     Q_OBJECT
 
 public:
-    Data(QWindow *parent = Q_NULLPTR);
-    ~Data();
+    QuickViewData(QWindow *parent = Q_NULLPTR);
+    ~QuickViewData();
     bool event(QEvent *event);
     Q_INVOKABLE double getHeading();
     Q_INVOKABLE double getPitch();
@@ -30,4 +30,4 @@ public slots:
     void changeData();
 };
 
-#endif // DATA_H
+#endif // QUICKVIEWDATA_H
