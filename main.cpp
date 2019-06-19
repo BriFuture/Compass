@@ -1,15 +1,15 @@
 ﻿#ifdef QUICKVIEW
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include "data.h"
+#include "QuickViewData.h"
 
-int old_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
 //    qmlRegisterType<FileContent>("dis.filecontent", 1, 0, "FileContentItem");
 
-    Data *data = new Data();
+    QuickViewData *data = new QuickViewData();
     data->show();
 
     return app.exec();
