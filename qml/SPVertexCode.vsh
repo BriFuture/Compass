@@ -1,4 +1,4 @@
-precision mediump float;
+﻿precision mediump float;
 
 attribute vec3 aVertexPosition;
 attribute vec3 aVertexNormal;
@@ -11,7 +11,7 @@ uniform mat4 uNMatrix;
 uniform vec3 uVertColor;
 uniform bool uSpecColor;
 
-uniform vec3  uLightDirection; // 直射光的方向
+uniform vec3  uLightDirection;
 varying vec3  vLight;
 varying vec2  vTexture;
 varying vec3  vNormal;

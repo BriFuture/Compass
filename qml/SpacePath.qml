@@ -5,11 +5,12 @@ import QtQuick.Controls 2.0
 import "SpacePath.js" as GLcode
 
 Item {
+    signal pointRecord
+
     id: container
     width: 1400
     height: 900
     visible: true
-
     Label {
         z: 1000
         anchors {
@@ -46,6 +47,8 @@ Item {
             contentWidth:  parent.width-8
             contentHeight: container.height
             property bool ready : false
+            property bool started: false
+            property bool spacePath: false
 
             Rectangle {
                 id: cameraItem
@@ -187,7 +190,7 @@ Item {
                     text:  "球面透明度"
                     maxValue: 100
                     minValue: 1
-                    value: 65
+                    value: 25
                     stepSize: 5
                     decimal: 2
                     onValueChanged: {
@@ -204,7 +207,7 @@ Item {
                     text: "指示器大小："
                     maxValue: 100
                     minValue: 1
-                    value: 30
+                    value: 10
                     decimal: 2
 
                     onValueChanged: {
@@ -221,7 +224,7 @@ Item {
                     text: "轨迹宽度："
                     maxValue: 50
                     minValue: 1
-                    value: 8
+                    value: 3
                     decimal: 1
                     enabled: pathEnableBox.checked
 
@@ -308,7 +311,7 @@ Item {
                         left: parent.left
                         leftMargin: controller.marginleft
                     }
-                    width: 20
+
 //                    checkable: true
                     text: "line"
 //                    exclusiveGroup: drawModeGroup
@@ -324,7 +327,7 @@ Item {
                         left: parent.left
                         leftMargin: controller.marginleft
                     }
-                    width: 20
+
                     text: "surface"
                     checked:  true
 //                    checkable: true
@@ -341,7 +344,6 @@ Item {
                         left: parent.left
                         leftMargin: controller.marginleft
                     }
-                    width: 20
                     text: "lessLine"
 
 //                    checkable: true
@@ -468,20 +470,14 @@ Item {
                         left: parent.left
                         leftMargin: controller.marginleft
                     }
-                    onClicked: {
-                        camTheta.value = 45
-                        camBeta.value  = 90
-
-                        onCameraRotate()
-                        GLcode.reset();
-                    }
+                    onClicked: resetCamera()
                 }
 
                 Button {
                     id: resetPathBtn
                     width: 100
                     height: 20
-                    text: "重置路径"
+                    text: "重置轨迹"
                     anchors {
                         top: resetCameraBtn.bottom
                         topMargin: 5
@@ -624,7 +620,7 @@ Item {
             text: "<"
             Image {
                 id: arrowBtnImg
-                source: "qrc:/img/arrow.png"
+                source: "qrc:/res/img/arrow.png"
                 width:  parent.width
                 height: parent.height
             }
@@ -684,22 +680,27 @@ Item {
         property int mousex: 1
         property int mousey: 1
         onMouseXChanged: {
-            if(mouseListener.pressed) {
-                onMouseDraged( this );
-                lpx = mouseListener.mouseX
+            if( pressed ) {
+                var xoffset = (mouseX - lpx) * 2 * 360 / width;
+                var dbeta       = 540 + camBeta.value - xoffset; // - indicates that drag direction is oppsite with movement
+                camBeta.value   = dbeta % 360 - 180;
+                onCameraRotate();
+                lpx = mouseX;
             }
         }
         onMouseYChanged: {
-            if(mouseListener.pressed) {
-                onMouseDraged( this );
-                lpy = mouseListener.mouseY;
+            if( pressed ) {
+                var yoffset = (mouseY - lpy) * 4 * 180 / height;
+                camTheta.value -= yoffset;
+                onCameraRotate();
+                lpy = mouseY;
             }
         }
         /** onPressed and onReleased 实现拖拽操作 */
         onPressed: {
 //            console.log("pressed  ==> " + mouseListener.mouseX + " ,  " + mouseListener.mouseY)
-            lpx = mouseListener.mouseX;
-            lpy = mouseListener.mouseY;
+            lpx = mouseX;
+            lpy = mouseY;
         }
 
         onWheel: {
@@ -737,6 +738,8 @@ Item {
             GLcode.initializeGL(canvas3d);
             view.ready = true;
             onCameraRotate();
+//            simBox.checked = true;
+
         }
 
         // 当 canvas3d 准备好绘制下一帧时触发
@@ -752,36 +755,59 @@ Item {
     Connections {
         target: dataSource
         onDataChanged: {
-//            console.log("dataSource heading changed:  " + dataSource.getHeading());
+//            console.log("dataSource heading changed:  " + dataSource.getHeading() + view.ready);
             if( view.ready ) {
+                var dis = dataSource.getLength()/10000;
+                if( view.spacePath ) {
+                    dis = ballRadius.value / 10000;
+                }
+
                 GLcode.sensorPoint.setParam( {
-                    dis:   dataSource.getMagicVectorLength()/10000,
-                    pitch: dataSource.getPitch(),
+                    dis:     dis,
+                    pitch:   dataSource.getPitch(),
                     heading: dataSource.getHeading(),
-                    roll: dataSource.getRoll()
+                    roll:    dataSource.getRoll()
                 } );
+                if(!view.started) {
+                    view.started = true;
+                    resetCamera();
+                }
             }
         }
+
     }
 
     Connections {
         target: window
 
-        onWindowStateChanged: {
-            if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
-                // it can decrease resource consuming when not minimized or hidden
-                console.log("[Info] windos state changed:  now hidden or minimized");
-                canvas3d.renderOnDemand = true;
-            } else {
-//                console.log("[Info] windos state changed:  now visible");
-                canvas3d.renderOnDemand = false;
+        onStateChanged: {
+            canvas3d.renderOnDemand = !render;
+//            if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
+//                // it can decrease resource consuming when not minimized or hidden
+//                console.log("[Info] windos state changed:  now hidden or minimized");
+//                canvas3d.renderOnDemand = true;
+//            } else {
+////                console.log("[Info] windos state changed:  now visible");
+//                canvas3d.renderOnDemand = false;
+//            }
+        }
+        onRemoveRecordPoint: {
+            console.log(iSet)
+            GLcode.recordPoint.remove( iSet );
+        }
+        onToRecord: {
+            if( isCSource ) {
+                GLcode.recordPoint.record();
             }
+        }
+        onThreeDPropertyChanged: {
+            view.spacePath = spacePath;
         }
     }
 
     Timer {
         id: garbageCollect
-        interval: 3000
+        interval: 5000
         running: true
         repeat: true
         onTriggered: {
@@ -789,8 +815,19 @@ Item {
         }
     }
 
+    Timer {
+        interval: 2000
+        running: true
+        repeat: false
+        onTriggered: {
+            simBox.checked = true;
+        }
+    }
+
     // this function is called by C++ layer and connects JS layer
     function recordAPoint() {
+//        pointRecord()
+        window.toRecord();
         GLcode.recordPoint.record();
     }
 
@@ -827,14 +864,20 @@ Item {
         cameraZPos.value = GLcode.camera.pos[2];
     }
 
-    function onMouseDraged(ml) {
-        var xoffset = (ml.mouseX - ml.lpx)*2 / ml.width;
-        var yoffset = (ml.mouseY - ml.lpy)*2 / ml.height;
-
-        var dbeta       = 540 + camBeta.value - xoffset*360; // - indicates that drag direction is oppsite with movement
-        camBeta.value   = dbeta % 360 - 180;
-        camTheta.value -= yoffset*180;
-        onCameraRotate();
+    function resetCamera() {
+        var p ;
+        if( calibrationBox.checked ) {
+            p = { theta: 90 - GLcode.sensorPoint.pitch, phi: 0 };
+        }
+        else {
+            p = { theta: 45, phi: 180 };
+        }
+        GLcode.sensorPoint.reset();
+        GLcode.sensorPath.resetAllPath();
+        camTheta.value = p.theta;
+        camBeta.value  = p.phi;
+        onCameraRotate()
+        GLcode.camera.reset(p);
     }
 
 }

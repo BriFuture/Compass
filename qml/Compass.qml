@@ -8,6 +8,8 @@ Item {
     height: 600
     id: container
 
+    property bool draw: true
+
     /* 矩形，用于设置背景色 */
     Rectangle {
         z: -10
@@ -40,7 +42,7 @@ Item {
             width: getScaledSize(449)
             height: getScaledSize(449)
             smooth: true
-            source: "/img/heading.png"
+            source: "/res/img/heading.png"
             rotation: -headingItem.headingAngle
         }
 
@@ -91,8 +93,8 @@ Item {
         //  设置俯仰角的圆的半径
         property real radius: stdradius / 1000 * container.width
 
-        property string rollCircleImg : "/img/compass_roll_circle.png"   // 白色基线图片
-        property string baseOuterImg: "/img/compass_pr_base.png"          // 指南针底部黑框
+        property string rollCircleImg : "/res/img/compass_roll_circle.png"   // 白色基线图片
+        property string baseOuterImg: "/res/img/compass_pr_base.png"          // 指南针底部黑框
         property real pitch: 0
         property real lastPitch: 0
 //        property bool pitchUp: false
@@ -207,7 +209,8 @@ Item {
     Connections {
         target: dataSource
         onDataChanged: {
-            console.log("dataSource heading changed:  " + dataSource.getHeading());
+            if( !container.draw )
+                return;
             var data = [0, 0, 0];
             data[0] = dataSource.getHeading();
             data[1] = dataSource.getPitch();
@@ -221,12 +224,8 @@ Item {
 
     Connections {
         target: window
-        onWindowStateChanged: {
-            if( window.visibility == window.Hidden || window.visibility == window.Minimized ) {
-                // it can decrease resource consuming when not minimized or hidden
-                console.log("[Info] windos state changed:  now hidden or minimized");
-            } else {
-            }
+        onStateChanged: {
+            container.draw = render;
         }
     }
 
@@ -532,7 +531,7 @@ Item {
         if(s > minsize) {
             return s
         }
-        console.log("minsize:" + minsize)
+//        console.log("minsize:" + minsize)
         return minsize
     }
 

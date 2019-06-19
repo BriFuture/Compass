@@ -48,11 +48,6 @@ var refCircle;
 var recordPoint;
 var sphere;
 
-function reset() {
-    sensorPoint.reset();
-    sensorPath.resetAllPath();
-    camera.reset();
-}
 
 /**
 * this function is copied from planets demo of qt version of threejs
@@ -122,7 +117,7 @@ function initializeGL(canvas, args) {
     coordinate  = new Coord();
     sensorPoint = new SensorPoint( { color: [0.9, 0.2, 0.15] } );
     sensorPoint.setScale( 0.1 );
-    sensorPath  = new SensorPath( { color: [0.9, 0.5, 0.2], size: 0.3 } );
+    sensorPath  = new SensorPath( { color: [0.1, 0.3, 0.2], size: 0.3 } );
     sensorPoint.addParamCallback( function( params ) {
         sensorPath.onSphericalChanged( params );
     });
@@ -189,6 +184,9 @@ function createArrayBuffer(data, drawtype, type) {
     return buffer;
 }
 
+/**
+  * 更新缓冲区的部分数据
+  */
 function subBuffer(buffer, offset, data) {
     var type = gl.ELEMENT_ARRAY_BUFFER;
     if( data instanceof Float32Array ) {
@@ -293,10 +291,12 @@ Camera.prototype = {
 
     /**
       * 重置摄像机位置
+      * @param { {phi, theta} } params
+      * theta:[0, 180], phi:[0, 360] 均为角度制
     **/
-    reset : function(  ) {
+    reset : function( params ) {
 //        this.rotate( 45, 180, this.dis );
-        this.rotate( 45, 0, this.dis );
+        this.rotate( params.theta, params.phi, this.dis );
         this.update();
     }
 }
@@ -427,7 +427,7 @@ Scene.prototype = {
             gl.attachShader(shaderProgram, vertexShader);
             ready = ( fragShader !== undefined );
             if( ready ) {
-                onShaderReady(shaderProgram);
+                that.onShaderReady(shaderProgram);
             }
         } );
 
@@ -1044,7 +1044,7 @@ function Ball(props) {
     this.hn         = (props.hn || 48) * 0.5;
     this.ratio      = 0.25;
     this.size       = 4;    // default radius
-    this.drawMode   = Ball.MODE_SURFACE;
+    this.drawMode   = Ball.MODE_LINE;
     this.line_alpha = 0.65;
     this.alpha = 0.25;
     this.init();
@@ -1476,8 +1476,6 @@ function RecordPoint() {
 
     this.type        = "RecordPoint";
     this.max_vertex   = this.sides * 1000;
-    this.vertex_count = 0;
-    this.index_count  = 0;
     this.init();
 }
 
@@ -1485,26 +1483,29 @@ RecordPoint.prototype = {
     constructor: RecordPoint,
 
     init : function() {
-        this.buffers.vertex = createArrayBuffer( this.max_vertex * 4, gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
-        this.buffers.index  = createArrayBuffer( this.max_vertex * 2, gl.DYNAMIC_DRAW, gl.ELEMENT_ARRAY_BUFFER );
+        this.vertexBuffer = createArrayBuffer( this.max_vertex * 4, gl.DYNAMIC_DRAW, gl.ARRAY_BUFFER );
+        this.vertexBuffer.length = 0;
+        this.vertexBuffer.count = 0;
+        this.indexBuffer  = createArrayBuffer( this.max_vertex * 2, gl.DYNAMIC_DRAW, gl.ELEMENT_ARRAY_BUFFER );
+        this.indexBuffer.value = [];
     },
 
     paint : function() {
         // 进行采点操作
-        if( this.vertex_count === 0 || !this.visible ) {
+        if( this.vertexBuffer.length === 0 || !this.visible ) {
             return;
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER,         this.buffers.vertex);
+        gl.bindBuffer(gl.ARRAY_BUFFER,         this.vertexBuffer);
         gl.vertexAttribPointer( attributes.vertex_normal,   3, gl.FLOAT, false, 6*4, 0   );
         gl.vertexAttribPointer( attributes.vertex_position, 3, gl.FLOAT, false, 6*4, 0   );
         gl.vertexAttribPointer( attributes.color,           3, gl.FLOAT, false, 6*4, 3*4 );
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);
+        gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer );
 
         gl.uniform1f(uniforms.alpha, this.alpha);
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
         gl.uniformMatrix4fv( uniforms.pmv_matrix, false, this.mvpMatrix );
-        gl.drawElements(gl.TRIANGLES, this.index_count, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, this.indexBuffer.value.length, gl.UNSIGNED_SHORT, 0);
     },
 
     onViewChanged: function( matrix ) {
@@ -1535,7 +1536,7 @@ RecordPoint.prototype = {
 
         var vertices = genVertices( point, [0.0, 0.5, 0.5] );
 
-        var n = this.vertex_count / 6;
+        var n = this.vertexBuffer.length / 6; // three coordinate, three color
         for(i = 1; i < this.sides; i++) {
             index.push( n, n+i,   n+i+1,
                         n, n+i+1, n+i
@@ -1544,11 +1545,13 @@ RecordPoint.prototype = {
         index.push( n, n+this.sides, n+1,
                     n, n+1,          n+this.sides
                    );
-        subBuffer( this.buffers.vertex, this.vertex_count * 4, new Float32Array( vertices ) );
-        subBuffer( this.buffers.index,  this.index_count  * 2, new Uint16Array( index ) );
+        subBuffer( this.vertexBuffer, this.vertexBuffer.length * 4, new Float32Array( vertices ) );
+        subBuffer( this.indexBuffer,  this.indexBuffer.value.length  * 2, new Uint16Array( index ) );
 
-        this.vertex_count += vertices.length;
-        this.index_count += index.length;
+//        vertices.push.apply( this.vertexBuffer.value, vertices );
+        this.vertexBuffer.length += vertices.length;
+        index.push.apply( this.indexBuffer.value, index );
+        this.vertexBuffer.count ++;
     },
 
     onSphericalChanged: function(params) {
@@ -1560,8 +1563,28 @@ RecordPoint.prototype = {
 
     // 重置已经打的点
     reset : function() {
-        this.vertex_count = 0;
-        this.index_count = 0;
+        this.vertexBuffer.length = 0;
+        this.vertexBuffer.count = 0;
+        this.indexBuffer.value  = [];
+    },
+
+    /**
+     * 移除第 i 组数据(对应图中的第 i 个点会消失)
+     * 并没有删除实际的顶点缓冲区，只是隐藏了圆圈
+    */
+    remove: function(iSet) {
+        if( this.vertexBuffer.count === 0 || iSet < 0 || this.vertexBuffer.count < iSet )
+            return;
+        var icount = 6 * this.sides;
+        var istart = iSet * icount;
+        this.indexBuffer.value.splice( istart, icount );
+//        var vcount = this.vertexBuffer.value.length / this.vertexBuffer.count;
+//        var vstart = iSet * vcount;
+//        this.vertexBuffer.value.splice( vstart, vcount );
+        this.vertexBuffer.count --;
+
+//        subBuffer( this.vertexBuffer, 0, new Float32Array( this.vertexBuffer.value ) );
+        subBuffer( this.indexBuffer,  0, new Uint16Array(  this.indexBuffer.value  ) );
     }
 
 }  // end of RecordPoint prototype
@@ -1576,7 +1599,7 @@ function Craft(props) {
     PaintObj.call( this );
 
     this.type    = "Craft";
-    this.url     = "qrc:/obj/craft.obj";
+    this.url     = "qrc:/res/obj/craft.obj";
     var scale = props.size || 1;
     this.setScale( scale );
     this.init();
@@ -1588,10 +1611,8 @@ Craft.prototype = {
     init : function() {
         var that = this;
         readFile( this.url, function(text) {
-//            console.log("Craft: ", text)
             that.mesh = new ObjLoader.OBJ.Mesh(text);
             ObjLoader.OBJ.initMeshBuffers(gl, that.mesh);
-            console.log(that.mesh.vertexBuffer.numItems, that.mesh.indexBuffer.numItems)
         } );
     },
 
@@ -1621,8 +1642,8 @@ Craft.prototype = {
 //            gl.vertexAttribPointer( attributes.texture, this.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
 //        }
 
-//        gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
-//        gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.mesh.normalBuffer);
+        gl.vertexAttribPointer(attributes.vertex_normal, this.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.uniformMatrix4fv( uniforms.m_matrix, false, this.mMatrix );
         gl.uniformMatrix4fv(uniforms.pmv_matrix, false, this.mvpMatrix);

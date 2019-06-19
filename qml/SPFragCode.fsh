@@ -1,4 +1,4 @@
-precision mediump float;
+﻿precision mediump float;
 
 varying vec3  vLight;
 varying vec2  vTexture;
@@ -15,9 +15,9 @@ uniform sampler2D uSampler;
 // uniform int uEnableTexture;
 void main(void) {
     vec3 lightPos = vec3( 10, 10, 10 );
-    vec3 ambientLight = vec3( 0.28, 0.28, 0.28 );
-    vec3 directLightColor = vec3( 0.88, 0.88, 0.88 );
-    float directional = max( dot( normalize( vNormal ), normalize( lightPos - vPosition ) ), 0.0);        // 直接使用顶点的法线数据进行漫反射计算
+    vec3 ambientLight = vec3( 0.48, 0.38, 0.42 );
+    vec3 directLightColor = vec3( 0.78, 0.98, 0.88 );
+    float directional = max( dot( normalize( vNormal ), normalize( lightPos - vPosition ) ) * 2, 0.0);        // 直接使用顶点的法线数据进行漫反射计算
     vec3 diffuse = directLightColor * directional;
 
     if( uHasTexture ) {
