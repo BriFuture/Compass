@@ -545,40 +545,67 @@ Item {
                     }
                 }
 
-                MySlider {
-                    id: pitch
+                Text {
+                    id: pitchHint
                     anchors.top: parent.top
                     width: parent.width
-                    text: "pitch："
-                    maxValue: 90
-                    minValue: -90
-                    value   : 0
-                    stepSize: 5
-                    onValueChanged: parent.posChanged()
+                    text: "pitch: "
+                    font.family: "Helvetica"
+                    font.pointSize: 18
+                }
+                Text {
+                    id: pitch
+                    anchors {
+                        right: parent.right
+                        top: parent.top
+                    }
+                    font.family: "Helvetica"
+                    font.pointSize: 24
+                    color: "red"
+                    width: parent.width / 2
+                    text: "0.0"
                 }
 
-                MySlider {
-                    id: heading
+                Text {
+                    id: headingHint
                     anchors.top: pitch.bottom
                     width: parent.width
-                    text: "heading:"
-                    maxValue: 180
-                    minValue: -180
-                    value   : 0
-                    stepSize: 5
-                    onValueChanged: parent.posChanged()
+                    text: "heading: "
+                    font.family: "Helvetica"
+                    font.pointSize: 18
+                }
+                Text {
+                    id: heading
+                    anchors {
+                        right: parent.right
+                        top: pitch.bottom
+                    }
+                    font.family: "Helvetica"
+                    font.pointSize: 24
+                    color: "red"
+                    width: parent.width / 2
+                    text: "0.0"
                 }
 
-                MySlider {
-                    id: roll
+                Text {
+                    id: rollHint
                     anchors.top: heading.bottom
                     width: parent.width
                     text: "roll:"
-                    maxValue: 180
-                    minValue: -180
-                    value   : 0
-                    stepSize: 5
-                    onValueChanged: parent.posChanged()
+                    font.family: "Helvetica"
+                    font.pointSize: 18
+                }
+                Text {
+                    id: roll
+                    anchors {
+                        right: parent.right
+                        top: heading.bottom
+                    }
+                    font.family: "Helvetica"
+                    font.pointSize: 24
+                    color: "red"
+                    width: parent.width / 2
+                    text: "0.0"
                 }
 
             }  // posItem
@@ -756,6 +783,10 @@ Item {
         target: dataSource
         onDataChanged: {
 //            console.log("dataSource heading changed:  " + dataSource.getHeading() + view.ready);
+            pitch.text   = dataSource.getPitch();
+            heading.text = dataSource.getHeading();
+            roll.text    = dataSource.getRoll();
+
             if( view.ready ) {
                 var dis = dataSource.getLength()/10000;
                 if( view.spacePath ) {

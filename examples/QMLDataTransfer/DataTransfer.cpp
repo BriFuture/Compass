@@ -13,7 +13,6 @@ DataTransfer::DataTransfer(QObject *parent) : QObject(parent),
 
     socket = new QUdpSocket(this);
     socket->open(QUdpSocket::ReadWrite);
-//    socket->setSocketOption(QUdpSocket::ReuseAddressHint, 1);
     connect(socket, &QUdpSocket::readyRead, this, &DataTransfer::recv);
 
 }
@@ -23,9 +22,11 @@ DataTransfer::~DataTransfer()
     delete animation;
 }
 
-void DataTransfer::start()
+void DataTransfer::start(int port)
 {
-    socket->bind(QHostAddress::Any, 16650);
+    if(port == 0)
+        port = 16656;
+    socket->bind(QHostAddress::LocalHost, port, QUdpSocket::ReuseAddressHint);
     animation->show();
 }
 

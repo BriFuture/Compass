@@ -16,7 +16,7 @@ public:
 signals:
 
 public slots:
-    void start();
+    void start(int port = 0);
 protected slots:
     void recv();
 
