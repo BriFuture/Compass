@@ -1661,7 +1661,7 @@ Craft.prototype = {
     },
 
     /**
-      * 加载模型不进行旋转操作时，可以看到模型指向 Z 轴负半轴，模型顶部指向 Y 轴
+      * 加载模型不进行旋转操作时，可以看到模型指向 Z 轴负半轴（roll 需要取负），模型顶部指向 Y 轴，
       * 正半轴，因此需要在跟随 SensorPoint 做旋转操作时需要首先调整指向。
       * mat4.rotate 方法会将物体的坐标轴进行旋转，即旋转后物体坐标轴与世界坐标系的轴不同
     **/
@@ -1682,7 +1682,7 @@ Craft.prototype = {
 //        mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( 270 ) );
         mat4.rotateY( this.mMatrix, this.mMatrix, degToRad( params.heading + 270 ) );
         mat4.rotateX( this.mMatrix, this.mMatrix, degToRad( params.pitch ) );
-        mat4.rotateZ( this.mMatrix, this.mMatrix, degToRad( params.roll ) );
+        mat4.rotateZ( this.mMatrix, this.mMatrix, degToRad( -params.roll ) );
         this.onViewChanged();
     },
 
