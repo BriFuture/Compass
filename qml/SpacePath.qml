@@ -609,7 +609,67 @@ Item {
                 }
 
             }  // posItem
-
+            Rectangle {
+                id: colorItem
+                color: controller.color
+                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+                border.width: 2
+                width: parent.width
+                height: childrenRect.height
+                anchors {
+                    top : posItem.bottom
+                    topMargin: controller.margintop
+                    left: parent.left
+                }
+                Button {
+                    id: pathGreenBtn
+                    width: 100
+                    height: 20
+                    text: "绿色路径"
+                    anchors{
+                        top: parent.top
+                        topMargin: 5
+                        left: parent.left
+                        leftMargin: controller.marginleft
+                    }
+                    onClicked: {
+//                        recordAPoint();
+                        GLcode.sensorPath.color = [0.1, 0.9, 0.1];
+                    }
+                }
+                Button {
+                    id: pathRedBtn
+                    width: 100
+                    height: 20
+                    text: "红色"
+                    anchors{
+                        top: pathGreenBtn.bottom
+                        topMargin: 5
+                        left: parent.left
+                        leftMargin: controller.marginleft
+                    }
+                    onClicked: {
+//                        recordAPoint();
+                        GLcode.sensorPath.color = [0.9, 0.1, 0.1];
+                    }
+                }
+                Button {
+                    id: pathBlueBtn
+                    width: 100
+                    height: 20
+                    text: "蓝色"
+                    anchors{
+                        top: pathRedBtn.bottom
+                        topMargin: 5
+                        left: parent.left
+                        leftMargin: controller.marginleft
+                    }
+                    onClicked: {
+//                        recordAPoint();
+                        GLcode.sensorPath.color = [0.1, 0.1, 0.9];
+                    }
+                }
+            }
 
             // Only show the scrollbars when the view is moving.
             states: State {

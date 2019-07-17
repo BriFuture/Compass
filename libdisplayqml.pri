@@ -4,7 +4,7 @@ QT += qml quick
 
 contains(DEFINES, _NO_LINK_DISPLAY_LIB) {
 } else {
-LIBS += -L"$$(DISPLAYER_DIR)/lib"
+LIBS += -L"$$PWD/lib"
 
 CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplayd"

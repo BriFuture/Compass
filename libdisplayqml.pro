@@ -1,8 +1,9 @@
-DISPLAY_VER = 0.1.12
+
 
 DEFINES += _NO_LINK_DISPLAY_LIB DISPLAY_LIBRARY
 include(./libdisplayqml.pri)
 TEMPLATE = lib
+#VERSION = 0.1.13.1
 
 QT += core gui widgets
 CONFIG += c++11
@@ -41,4 +42,4 @@ DISTFILES += \
     qml/SPVertexCode.vsh \
     qml/SPFragCode.fsh
 
-RC_FILE = icon.rc
+#RC_FILE = icon.rc

@@ -14,33 +14,55 @@ class AnimationDataObject : public QObject {
     Q_PROPERTY(double roll READ getRoll NOTIFY dataChanged)
     Q_PROPERTY(double vectorLength READ getLength NOTIFY dataChanged)
 
-    friend class Animation;
 signals:
     void dataChanged();
 //    void dataChanged(const MagParam &params);
-public:
-    Q_INVOKABLE double getHeading() {
+public Q_SLOTS:
+    double getHeading() {
         return m_heading;
     }
 
-    Q_INVOKABLE double getPitch() {
+    double getPitch() {
         return m_pitch;
     }
 
-    Q_INVOKABLE double getRoll() {
+    double getRoll() {
         return m_roll;
     }
 
-    Q_INVOKABLE double getLength() {
+    double getLength() {
         return m_length;
     }
 
-private:
+    double getMx() { return mx; }
+    double getMy() { return my; }
+    double getMz() { return mz; }
+
+    double getAx() { return ax; }
+    double getAy() { return ay; }
+    double getAz() { return az; }
+
+    double getWx() { return wx; }
+    double getWy() { return wy; }
+    double getWz() { return wz; }
+
+public:
     double m_heading;
     double m_pitch;
     double m_roll;
     double m_length;
 
+    double mx;
+    double my;
+    double mz;
+
+    double wx;
+    double wy;
+    double wz;
+
+    double ax;
+    double ay;
+    double az;
 };
 
 class DISPLAY_DLL_EXPORT Animation : public QQuickView
@@ -51,6 +73,11 @@ public:
 
 public slots:
     void setParam(const double heading, const double pitch, const double roll, const double length);
+
+    AnimationDataObject *getDataObject() {
+        return ado;
+    }
+
 signals:
     void toRecord(bool isCSource = false);
     void removeRecordPoint(int iSet);

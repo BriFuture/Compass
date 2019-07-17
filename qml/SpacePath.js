@@ -754,8 +754,8 @@ SensorPoint.prototype = {
     setParam : function( params ) {
         this.dis     = params.dis;
         this.pitch   = params.pitch;
-        params.heading = params.heading - this.headingOffset;
-        this.heading = params.heading;
+        params.heading = params.heading + this.headingOffset;
+        this.heading = - params.heading;
         this.roll    = params.roll;
         var theta = 90 - this.pitch;
         this.setTranslation( this.dis, theta, this.heading );
