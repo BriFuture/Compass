@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>compass.ico</file>
+    </qresource>
+</RCC>

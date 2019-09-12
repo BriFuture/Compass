@@ -1,25 +1,25 @@
 ﻿#include "DataTransfer.h"
-#include "Animation.h"
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QDebug>
+#include <QQmlEngine>
 
 DataTransfer::DataTransfer(QObject *parent) : QObject(parent),
   animation(new Animation)
-{
-    animation->setMinimumSize(QSize(800, 600));
-    QUrl url(QStringLiteral("qrc:/qml/SpacePath.qml"));
-    animation->setSource(url);
-
+{    
     socket = new QUdpSocket(this);
     socket->open(QUdpSocket::ReadWrite);
     connect(socket, &QUdpSocket::readyRead, this, &DataTransfer::recv);
 
+    animation->setMinimumSize(QSize(800, 600));
 }
 
 DataTransfer::~DataTransfer()
 {
-    delete animation;
+    stop();
+//    qDebug() << "DT: Before delete animation";
+    animation->destroy();
+//    qDebug() << "DT: After delete animation";
 }
 
 void DataTransfer::start(int port)
@@ -27,7 +27,20 @@ void DataTransfer::start(int port)
     if(port == 0)
         port = 16656;
     socket->bind(QHostAddress::LocalHost, port, QUdpSocket::ReuseAddressHint);
-    animation->show();
+    //    animation->show();
+}
+
+void DataTransfer::stop()
+{
+    socket->close();
+    disconnect(socket, &QUdpSocket::readyRead, this, &DataTransfer::recv);
+}
+
+void DataTransfer::refreshAnimation()
+{
+    animation->engine()->clearComponentCache();
+    QUrl url(QStringLiteral("qrc:/qml/SpacePath.qml"));
+    animation->setSource(url);
 }
 
 void DataTransfer::recv()
@@ -64,7 +77,13 @@ void DataTransfer::recv()
             animation->setTitle(title);
             animation->threeDPropertyChanged(threed);
         }
+//        else if(type == "curve_data") {
+//            BcCurve::Data d;
+//            d.x = obj.value("x").toDouble();
+//            d.y = obj.value("y").toDouble();
+//            d.z = obj.value("z").toDouble();
+//            ui_curve->showDataOnPlot(d);
+//        }
 
     }
 }
-

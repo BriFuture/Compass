@@ -70,6 +70,7 @@ class DISPLAY_DLL_EXPORT Animation : public QQuickView
     Q_OBJECT
 public:
     explicit Animation(QWindow *parent = 0);
+    ~Animation();
 
 public slots:
     void setParam(const double heading, const double pitch, const double roll, const double length);

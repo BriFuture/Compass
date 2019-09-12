@@ -6,13 +6,18 @@
 
 QT       += core gui
 
+include($$(DISPLAYER_DIR)/libdisplayqml.pri)
+#include($$(BASICCOMMDIR)/BasicComm.pri)
+include($$(BUILIB_DIR)/BuiLib.pri)
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = QMLDataTransfer
 TEMPLATE = app
+#CONFIG += console
 
-VERSION=1.0.0.0
-
+VERSION=1.0.8.0
+DEFINES += _QMLDT_MAJ_VER=1 _QMLDT_MIN_VER=0
 RC_ICONS = ./compass.ico
 
 # The following define makes your compiler emit warnings if you use
@@ -28,12 +33,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-    DataTransfer.cpp
+    DataTransfer.cpp \
+    MainWindow.cpp
 
 HEADERS  += \
-    DataTransfer.h
+    DataTransfer.h \
+    MainWindow.h
 
 FORMS    += MainWindow.ui
-include($$(DISPLAYER_DIR)/libdisplayqml.pri)
 
-message($$(DISPLAYER_DIR)/libdisplayqml.pri)
+RESOURCES += \
+    res.qrc
+
+win32: CONFIG += skip_target_version_ext
+DESTDIR = $$OUT_PWD/app

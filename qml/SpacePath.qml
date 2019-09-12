@@ -12,6 +12,7 @@ Item {
     height: 900
     visible: true
     Label {
+        id: fpsLabel
         z: 1000
         anchors {
             top: parent.top
@@ -26,6 +27,95 @@ Item {
         verticalAlignment: Text.AlignVCenter
     }
 
+    Rectangle {
+        id: posItem
+        z: 1000
+        color: Qt.rgba(0.78, 0.78, 0.78, 0.5)
+        border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
+        border.width: 2
+        width: 240
+        height: childrenRect.height
+        anchors {
+            top : fpsLabel.bottom
+            topMargin: 10
+            right: parent.right
+            rightMargin: 10
+//            left: fpsLabel.left
+        }
+        property var posChanged: function() {
+
+            if( view.ready ) {
+                GLcode.sensorPoint.setParam( {  dis:   4,
+                                                pitch: pitch.value,
+                                                heading: heading.value,
+                                                roll: roll.value } );
+            }
+        }
+
+        Text {
+            id: pitchHint
+            anchors.top: parent.top
+            width: parent.width
+            text: "pitch: "
+            font.family: "Helvetica"
+            font.pointSize: 18
+        }
+        Text {
+            id: pitch
+            anchors {
+                right: parent.right
+                top: parent.top
+            }
+            font.family: "Helvetica"
+            font.pointSize: 24
+            color: "red"
+            width: parent.width / 2
+            text: "0.0"
+        }
+
+        Text {
+            id: headingHint
+            anchors.top: pitch.bottom
+            width: parent.width
+            text: "heading: "
+            font.family: "Helvetica"
+            font.pointSize: 18
+        }
+        Text {
+            id: heading
+            anchors {
+                right: parent.right
+                top: pitch.bottom
+            }
+            font.family: "Helvetica"
+            font.pointSize: 24
+            color: "red"
+            width: parent.width / 2
+            text: "0.0"
+        }
+
+        Text {
+            id: rollHint
+            anchors.top: heading.bottom
+            width: parent.width
+            text: "roll:"
+            font.family: "Helvetica"
+            font.pointSize: 18
+        }
+        Text {
+            id: roll
+            anchors {
+                right: parent.right
+                top: heading.bottom
+            }
+            font.family: "Helvetica"
+            font.pointSize: 24
+            color: "red"
+            width: parent.width / 2
+            text: "0.0"
+        }
+
+    }  // posItem
 
 //        flickableItem: contentRect
     Rectangle {
@@ -312,7 +402,7 @@ Item {
                         leftMargin: controller.marginleft
                     }
 
-//                    checkable: true
+                    checked: true
                     text: "line"
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
@@ -329,7 +419,7 @@ Item {
                     }
 
                     text: "surface"
-                    checked:  true
+//                    checked:  true
 //                    checkable: true
 //                    exclusiveGroup: drawModeGroup
                     onClicked: {
@@ -523,92 +613,7 @@ Item {
                 }
             }  // end of operateItem
 
-            Rectangle {
-                id: posItem
-                color: controller.color
-                border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
-                border.width: 2
-                width: parent.width
-                height: childrenRect.height
-                anchors {
-                    top : operateItem.bottom
-                    topMargin: controller.margintop
-                    left: parent.left
-                }
-                property var posChanged: function() {
 
-                    if( view.ready ) {
-                        GLcode.sensorPoint.setParam( {  dis:   4,
-                                                        pitch: pitch.value,
-                                                        heading: heading.value,
-                                                        roll: roll.value } );
-                    }
-                }
-
-                Text {
-                    id: pitchHint
-                    anchors.top: parent.top
-                    width: parent.width
-                    text: "pitch: "
-                    font.family: "Helvetica"
-                    font.pointSize: 18
-                }
-                Text {
-                    id: pitch
-                    anchors {
-                        right: parent.right
-                        top: parent.top
-                    }
-                    font.family: "Helvetica"
-                    font.pointSize: 24
-                    color: "red"
-                    width: parent.width / 2
-                    text: "0.0"
-                }
-
-                Text {
-                    id: headingHint
-                    anchors.top: pitch.bottom
-                    width: parent.width
-                    text: "heading: "
-                    font.family: "Helvetica"
-                    font.pointSize: 18
-                }
-                Text {
-                    id: heading
-                    anchors {
-                        right: parent.right
-                        top: pitch.bottom
-                    }
-                    font.family: "Helvetica"
-                    font.pointSize: 24
-                    color: "red"
-                    width: parent.width / 2
-                    text: "0.0"
-                }
-
-                Text {
-                    id: rollHint
-                    anchors.top: heading.bottom
-                    width: parent.width
-                    text: "roll:"
-                    font.family: "Helvetica"
-                    font.pointSize: 18
-                }
-                Text {
-                    id: roll
-                    anchors {
-                        right: parent.right
-                        top: heading.bottom
-                    }
-                    font.family: "Helvetica"
-                    font.pointSize: 24
-                    color: "red"
-                    width: parent.width / 2
-                    text: "0.0"
-                }
-
-            }  // posItem
             Rectangle {
                 id: colorItem
                 color: controller.color
@@ -617,7 +622,7 @@ Item {
                 width: parent.width
                 height: childrenRect.height
                 anchors {
-                    top : posItem.bottom
+                    top : operateItem.bottom
                     topMargin: controller.margintop
                     left: parent.left
                 }
@@ -803,22 +808,6 @@ Item {
         id: canvas3d
         anchors.fill: parent
         focus: true
-//        renderOnDemand: true
-//        property var  callbacks : []
-//        property var  addCallback: function( callback, type ) {
-//            if( callbacks[type] === undefined ) {
-//                callbacks[type] = [];
-//            }
-//            callbacks[type].push( callback );
-//        }
-//        property var onCall: function( type, params ) {
-//            if( callbacks[type] === undefined ) {
-//                return;
-//            }
-//            for( var i = 0; i < callbacks[type].length; i++ ) {
-//                callbacks[type][i](params);
-//            }
-//        }
 
         // 渲染节点就绪时，进行初始化时触发
         onInitializeGL: {
@@ -843,9 +832,9 @@ Item {
         target: dataSource
         onDataChanged: {
 //            console.log("dataSource heading changed:  " + dataSource.getHeading() + view.ready);
-            pitch.text   = dataSource.getPitch();
-            heading.text = dataSource.getHeading();
-            roll.text    = dataSource.getRoll();
+            pitch.text   = dataSource.getPitch().toFixed(2);
+            heading.text = dataSource.getHeading().toFixed(2);
+            roll.text    = dataSource.getRoll().toFixed(2);
 
             if( view.ready ) {
                 var dis = dataSource.getLength()/10000;

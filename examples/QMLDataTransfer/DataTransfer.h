@@ -3,8 +3,7 @@
 
 #include <QObject>
 #include <QUdpSocket>
-
-class Animation;
+#include "Animation.h"
 
 class DataTransfer : public QObject
 {
@@ -12,17 +11,22 @@ class DataTransfer : public QObject
 public:
     explicit DataTransfer(QObject *parent = 0);
     ~DataTransfer();
-
+    Animation *getAnimationView() const {
+        return animation;
+    }
 signals:
 
 public slots:
     void start(int port = 0);
+    void stop();
+    void refreshAnimation();
+protected:
 protected slots:
     void recv();
 
 private:
-    Animation *animation = 0;
-    QUdpSocket *socket;
+    Animation *animation = nullptr;
+    QUdpSocket *socket = nullptr;
 };
 
 #endif // DATATRANSFER_H

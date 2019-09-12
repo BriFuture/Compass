@@ -38,6 +38,11 @@ Animation::Animation(QWindow *parent) : QQuickView(parent),
     connect(this, &QQuickView::windowStateChanged, this, &Animation::onWindowStateChange );
 }
 
+Animation::~Animation()
+{
+    delete ado;
+}
+
 
 /*!
  * \brief 将数据传递给 QML 组件
