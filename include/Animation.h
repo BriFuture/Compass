@@ -3,81 +3,34 @@
 
 #include <QObject>
 #include <QQuickView>
-#include <QQmlContext>
 
+QT_BEGIN_NAMESPACE
+class QQmlContext;
+QT_END_NAMESPACE
 #include "display_global.h"
 
-class AnimationDataObject : public QObject {
-    Q_OBJECT
-    Q_PROPERTY(double heading READ getHeading NOTIFY dataChanged)
-    Q_PROPERTY(double pitch READ getPitch NOTIFY dataChanged)
-    Q_PROPERTY(double roll READ getRoll NOTIFY dataChanged)
-    Q_PROPERTY(double vectorLength READ getLength NOTIFY dataChanged)
+#include "AnimationDataObject.h"
+#include "DisplayQmlInterface.h"
 
-signals:
-    void dataChanged();
-//    void dataChanged(const MagParam &params);
-public Q_SLOTS:
-    double getHeading() {
-        return m_heading;
-    }
-
-    double getPitch() {
-        return m_pitch;
-    }
-
-    double getRoll() {
-        return m_roll;
-    }
-
-    double getLength() {
-        return m_length;
-    }
-
-    double getMx() { return mx; }
-    double getMy() { return my; }
-    double getMz() { return mz; }
-
-    double getAx() { return ax; }
-    double getAy() { return ay; }
-    double getAz() { return az; }
-
-    double getWx() { return wx; }
-    double getWy() { return wy; }
-    double getWz() { return wz; }
-
-public:
-    double m_heading;
-    double m_pitch;
-    double m_roll;
-    double m_length;
-
-    double mx;
-    double my;
-    double mz;
-
-    double wx;
-    double wy;
-    double wz;
-
-    double ax;
-    double ay;
-    double az;
-};
-
-class DISPLAY_DLL_EXPORT Animation : public QQuickView
+class DISPLAY_DLL_EXPORT Animation : public QQuickView,
+        public AnimationInterface
 {
     Q_OBJECT
+
+    Q_PLUGIN_METADATA(IID "cn.zbrifuture.Qt.libdisplayqml.Animation" FILE "res/libdisplayqml.json")
+    Q_INTERFACES(AnimationInterface)
 public:
     explicit Animation(QWindow *parent = 0);
     ~Animation();
 
 public slots:
-    void setParam(const double heading, const double pitch, const double roll, const double length);
+    void setParam(double heading, double pitch, double roll, double length) override;
 
-    AnimationDataObject *getDataObject() {
+    AnimationDataObject *getDataObject() const override  {
         return ado;
     }
+
+    QObject *getObject();
 
 signals:
     void toRecord(bool isCSource = false);
@@ -90,7 +43,7 @@ protected:
     void onWindowStateChange(Qt::WindowState windowState);
     void hideEvent(QHideEvent *) override;
 
-    AnimationDataObject *ado;
+    AnimationDataObject *ado = nullptr;
 
 };
 

@@ -16,12 +16,6 @@ CONFIG(debug, debug|release) {
 }
 
 INCLUDEPATH += $$PWD/include
-
-CONFIG += debug_and_release
 DEPENDPATH += .
 
-MOC_DIR = ./qt/moc
-RCC_DIR = ./qt/rcc/src
-UI_DIR = ./qt/ui
-UI_HEADERS_DIR = ./qt/ui/include
-UI_SOURCES_DIR = ./qt/ui/src
+CONFIG += debug_and_release

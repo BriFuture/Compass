@@ -8,7 +8,10 @@ QT       += core gui
 
 include($$(DISPLAYER_DIR)/libdisplayqml.pri)
 #include($$(BASICCOMMDIR)/BasicComm.pri)
-include($$(BUILIB_DIR)/BuiLib.pri)
+CONFIG += builib
+BUILib_DIR=$$(BUILib_DIR)
+isEmpty(BUILib_DIR): BUILib_DIR=$$PWD
+include($$BUILib_DIR/feature/BUILIB.prf)
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

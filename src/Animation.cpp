@@ -1,5 +1,6 @@
 ﻿#include "Animation.h"
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QDebug>
 #include <QSettings>
 #include <QtGlobal>
@@ -41,6 +42,11 @@ Animation::Animation(QWindow *parent) : QQuickView(parent),
 Animation::~Animation()
 {
     delete ado;
+}
+
+QObject *Animation::getObject()
+{
+    return this;
 }
 
 
