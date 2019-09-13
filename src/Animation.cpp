@@ -6,7 +6,7 @@
 #include <QtGlobal>
 #include <QTimer>
 
-#include "animation.h"
+#include "Animation.h"
 #include <QQmlContext>
 
 /*!
@@ -47,6 +47,15 @@ Animation::~Animation()
 QObject *Animation::getObject()
 {
     return this;
+}
+
+void Animation::setSource(const QUrl &source)
+{
+    if(source.isEmpty()) {
+        QQuickView::setSource(QUrl("qrc:/qml/SpacePath.qml"));
+    } else {
+        QQuickView::setSource(source);
+    }
 }
 
 

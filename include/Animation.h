@@ -31,6 +31,7 @@ public slots:
     }
 
     QObject *getObject();
+    void setSource(const QUrl &source = QUrl());
 
 signals:
     void toRecord(bool isCSource = false);

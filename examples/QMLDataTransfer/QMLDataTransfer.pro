@@ -4,9 +4,11 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
-include($$(DISPLAYER_DIR)/libdisplayqml.pri)
+DISPLAYER_DIR = $$(DISPLAYER_DIR)
+isEmpty(DISPLAYER_DIR): DISPLAYER_DIR = $$PWD/../../
+include($$DISPLAYER_DIR/libdisplayqml.pri)
 #include($$(BASICCOMMDIR)/BasicComm.pri)
 CONFIG += builib
 BUILib_DIR=$$(BUILib_DIR)

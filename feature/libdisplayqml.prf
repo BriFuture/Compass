@@ -1,9 +1,7 @@
-QT += printsupport
-QT += qml quick
+LIBQMLDISPLAYDIR = $$PWD/..
+libqml3ddisplay {
 
-contains(DEFINES, _NO_LINK_DISPLAY_LIB) {
-} else {
-LIBS += -L"$$PWD/lib"
+LIBS += -L"$$LIBQMLDISPLAYDIR/lib"
 
 CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplayd"
@@ -14,7 +12,5 @@ CONFIG(debug, debug|release) {
 }# CONFIG(debug, debug|release)
 }
 
-INCLUDEPATH += $$PWD/include
-DEPENDPATH += .
-
-CONFIG += debug_and_release
+INCLUDEPATH += $$LIBQMLDISPLAYDIR/include
+DEPENDPATH  += .
