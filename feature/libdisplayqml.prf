@@ -1,5 +1,5 @@
-LIBQMLDISPLAYDIR = $$PWD/..
 libqml3ddisplay {
+LIBQMLDISPLAYDIR = $$PWD/..
 
 LIBS += -L"$$LIBQMLDISPLAYDIR/lib"
 
@@ -10,6 +10,14 @@ CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplay"
     DEFINES += _DISPLAY_RELEASE
 }# CONFIG(debug, debug|release)
+
+android {
+    CONFIG(release, debug|release): libQMLDisplayName = libQmlLibDisplay.so
+    else: libQMLDisplayName = libQmlLibDisplayd.so
+    ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/lib/$$libQMLDisplayName
+} # android
+
+
 }
 
 INCLUDEPATH += $$LIBQMLDISPLAYDIR/include
