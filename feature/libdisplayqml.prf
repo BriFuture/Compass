@@ -1,7 +1,15 @@
 libqml3ddisplay {
 LIBQMLDISPLAYDIR = $$PWD/..
 
-LIBS += -L"$$LIBQMLDISPLAYDIR/lib"
+android {
+    CONFIG(release, debug|release): libQMLDisplayName = libQmlLibDisplay.so
+    else: libQMLDisplayName = libQmlLibDisplayd.so
+    ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/lib/$$libQMLDisplayName
+    LIBS += -L"$$LIBQMLDISPLAYDIR/bin/androidlib"
+} else {
+    LIBS += -L"$$LIBQMLDISPLAYDIR/bin/lib"
+}# android
+
 
 CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplayd"
@@ -10,12 +18,6 @@ CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplay"
     DEFINES += _DISPLAY_RELEASE
 }# CONFIG(debug, debug|release)
-
-android {
-    CONFIG(release, debug|release): libQMLDisplayName = libQmlLibDisplay.so
-    else: libQMLDisplayName = libQmlLibDisplayd.so
-    ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/lib/$$libQMLDisplayName
-} # android
 
 
 }

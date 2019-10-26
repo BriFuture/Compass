@@ -19,7 +19,10 @@ DEFINES += _LIBDISPLAYQML_MAJOR_VER=$$_LIBDISPLAYQML_MAJOR_VER \
            _LIBDISPLAYQML_MINOR_VER=$$_LIBDISPLAYQML_MINOR_VER \
            _LIBDISPLAYQML_PATCH_VER=$$_LIBDISPLAYQML_PATCH_VER
 
-DESTDIR = $$PWD/lib/
+DESTDIR = $$PWD/bin/lib
+android {
+    DESTDIR = $$PWD/bin/androidlib
+}
 CONFIG(debug, debug|release) {
     TARGET = QmlLibDisplayd
 } else {
