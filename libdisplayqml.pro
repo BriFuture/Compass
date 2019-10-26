@@ -21,7 +21,11 @@ DEFINES += _LIBDISPLAYQML_MAJOR_VER=$$_LIBDISPLAYQML_MAJOR_VER \
 
 DESTDIR = $$PWD/bin/lib
 android {
-    DESTDIR = $$PWD/bin/androidlib
+contains(ANDROID_TARGET_ARCH,x86) {
+    DESTDIR = $$PWD/bin/android-x86-lib
+} else : contains(ANDROID_TARGET_ARCH,armeabi-v7a) {
+    DESTDIR = $$PWD/bin/android-v7a-lib
+}
 }
 CONFIG(debug, debug|release) {
     TARGET = QmlLibDisplayd
