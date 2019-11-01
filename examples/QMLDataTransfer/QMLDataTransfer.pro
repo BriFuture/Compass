@@ -6,14 +6,15 @@
 
 QT       += core gui network
 
+CONFIG += libqml3ddisplay builib
+
 DISPLAYER_DIR = $$(DISPLAYER_DIR)
 isEmpty(DISPLAYER_DIR): DISPLAYER_DIR = $$PWD/../../
-include($$DISPLAYER_DIR/libdisplayqml.pri)
+include($$DISPLAYER_DIR/feature/libdisplayqml.prf)
 #include($$(BASICCOMMDIR)/BasicComm.pri)
-CONFIG += builib
 BUILib_DIR=$$(BUILib_DIR)
 isEmpty(BUILib_DIR): BUILib_DIR=$$PWD
-include($$BUILib_DIR/feature/BUILIB.prf)
+include($$BUILib_DIR/feature/Builib.prf)
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

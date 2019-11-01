@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <DataTransfer.h>
 #include <BAboutDialog.h>
+#include <QCloseEvent>
 
 namespace Ui {
 class MainWindow;
@@ -25,6 +26,9 @@ private:
     QWidget *animationContainer = nullptr;
     BAboutDialog *about = nullptr;
     DataTransfer *dt = nullptr;
+
+protected:
+    void closeEvent(QCloseEvent *event);
 };
 
 #endif // MAINWINDOW_H

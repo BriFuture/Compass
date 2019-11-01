@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+
     delete ui;
 }
 
@@ -38,4 +39,9 @@ void MainWindow::init() {
     animationContainer->resize(a->size());
     ui->centralwidget->layout()->addWidget(animationContainer);
     resize(a->size());
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    dt->stop();
+    delete dt->getAnimationView();
 }

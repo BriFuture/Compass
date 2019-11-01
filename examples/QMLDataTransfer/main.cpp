@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationVersion(QString("%1.%2").arg(_QMLDT_MAJ_VER).arg(_QMLDT_MIN_VER));
 
     BProgramSharer bps("QML3DDisplay");
-    bps.exportProgramPath(a);
+    bps.exportProgramPath(&a);
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Display 3D Animation For Compass Program.");

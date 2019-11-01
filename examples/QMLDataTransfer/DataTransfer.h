@@ -11,9 +11,7 @@ class DataTransfer : public QObject
 public:
     explicit DataTransfer(QObject *parent = 0);
     ~DataTransfer();
-    Animation *getAnimationView() const {
-        return animation;
-    }
+    inline Animation *getAnimationView() const { return animation; }
 signals:
 
 public slots:

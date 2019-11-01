@@ -16,9 +16,9 @@ DataTransfer::DataTransfer(QObject *parent) : QObject(parent),
 
 DataTransfer::~DataTransfer()
 {
-    stop();
+//    stop();
 //    qDebug() << "DT: Before delete animation";
-    animation->destroy();
+//    animation->destroy();
 //    qDebug() << "DT: After delete animation";
 }
 

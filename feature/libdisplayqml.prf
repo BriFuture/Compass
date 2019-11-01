@@ -1,5 +1,6 @@
 libqml3ddisplay {
 LIBQMLDISPLAYDIR = $$PWD/..
+QT += qml quick
 
 android {
     CONFIG(release, debug|release): libQMLDisplayName = libQmlLibDisplay.so
