@@ -5,17 +5,18 @@ QT += qml quick
 android {
     CONFIG(release, debug|release): libQMLDisplayName = libQmlLibDisplay.so
     else: libQMLDisplayName = libQmlLibDisplayd.so
-    ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/lib/$$libQMLDisplayName
 
-contains(ANDROID_TARGET_ARCH,x86) {
-    LIBS += -L"$$LIBQMLDISPLAYDIR/bin/android-x86-lib"
-} else : contains(ANDROID_TARGET_ARCH,armeabi-v7a) {
-    LIBS += -L"$$LIBQMLDISPLAYDIR/bin/android-v7a-lib"
-}
-} else {
+    contains(ANDROID_TARGET_ARCH,x86) {
+        ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/bin/android-x86-lib/$$libQMLDisplayName
+        LIBS += -L"$$LIBQMLDISPLAYDIR/bin/android-x86-lib"
+    } else : contains(ANDROID_TARGET_ARCH,armeabi-v7a) {
+        ANDROID_EXTRA_LIBS +=$$LIBQMLDISPLAYDIR/bin/android-v7a-lib/$$libQMLDisplayName
+        LIBS += -L"$$LIBQMLDISPLAYDIR/bin/android-v7a-lib"
+    }
+} # android
+else {
     LIBS += -L"$$LIBQMLDISPLAYDIR/bin/lib"
 }# android
-
 
 CONFIG(debug, debug|release) {
     LIBS += -l"QmlLibDisplayd"
