@@ -13,13 +13,14 @@
 .pragma library
 //.import "gl-matrix-min.js" as MatrixHelper
 //.import "webgl-obj-loader.min.js" as ObjLoader
-.import "gl-matrix.js" as MatrixHelper
-.import "webgl-obj-loader.js" as ObjLoader
+//.import "gl-matrix.js" as MatrixHelper
+//.import "webgl-obj-loader.js" as ObjLoader
 
-var mat4 = MatrixHelper.mat4;
-var vec3 = MatrixHelper.vec3;
-//Qt.include("gl-matrix-min.js");
-//Qt.include("webgl-obj-loader.min.js");
+//var mat4 = MatrixHelper.mat4;
+//var vec3 = MatrixHelper.vec3;
+//var OBJ = ObjLoader.OBJ;
+Qt.include("gl-matrix-min.js");
+Qt.include("webgl-obj-loader.min.js");
 
 if( String.prototype.startsWith === undefined ) {
     String.prototype.startsWith = function(pattern) {
@@ -1611,8 +1612,8 @@ Craft.prototype = {
     init : function() {
         var that = this;
         readFile( this.url, function(text) {
-            that.mesh = new ObjLoader.OBJ.Mesh(text);
-            ObjLoader.OBJ.initMeshBuffers(gl, that.mesh);
+            that.mesh = new OBJ.Mesh(text);
+            OBJ.initMeshBuffers(gl, that.mesh);
         } );
     },
 

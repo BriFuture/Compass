@@ -891,7 +891,7 @@ Item {
         running: true
         repeat: true
         onTriggered: {
-            GLcode.gc();
+//            GLcode.gc();
         }
     }
 

@@ -35,6 +35,7 @@ Animation::Animation(QWindow *parent) : QQuickView(parent),
     QQmlContext *context = rootContext();
     context->setContextProperty( "dataSource", ado );
     context->setContextProperty( "window",     this );
+    context->setContextProperty("qtVersion", qVersion());
     setResizeMode( SizeRootObjectToView );     // 设置窗口缩放时，根对象也会随之缩放
     connect(this, &QQuickView::windowStateChanged, this, &Animation::onWindowStateChange );
 }
