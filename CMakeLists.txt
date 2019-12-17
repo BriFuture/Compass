@@ -42,6 +42,8 @@ set(SOURCES
 )
 
 add_definitions(-DBUILD_WITH_CMAKE)
+set(CMAKE_DEBUG_POSTFIX d)
+
 set(RESOURCES qml.qrc)
 add_library(DisplayCompass SHARED
     ${SOURCES} ${HEADERS} ${RESOURCES}
