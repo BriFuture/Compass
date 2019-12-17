@@ -1,0 +1,7 @@
+#ifndef QMLDATATRANSFER_CONFIG_H
+#define QMLDATATRANSFER_CONFIG_H
+
+#define _QMLDT_MAJ_VER @QMLDataTransfer_MAJOR_VER@
+#define _QMLDT_MIN_VER @QMLDataTransfer_MINOR_VER@
+
+#endif

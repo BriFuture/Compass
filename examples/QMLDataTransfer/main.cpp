@@ -11,6 +11,10 @@
 #include "MainWindow.h"
 #include <iostream>
 
+#ifdef BUILD_WITH_CMAKE
+#include "qmldt_config.h"
+#endif
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);

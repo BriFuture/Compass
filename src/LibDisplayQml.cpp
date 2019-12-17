@@ -1,5 +1,7 @@
 ﻿#include "LibDisplayQml.h"
-
+#ifdef BUILD_WITH_CMAKE
+#include "config.h"
+#endif
 
 LibDisplayQml::LibDisplayQml()
 {
