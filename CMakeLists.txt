@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+﻿cmake_minimum_required(VERSION 3.9)
 
 set(DisplayCompass_MAJOR_VER 1)
 set(DisplayCompass_MINOR_VER 0)
@@ -47,7 +47,10 @@ add_library(DisplayCompass SHARED
     ${SOURCES} ${HEADERS} ${RESOURCES}
 )
 
+OPTION(BUILD_EXAMPLES "BUILD EXAMPLES" OFF)
+if(BUILD_EXAMPLES)
 add_subdirectory(examples/QMLDataTransfer)
+endif(BUILD_EXAMPLES)
 
 SET_TARGET_PROPERTIES(DisplayCompass PROPERTIES VERSION ${DisplayCompass_VER} SOVERSION 0)
 target_compile_definitions(DisplayCompass PRIVATE DISPLAY_LIBRARY)
@@ -61,7 +64,12 @@ write_basic_package_version_file(
     VERSION ${DisplayCompass_VER}
     COMPATIBILITY AnyNewerVersion
     )
-install(TARGETS DisplayCompass DESTINATION bin EXPORT DisplayCompassTargets)
+install(TARGETS DisplayCompass
+    DESTINATION bin
+    EXPORT DisplayCompassTargets
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
 install(FILES ${HEADERS} DESTINATION include/DisplayCompass)
 configure_file(cmake/DisplayCompassConfig.cmake.in DisplayCompassConfig.cmake @ONLY)
 install(FILES
