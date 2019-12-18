@@ -32,7 +32,8 @@ add_definitions(${QT5Qml_DEFINITIONS})
 include_directories(${Qt5Quick_INCLUDE_DIRS})
 add_definitions(${QT5Quick_DEFINITIONS})
 
-include_directories(include)
+set(DisplayCompass_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${DisplayCompass_INCLUDE_DIRS})
 set(HEADERS
     include/display_global.h
     include/Animation.h
@@ -49,7 +50,7 @@ set(SOURCES
 add_definitions(-DBUILD_WITH_CMAKE)
 set(CMAKE_DEBUG_POSTFIX d)
 
-set(RESOURCES qml.qrc)
+set(RESOURCES dc_qml.qrc dc_res.qrc)
 add_library(DisplayCompass SHARED
     ${SOURCES} ${HEADERS} ${RESOURCES}
 )

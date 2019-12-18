@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/img/arrow.png</file>
+        <file>res/img/compass.ico</file>
+        <file>res/img/compass.png</file>
+        <file>res/img/compass_pr_base.png</file>
+        <file>res/img/compass_roll_circle.png</file>
+        <file>res/img/heading.png</file>
+        <file>res/img/x.png</file>
+        <file>res/img/y.png</file>
+        <file>res/img/z.png</file>
+        <file>res/obj/craft.obj</file>
+    </qresource>
+</RCC>

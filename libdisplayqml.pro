@@ -37,7 +37,7 @@ CONFIG(debug, debug|release) {
 # Additional import path used to resolve QML modules in Qt Creator's code model
 #QML_IMPORT_PATH =
 
-RESOURCES += qml.qrc
+RESOURCES += dc_qml.qrc dc_res.qrc
 
 HEADERS += include/display_global.h \
     include/Animation.h \

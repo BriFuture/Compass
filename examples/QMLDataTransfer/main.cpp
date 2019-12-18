@@ -23,6 +23,8 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationDomain("qt.zbrifuture.cn");
     QApplication::setApplicationVersion(QString("%1.%2").arg(_QMLDT_MAJ_VER).arg(_QMLDT_MIN_VER));
 
+    Q_INIT_RESOURCE(dc_qml);
+    Q_INIT_RESOURCE(dc_res);
 //    BProgramSharer bps("QML3DDisplay");
 //    bps.exportProgramPath(&a);
 

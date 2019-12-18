@@ -327,8 +327,8 @@ function Scene() {
     this.objs = [];
     this.light_direct = [0.35, 0.35, 0.7];
 
-    this.vertexFile = "qrc:/qml/SPVertexCode.vsh";
-    this.fragFile   = "qrc:/qml/SPFragCode.fsh";
+    this.vertexFile = "qrc:/DisplayCompass/qml/SPVertexCode.vsh";
+    this.fragFile   = "qrc:/DisplayCompass/qml/SPFragCode.fsh";
 
     this.initShaders();
 }

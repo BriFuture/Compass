@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/">
+    <qresource prefix="/DisplayCompass">
         <file>qml/SpacePath.qml</file>
         <file>qml/MySlider.qml</file>
         <file>qml/Compass.qml</file>
@@ -11,15 +11,5 @@
         <file>qml/gl-matrix-min.js</file>
         <file>qml/gl-matrix.js</file>
         <file>qml/webgl-obj-loader.js</file>
-        <file>res/img/arrow.png</file>
-        <file>res/img/compass.ico</file>
-        <file>res/img/compass.png</file>
-        <file>res/img/compass_pr_base.png</file>
-        <file>res/img/compass_roll_circle.png</file>
-        <file>res/img/heading.png</file>
-        <file>res/img/x.png</file>
-        <file>res/img/y.png</file>
-        <file>res/img/z.png</file>
-        <file>res/obj/craft.obj</file>
     </qresource>
 </RCC>

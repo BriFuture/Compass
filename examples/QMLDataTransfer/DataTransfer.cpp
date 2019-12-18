@@ -39,7 +39,7 @@ void DataTransfer::stop()
 void DataTransfer::refreshAnimation()
 {
     animation->engine()->clearComponentCache();
-    QUrl url(QStringLiteral("qrc:/qml/SpacePath.qml"));
+    QUrl url(QStringLiteral("qrc:/DisplayCompass/qml/SpacePath.qml"));
     animation->setSource(url);
 }
 
