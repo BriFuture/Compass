@@ -1,6 +1,6 @@
 
 
-DEFINES += _NO_LINK_DISPLAY_LIB DISPLAY_LIBRARY
+DEFINES += DISPLAY_LIBRARY
 include(./libdisplayqml.pri)
 TEMPLATE = lib
 #VERSION = 0.1.13.1
@@ -28,9 +28,9 @@ contains(ANDROID_TARGET_ARCH,x86) {
 }
 }
 CONFIG(debug, debug|release) {
-    TARGET = QmlLibDisplayd
+    TARGET = QmlCompassd
 } else {
-    TARGET = QmlLibDisplay
+    TARGET = QmlCompass
 }
 
 

@@ -1,16 +1,13 @@
 QT += printsupport
 QT += qml quick
 
-contains(DEFINES, _NO_LINK_DISPLAY_LIB) {
-} else {
+!contains(DEFINES, DISPLAY_LIBRARY) {
 LIBS += -L"$$PWD/lib"
 
 CONFIG(debug, debug|release) {
-    LIBS += -l"QmlLibDisplayd"
-    DEFINES += _DISPLAY_DEBUG
+    LIBS += -l"QmlCompassd"
 } else {
-    LIBS += -l"QmlLibDisplay"
-    DEFINES += _DISPLAY_RELEASE
+    LIBS += -l"QmlCompass"
 }# CONFIG(debug, debug|release)
 }
 
