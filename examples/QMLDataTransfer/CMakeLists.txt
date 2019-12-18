@@ -13,7 +13,27 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-fPIC")
+
+set(ICON_NAME compass)
+set(ICON_FILE ${ICON_NAME}.ico)
+
+if(UNIX)
+    set(CMAKE_CXX_FLAGS "-fPIC")
+elseif(WIN32)
+    if (NOT PROJECT_VERSION_TWEAK)
+        set(PROJECT_VERSION_TWEAK 0)
+    endif()
+
+    configure_file("${PROJECT_SOURCE_DIR}/cmake/windows_metafile.rc.in"
+          "windows_metafile.rc"
+    )
+    set(RES_FILES "windows_metafile.rc" )
+    set(CMAKE_RC_COMPILER_INIT windres)
+    ENABLE_LANGUAGE(RC)
+#    SET(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O <DEFINES> -i <SOURCE> -o <OBJECT>")
+    SET(APP_RESOURCES ${RES_FILES})
+    SET(OS_BUNDLE WIN32)
+endif(UNIX)
 
 configure_file("./config.h.in" "./include/qmldt_config.h" )
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -37,18 +57,23 @@ set(SOURCES
     MainWindow.cpp
     BAboutDialog.cpp
     )
-set(RESOURCES res.qrc)
+SET(RESOURCES res.qrc)
 file( GLOB UIS ${CMAKE_CURRENT_SOURCE_DIR}/*.ui )
 
 add_definitions(-DBUILD_WITH_CMAKE)
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR})
-add_executable(QMLDataTransfer ${HEADERS} ${SOURCES} ${RESOURCES} ${UIS})
+add_executable(QMLDataTransfer ${OS_BUNDLE}
+    ${HEADERS} ${SOURCES}
+    ${RESOURCES} ${UIS}
+    ${APP_RESOURCES}
+)
 target_include_directories(QMLDataTransfer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(QMLDataTransfer
     PRIVATE
-        DisplayCompass Builib
+        DisplayCompass
+#        Builib
         Qt5::Core Qt5::Widgets Qt5::Qml Qt5::Quick
 )
 

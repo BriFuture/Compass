@@ -1,6 +1,6 @@
 ﻿#include "BAboutDialog.h"
 #include "ui_BAboutDialog.h"
-#include "BUILib.h"
+//#include "BUILib.h"
 
 BAboutDialog::BAboutDialog(QWidget *parent) :
     QDialog(parent),
@@ -13,7 +13,7 @@ BAboutDialog::BAboutDialog(QWidget *parent) :
     ui->buiLogo->setPixmap(QPixmap(":/res/logo/logo.jpg"));
     connect(ui->okBtn, &QPushButton::clicked, this, &QDialog::close);
     ui->buiDesc->setText(tr("Support By \nBUI Library Version: %1. \n"
-                            "Qt Framework Version: 5.7.0").arg(BUILib::getVersion()));
+                            "Qt Framework Version: 5.7.0").arg("0.1.20"));
 }
 
 BAboutDialog::~BAboutDialog()
@@ -68,5 +68,5 @@ void BAboutDialog::setBUIVisible(bool visible)
 
 void BAboutDialog::retranslateUi()
 {
-    ui->buiDesc->setText(tr("Support By \n%1").arg(BUILib::aboutBuiLib()));
+    ui->buiDesc->setText(tr("Support By \n%1").arg("BUILib"));
 }

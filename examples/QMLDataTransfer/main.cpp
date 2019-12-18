@@ -2,7 +2,7 @@
 #include <QSettings>
 #include <QDir>
 #include <QDebug>
-#include <BProgramSharer.h>
+//#include <BProgramSharer.h>
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
@@ -20,10 +20,11 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QApplication::setApplicationName("QMLData3DDsiplay");
     QApplication::setApplicationDisplayName("3D Data Dsiplay");
+    QApplication::setOrganizationDomain("qt.zbrifuture.cn");
     QApplication::setApplicationVersion(QString("%1.%2").arg(_QMLDT_MAJ_VER).arg(_QMLDT_MIN_VER));
 
-    BProgramSharer bps("QML3DDisplay");
-    bps.exportProgramPath(&a);
+//    BProgramSharer bps("QML3DDisplay");
+//    bps.exportProgramPath(&a);
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Display 3D Animation For Compass Program.");

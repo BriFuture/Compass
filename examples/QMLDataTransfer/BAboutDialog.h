@@ -2,13 +2,12 @@
 #define BABOUTDIALOG_H
 
 #include <QDialog>
-#include "builib_global.h"
 
 namespace Ui {
 class BAboutDialog;
 }
 
-class BUILIBSHARED_EXPORT BAboutDialog : public QDialog
+class BAboutDialog : public QDialog
 {
     Q_OBJECT
 
