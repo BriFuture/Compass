@@ -11,7 +11,12 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-fPIC")
+
+if(UNIX)
+    set(CMAKE_CXX_FLAGS "-fPIC")
+elseif(WIN32)
+
+endif(UNIX)
 
 configure_file("./config.h.in" "./include/config.h" )
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)

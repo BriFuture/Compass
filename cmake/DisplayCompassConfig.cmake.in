@@ -1,4 +1,4 @@
-set(DisplayCompass_LIB DisplayCompass$<$<CONFIG:Debug>:d>)
+﻿set(DisplayCompass_LIB DisplayCompass$<$<CONFIG:Debug>:d>)
 set(DisplayCompass_INCLUDE_DIRS
     @CMAKE_INSTALL_PREFIX@/include/DisplayCompass
     )
@@ -16,3 +16,4 @@ include_directories(${Qt5Quick_INCLUDE_DIRS})
 add_definitions(${QT5Quick_DEFINITIONS})
 
 include("${CMAKE_CURRENT_LIST_DIR}/DisplayCompassTargets.cmake")
+set(DisplayCompassFOUND ON)

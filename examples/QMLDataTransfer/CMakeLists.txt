@@ -23,17 +23,19 @@ find_package(DisplayCompass REQUIRED)
 endif(NOT Display_BUILD_EXAMPLES)
 include_directories(${DisplayCompass_INCLUDE_DIRS})
 
-find_package(Builib REQUIRED)
-include_directories(${Builib_INCLUDE_DIRS})
+#find_package(Builib REQUIRED)
+#include_directories(${Builib_INCLUDE_DIRS})
 
 set(HEADERS
     DataTransfer.h
     MainWindow.h
+    BAboutDialog.h
     )
 set(SOURCES
     main.cpp
     DataTransfer.cpp
     MainWindow.cpp
+    BAboutDialog.cpp
     )
 set(RESOURCES res.qrc)
 file( GLOB UIS ${CMAKE_CURRENT_SOURCE_DIR}/*.ui )
