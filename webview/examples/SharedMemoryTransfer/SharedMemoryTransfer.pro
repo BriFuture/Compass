@@ -1,14 +1,14 @@
 #-------------------------------------------------
 #
-# Project created by QtCreator 2019-04-14T13:03:32
+# Project created by QtCreator 2019-04-18T16:42:35
 #
 #-------------------------------------------------
-include($$(DISPLAYER_DIR)/libdisplay.pri)
+include(../../webcompass.pri)
 QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = DataTransfer
+TARGET = SharedMemoryTransfer
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use

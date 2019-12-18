@@ -39,6 +39,9 @@ CONFIG(debug, debug|release) {
 
 RESOURCES += dc_qml.qrc dc_res.qrc
 
+INCLUDEPATH += $$PWD/include
+DEPENDPATH += .
+
 HEADERS += include/display_global.h \
     include/Animation.h \
     include/LibDisplayQml.h \
@@ -65,9 +68,3 @@ DISTFILES += \
 
 #RC_FILE = icon.rc
 win32: CONFIG += skip_target_version_ext
-
-MOC_DIR = ./qt/moc
-RCC_DIR = ./qt/rcc/src
-UI_DIR = ./qt/ui
-UI_HEADERS_DIR = ./qt/ui/include
-UI_SOURCES_DIR = ./qt/ui/src

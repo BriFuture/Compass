@@ -14,7 +14,4 @@ CONFIG(debug, debug|release) {
 }# CONFIG(debug, debug|release)
 }
 
-INCLUDEPATH += $$PWD/include
-DEPENDPATH += .
-
 CONFIG += debug_and_release

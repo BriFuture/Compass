@@ -1,7 +1,7 @@
 DISPLAY_VER = 0.0.12
 
-DEFINES += _NO_LINK_DISPLAY_LIB DISPLAY_LIBRARY
-include(./libdisplay.pri)
+DEFINES += WEBCOMPASS_LIBRARY
+include(./webcompass.pri)
 TEMPLATE = lib
 TARGET = display
 
@@ -12,21 +12,19 @@ DEFINES += WEBVIEW
 
 DESTDIR = $$PWD/lib/
 CONFIG(debug, debug|release) {
-    TARGET = LibDisplayd
+    TARGET = WebCompassd
 } else {
-    TARGET = LibDisplay
+    TARGET = WebCompass
 }
+
+INCLUDEPATH += $$PWD/include
+DEPENDPATH += .
 
 HEADERS += include/display_global.h \
     include/Displayer3d.h
 
-
-#message($$DEFINES)
-
-QT += websockets
-QT += webenginewidgets
-
-RESOURCES += web.qrc
+SOURCES += \
+    src/Displayer3d.cpp
 
 SOURCES += src/WebDataFeeder.cpp \
     src/TestFeeder.cpp
@@ -34,7 +32,10 @@ SOURCES += src/WebDataFeeder.cpp \
 HEADERS += include/WebDataFeeder.h \
     include/TestFeeder.h
 
+#message($$DEFINES)
+
+RESOURCES += wc_web.qrc
+
 RC_FILE = icon.rc
 
-SOURCES += \
-    src/Displayer3d.cpp
+

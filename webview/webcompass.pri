@@ -8,16 +8,12 @@ CONFIG += c++11
 QT += printsupport
 QT += websockets webenginewidgets
 
-contains(DEFINES, _NO_LINK_DISPLAY_LIB) {
-message(NoDisplayLib)
-} else {
-LIBS += -L"$$(DISPLAYER_DIR)/lib"
+!contains(DEFINES, WEBCOMPASS_LIBRARY) {
+LIBS += -L"$$PWD/lib"
 CONFIG(debug, debug|release) {
-    LIBS += -l"LibDisplayd"
-    DEFINES += _DISPLAY_DEBUG
+    LIBS += -l"WebCompassd"
 } else {
-    LIBS += -l"LibDisplay"
-    DEFINES += _DISPLAY_RELEASE
+    LIBS += -l"WebCompass"
 }# CONFIG(debug, debug|release)
 }
 
