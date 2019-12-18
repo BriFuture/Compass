@@ -77,6 +77,7 @@ write_basic_package_version_file(
 install(TARGETS DisplayCompass
     DESTINATION bin
     EXPORT DisplayCompassTargets
+    LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
 )
