@@ -3,7 +3,7 @@
 set(DisplayCompass_MAJOR_VER 1)
 set(DisplayCompass_MINOR_VER 0)
 set(DisplayCompass_PATCH_VER 0)
-set(DisplayCompass_VER 1.0.0)
+set(DisplayCompass_VER "${DisplayCompass_MAJOR_VER}.${DisplayCompass_MINOR_VER}.${DisplayCompass_PATCH_VER}")
 project(DisplayCompass VERSION ${DisplayCompass_VER})
 
 set(CMAKE_AUTOMOC ON)

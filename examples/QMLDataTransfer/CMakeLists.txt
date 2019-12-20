@@ -3,7 +3,7 @@
 set(QMLDataTransfer_MAJOR_VER 1)
 set(QMLDataTransfer_MINOR_VER 1)
 set(QMLDataTransfer_PATCH_VER 0)
-set(QMLDataTransfer_VER 1.1.0)
+set(QMLDataTransfer_VER "${QMLDataTransfer_MAJOR_VER}.${QMLDataTransfer_MINOR_VER}.${QMLDataTransfer_PATCH_VER}")
 
 project(QMLDataTransfer VERSION ${QMLDataTransfer_VER})
 
@@ -15,7 +15,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(ICON_NAME compass)
-set(ICON_FILE ${ICON_NAME}.ico)
+set(ICON_FOLDER ${CMAKE_CURRENT_LIST_DIR})
+set(ICON_FILE ${ICON_FOLDER}/${ICON_NAME}.ico)
 
 if(UNIX)
     set(CMAKE_CXX_FLAGS "-fPIC")
@@ -23,8 +24,8 @@ elseif(WIN32)
     if (NOT PROJECT_VERSION_TWEAK)
         set(PROJECT_VERSION_TWEAK 0)
     endif()
-
-    configure_file("${PROJECT_SOURCE_DIR}/cmake/windows_metafile.rc.in"
+    string(REPLACE "/" "\\\\" ICON_FILE ${ICON_FILE})
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows_metafile.rc.in"
           "windows_metafile.rc"
     )
     set(RES_FILES "windows_metafile.rc" )
@@ -78,7 +79,7 @@ target_link_libraries(QMLDataTransfer
 )
 
 install(TARGETS QMLDataTransfer DESTINATION bin)
-#link_directories(${CMAKE_BINARY_DIR})
+link_directories(${CMAKE_BINARY_DIR})
 
 add_custom_command(TARGET QMLDataTransfer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:DisplayCompass> $<TARGET_FILE_DIR:QMLDataTransfer>
