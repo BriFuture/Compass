@@ -78,3 +78,8 @@ target_link_libraries(QMLDataTransfer
 )
 
 install(TARGETS QMLDataTransfer DESTINATION bin)
+#link_directories(${CMAKE_BINARY_DIR})
+
+add_custom_command(TARGET QMLDataTransfer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:DisplayCompass> $<TARGET_FILE_DIR:QMLDataTransfer>
+)
