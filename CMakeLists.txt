@@ -83,6 +83,8 @@ install(TARGETS DisplayCompass
     RUNTIME DESTINATION bin
 )
 install(FILES ${HEADERS} DESTINATION include/DisplayCompass)
+install(FILES feature/libdisplayqml.prf DESTINATION include/feature)
+
 configure_file(cmake/DisplayCompassConfig.cmake.in DisplayCompassConfig.cmake @ONLY)
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/DisplayCompassConfig.cmake
