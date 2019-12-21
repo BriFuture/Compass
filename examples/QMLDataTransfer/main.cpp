@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationDisplayName("3D Data Dsiplay");
     QApplication::setOrganizationDomain("qt.zbrifuture.cn");
     QApplication::setApplicationVersion(QString("%1.%2").arg(_QMLDT_MAJ_VER).arg(_QMLDT_MIN_VER));
-
+    a.setWindowIcon(QIcon(":/compass.ico"));
 #if ! defined(Q_OS_WIN)
     Q_INIT_RESOURCE(dc_qml);
     Q_INIT_RESOURCE(dc_res);
