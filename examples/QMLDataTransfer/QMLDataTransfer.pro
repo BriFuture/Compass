@@ -38,15 +38,18 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 
-SOURCES += main.cpp\
-    DataTransfer.cpp \
-    MainWindow.cpp
+SOURCES += \
+    src/main.cpp\
+    src/DataTransfer.cpp \
+    src/MainWindow.cpp \
+    src/BAboutDialog.cpp
 
 HEADERS  += \
-    DataTransfer.h \
-    MainWindow.h
+    src/DataTransfer.h \
+    src/MainWindow.h \
+    src/BAboutDialog.h
 
-FORMS    += MainWindow.ui
+FORMS    += src/MainWindow.ui src/MainWindow.ui
 
 RESOURCES += \
     res.qrc
