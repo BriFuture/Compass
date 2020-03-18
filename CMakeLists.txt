@@ -19,7 +19,6 @@ elseif(WIN32)
 endif(UNIX)
 
 configure_file("./config.h.in" "./include/config.h" )
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 find_package(Qt5 COMPONENTS Widgets Core REQUIRED)
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
@@ -65,6 +64,13 @@ endif(Display_BUILD_EXAMPLES)
 
 SET_TARGET_PROPERTIES(DisplayCompass PROPERTIES VERSION ${DisplayCompass_VER} SOVERSION 0)
 target_compile_definitions(DisplayCompass PRIVATE DISPLAY_LIBRARY)
+target_include_directories(DisplayCompass
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+    $<INSTALL_INTERFACE:include/DisplayCompass>
+    PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    )
 target_link_libraries(DisplayCompass
     PRIVATE
         Qt5::Core Qt5::Widgets Qt5::Qml Qt5::Quick
