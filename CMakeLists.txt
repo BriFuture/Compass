@@ -56,11 +56,11 @@ add_library(DisplayCompass SHARED
 
 set(DisplayCompass_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-OPTION(Display_BUILD_EXAMPLES "BUILD EXAMPLES" ON)
-if(Display_BUILD_EXAMPLES)
+OPTION(BUILD_Display_examples "BUILD EXAMPLES WITH DisplayCompass" ON)
+if(BUILD_Display_examples)
     add_subdirectory(examples/QMLDataTransfer)
     add_dependencies(QMLDataTransfer DisplayCompass)
-endif(Display_BUILD_EXAMPLES)
+endif(BUILD_Display_examples)
 
 SET_TARGET_PROPERTIES(DisplayCompass PROPERTIES VERSION ${DisplayCompass_VER} SOVERSION 0)
 target_compile_definitions(DisplayCompass PRIVATE DISPLAY_LIBRARY)
