@@ -50,18 +50,14 @@ elseif(WIN32)
 endif(UNIX)
 
 configure_file("./config.h.in" "./include/qmldt_config.h" )
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 add_definitions(-DBUILD_WITH_CMAKE)
 
 # include DisplayCompass library
-if(NOT Display_BUILD_EXAMPLES)
+if(NOT BUILD_EXAMPLE_DisplayCompass)
 find_package(DisplayCompass REQUIRED)
-endif(NOT Display_BUILD_EXAMPLES)
-include_directories(${DisplayCompass_INCLUDE_DIRS})
+endif(NOT BUILD_EXAMPLE_DisplayCompass)
 
 #find_package(Builib REQUIRED)
-#include_directories(${Builib_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_LIST_DIR}/src)
 
 set(HEADERS
     src/DataTransfer.h
@@ -88,7 +84,11 @@ add_executable(QMLDataTransfer ${OS_BUNDLE}
     ${APP_RESOURCES}
 )
 
-#target_include_directories(QMLDataTransfer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(QMLDataTransfer PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${DisplayCompass_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    )
 
 target_link_libraries(QMLDataTransfer
     PRIVATE
