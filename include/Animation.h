@@ -17,7 +17,7 @@ class DISPLAY_DLL_EXPORT Animation : public QQuickView,
 {
     Q_OBJECT
 
-    Q_PLUGIN_METADATA(IID "cn.zbrifuture.Qt.libdisplayqml.Animation" FILE "res/libdisplayqml.json")
+    Q_PLUGIN_METADATA(IID "cn.zbrifuture.Qt.libdisplayqml.Animation" FILE "libdisplayqml.json")
     Q_INTERFACES(AnimationInterface)
 public:
     explicit Animation(QWindow *parent = 0);

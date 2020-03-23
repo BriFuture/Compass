@@ -47,13 +47,14 @@ target_include_directories(DisplayCompass
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/DisplayCompass>
     PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/
     ${CMAKE_CURRENT_BINARY_DIR}/include
     )
 target_link_libraries(DisplayCompass
     PUBLIC
         Qt5::Widgets Qt5::Qml Qt5::Quick
 )
-
+configure_file("res/libdisplayqml.json" "libdisplayqml.json" @ONLY)
 
 install(FILES ${HEADERS} DESTINATION include/DisplayCompass)
 install(FILES feature/libdisplayqml.prf DESTINATION include/feature)
