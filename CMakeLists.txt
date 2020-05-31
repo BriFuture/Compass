@@ -14,7 +14,6 @@ elseif(WIN32)
 
 endif(UNIX)
 
-configure_file("./config.h.in" "./include/config.h" )
 
 find_package(Qt5 COMPONENTS Widgets Qml Quick REQUIRED)
 
@@ -34,8 +33,13 @@ set(SOURCES
 )
 
 set(RESOURCES dc_qml.qrc dc_res.qrc)
+set(Res3DFile "dc3d_res.rcc")
+set(ResQml3DFile "dc3d_qml.rcc")
+configure_file("./config.h.in" "./include/config.h" )
+
 add_library(DisplayCompass SHARED
-    ${SOURCES} ${HEADERS} ${RESOURCES}
+    ${SOURCES} ${HEADERS}
+#    ${RESOURCES}
 )
 
 set(DisplayCompass_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -72,3 +76,14 @@ if(BUILD_EXAMPLE_DisplayCompass)
     add_subdirectory(examples/QMLDataTransfer)
     add_dependencies(QMLDataTransfer DisplayCompass)
 endif(BUILD_EXAMPLE_DisplayCompass)
+
+
+
+qt5_add_binary_resources(DCRes3D "dc_res.qrc"
+    OPTIONS --compress 9
+    DESTINATION "${CMAKE_BINARY_DIR}/bin/${Res3DFile}")
+qt5_add_binary_resources(DCRes3DQml "dc_qml.qrc"
+    OPTIONS --compress 9
+    DESTINATION "${CMAKE_BINARY_DIR}/bin/${ResQml3DFile}")
+install(FILES "${CMAKE_BINARY_DIR}/bin/${Res3DFile}" DESTINATION bin)
+install(FILES "${CMAKE_BINARY_DIR}/bin/${ResQml3DFile}" DESTINATION bin)

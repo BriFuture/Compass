@@ -92,3 +92,37 @@ void Animation::hideEvent(QHideEvent *)
 {
     stateChanged( false );
 }
+
+#ifdef BUILD_WITH_CMAKE
+#include "config.h"
+#endif
+#include <QResource>
+
+void LibDisplayCompass::init(const QString &path, const QString &root)
+{
+    QString location3D = QString("%1/%2").arg(path).arg(Resource3DFile);
+    QString locationQml = QString("%1/%2").arg(path).arg(ResourceQml3DFile);
+    QResource::registerResource(location3D, root);
+    QResource::registerResource(locationQml, root);
+}
+
+int LibDisplayCompass::getMajorVer()
+{
+    return _LIBDISPLAYQML_MAJOR_VER;
+}
+
+int LibDisplayCompass::getMinorVer()
+{
+    return _LIBDISPLAYQML_MINOR_VER;
+}
+
+int LibDisplayCompass::getPatchVer()
+{
+    return _LIBDISPLAYQML_PATCH_VER;
+}
+
+QString LibDisplayCompass::getVersion()
+{
+    return QString("%1.%2.%3").arg(getMajorVer()).arg(getMinorVer()).arg(getPatchVer());
+}
+

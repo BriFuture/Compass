@@ -48,4 +48,14 @@ protected:
 
 };
 
+
+class DISPLAY_DLL_EXPORT  LibDisplayCompass
+{
+public:
+    static void init(const QString &path = QString("."), const QString &root = QString());
+    static int getMajorVer();
+    static int getMinorVer();
+    static int getPatchVer();
+    static QString getVersion();
+};
 #endif // DATA_H

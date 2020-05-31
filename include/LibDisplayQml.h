@@ -2,9 +2,9 @@
 #define LIBDISPLAYQML_H
 
 #include <QString>
+#include "display_global.h"
 
-
-class LibDisplayQml
+class  LibDisplayQml
 {
 public:
     LibDisplayQml();
