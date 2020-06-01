@@ -53,10 +53,18 @@ QObject *Animation::getObject()
 void Animation::setSource(const QUrl &source)
 {
     if(source.isEmpty()) {
-        QQuickView::setSource(QUrl("qrc:/DisplayCompass/qml/SpacePath.qml"));
+        _source = QUrl("qrc:/DisplayCompass/qml/SpacePath.qml");
+        QQuickView::setSource(_source);
     } else {
         QQuickView::setSource(source);
+        _source = source;
     }
+}
+
+void Animation::restart()
+{
+    engine()->clearComponentCache();
+    QQuickView::setSource(_source);
 }
 
 

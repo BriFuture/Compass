@@ -9,6 +9,7 @@ class QQmlContext;
 QT_END_NAMESPACE
 #include "display_global.h"
 
+#include <QUrl>
 #include "AnimationDataObject.h"
 #include "DisplayQmlInterface.h"
 
@@ -32,6 +33,7 @@ public slots:
 
     QObject *getObject();
     void setSource(const QUrl &source = QUrl());
+    void restart();
 
 signals:
     void toRecord(bool isCSource = false);
@@ -44,8 +46,9 @@ protected:
     void onWindowStateChange(Qt::WindowState windowState);
     void hideEvent(QHideEvent *) override;
 
+private:
     AnimationDataObject *ado = nullptr;
-
+    QUrl _source;
 };
 
 
