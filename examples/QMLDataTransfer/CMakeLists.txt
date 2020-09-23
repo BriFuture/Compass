@@ -103,3 +103,8 @@ install(TARGETS QMLDataTransfer DESTINATION bin)
 add_custom_command(TARGET QMLDataTransfer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:DisplayCompass> $<TARGET_FILE_DIR:QMLDataTransfer>
 )
+set_target_properties(QMLDataTransfer PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

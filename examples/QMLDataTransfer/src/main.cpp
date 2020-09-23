@@ -10,7 +10,7 @@
 
 #include "MainWindow.h"
 #include <iostream>
-
+#include <QResource>
 #ifdef BUILD_WITH_CMAKE
 #include "qmldt_config.h"
 #endif
@@ -26,6 +26,10 @@ int main(int argc, char *argv[])
 #if ! defined(Q_OS_WIN)
     Q_INIT_RESOURCE(dc_qml);
     Q_INIT_RESOURCE(dc_res);
+#else
+    QDir curDir(a.applicationDirPath());
+    QResource::registerResource(curDir.filePath("dc3d_res.rcc"));
+    QResource::registerResource(curDir.filePath("dc3d_qml.rcc"));
 #endif
 //    BProgramSharer bps("QML3DDisplay");
 //    bps.exportProgramPath(&a);

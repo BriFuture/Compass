@@ -33,7 +33,7 @@ Item {
         color: Qt.rgba(0.78, 0.78, 0.78, 0.5)
         border.color: Qt.rgba(0.68, 0.68, 0.68, 1)
         border.width: 2
-        width: 240
+        width: 260
         height: childrenRect.height
         anchors {
             top : fpsLabel.bottom
@@ -53,15 +53,15 @@ Item {
         }
 
         Text {
-            id: pitchHint
+            id: headingHint
             anchors.top: parent.top
             width: parent.width
-            text: "pitch: "
+            text: "Yaw: "
             font.family: "Helvetica"
             font.pointSize: 18
         }
         Text {
-            id: pitch
+            id: heading
             anchors {
                 right: parent.right
                 top: parent.top
@@ -72,17 +72,38 @@ Item {
             width: parent.width / 2
             text: "0.0"
         }
-
         Text {
-            id: headingHint
-            anchors.top: pitch.bottom
+            id: pitchHint
+            anchors.top: heading.bottom
             width: parent.width
-            text: "heading: "
+            text: "Pitch: "
             font.family: "Helvetica"
             font.pointSize: 18
         }
         Text {
-            id: heading
+            id: pitch
+            anchors {
+                right: parent.right
+                top: heading.bottom
+            }
+            font.family: "Helvetica"
+            font.pointSize: 24
+            color: "red"
+            width: parent.width / 2
+            text: "0.0"
+        }
+
+
+        Text {
+            id: rollHint
+            anchors.top: pitch.bottom
+            width: parent.width
+            text: "Roll:"
+            font.family: "Helvetica"
+            font.pointSize: 18
+        }
+        Text {
+            id: roll
             anchors {
                 right: parent.right
                 top: pitch.bottom
@@ -93,20 +114,19 @@ Item {
             width: parent.width / 2
             text: "0.0"
         }
-
         Text {
-            id: rollHint
-            anchors.top: heading.bottom
+            id: lengthHint
+            anchors.top: roll.bottom
             width: parent.width
-            text: "roll:"
+            text: "Len:"
             font.family: "Helvetica"
             font.pointSize: 18
         }
         Text {
-            id: roll
+            id: length
             anchors {
                 right: parent.right
-                top: heading.bottom
+                top: roll.bottom
             }
             font.family: "Helvetica"
             font.pointSize: 24
@@ -835,12 +855,16 @@ Item {
             pitch.text   = dataSource.getPitch().toFixed(2);
             heading.text = dataSource.getHeading().toFixed(2);
             roll.text    = dataSource.getRoll().toFixed(2);
+            var dis = dataSource.getLength();
+            length.text = dis.toFixed(2);
+            if(dis > 1000) {
+                dis /= 10000;
+            }
 
             if( view.ready ) {
-                var dis = dataSource.getLength()/10000;
-                if( view.spacePath ) {
-                    dis = ballRadius.value / 10000;
-                }
+//                if( view.spacePath ) {
+//                    dis = ballRadius.value / 10000;
+//                }
 
                 GLcode.sensorPoint.setParam( {
                     dis:     dis,

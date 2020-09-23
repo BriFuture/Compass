@@ -1,7 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.9)
 
 set(DisplayCompass_MAJOR_VER 1)
-set(DisplayCompass_MINOR_VER 0)
+set(DisplayCompass_MINOR_VER 1)
 set(DisplayCompass_PATCH_VER 0)
 set(DisplayCompass_VER "${DisplayCompass_MAJOR_VER}.${DisplayCompass_MINOR_VER}.${DisplayCompass_PATCH_VER}")
 project(DisplayCompass VERSION ${DisplayCompass_VER})
